@@ -1,0 +1,85 @@
+\subsection{Modelado}
+\subsubsection{Obtener la función de transferencia de lazo abierto}
+
+\paragraph{Impedancia de realimentación (paralelo $R_f \parallel C_f$).}
+\begin{equation}
+	Z_f \;=\; R_f \parallel \frac{1}{sC_f}
+	\;=\; \frac{R_f\cdot \frac{1}{sC_f}}{R_f + \frac{1}{sC_f}}
+	\;=\; \frac{R_f}{1 + s R_f C_f}.
+	\label{eq:Zf}
+\end{equation}
+
+\paragraph{Esquema general del AO (entrada en $R_i$ al nodo inversor y referencia en la no inversora).}
+Sea $V_{\text{ref}}$ la tensión aplicada a la entrada no inversora (por ejemplo, $V_{\text{ref}}=\text{VDDA}/2$ o $V_{\text{ref}}=\text{VDAC}$). Por superposición, el aporte total a la salida es la suma de:
+\[
+V_o \;=\; V_o\big|_{V_{\text{ref}}=0} \;+\; V_o\big|_{V_i=0}.
+\]
+
+\textbf{(A) Aporte de $V_i$ con $V_{\text{ref}}=0$ (no inversora a masa AC).}
+Por cortocircuito virtual, $V_n=V_p=0$. Corrientes:
+\[
+i_1=\frac{V_i-0}{R_i}, \qquad i_2=\frac{0 - V_o}{Z_f}.
+\]
+KCL en el nodo inversor ($i_1=i_2$):
+\[
+\frac{V_i}{R_i}=\frac{-V_o}{Z_f}
+\;\;\Rightarrow\;\;
+\frac{V_o}{V_i}=-\frac{Z_f}{R_i}.
+\]
+Con \eqref{eq:Zf}:
+\begin{equation}
+	\boxed{\;\displaystyle
+		\frac{V_o}{V_i}\Bigg|_{V_{\text{ref}}=0}
+		= -\,\frac{Z_f}{R_i}
+		= -\,\frac{R_f}{R_i}\,\frac{1}{1+sR_f C_f}
+		\;}
+	\label{eq:gain_inverting}
+\end{equation}
+
+\textbf{(B) Aporte de $V_{\text{ref}}$ con $V_i=0$ (entrada inversora a masa).}
+Ahora $R_i$ va a masa y el AO queda en configuración no inversora con red $R_i$--$Z_f$ en la rama inversora. El lazo de realimentación fija:
+\[
+\frac{V_o - V_{\text{ref}}}{Z_f} = \frac{0 - V_{\text{ref}}}{R_i}
+\;\;\Rightarrow\;\;
+V_o = V_{\text{ref}}\!\left(1+\frac{Z_f}{R_i}\right).
+\]
+Con \eqref{eq:Zf}:
+\begin{equation}
+	\boxed{\;\displaystyle
+		\frac{V_o}{V_{\text{ref}}}\Bigg|_{V_i=0}
+		= 1+\frac{Z_f}{R_i}
+		= 1 + \frac{R_f}{R_i}\,\frac{1}{1+sR_f C_f}
+		\;}
+	\label{eq:gain_noninv}
+\end{equation}
+
+\paragraph{Resultado por superposición (salida total).}
+Sumando \eqref{eq:gain_inverting} y \eqref{eq:gain_noninv}:
+\begin{equation}
+	\boxed{\;\displaystyle
+		V_o(s)
+		= \underbrace{\Bigg(-\frac{Z_f(s)}{R_i}\Bigg)}_{\text{camino inversor}}\,V_i(s)
+		\;+\;
+		\underbrace{\Bigg(1+\frac{Z_f(s)}{R_i}\Bigg)}_{\text{camino no inversor}}\,V_{\text{ref}}(s),
+		\quad
+		Z_f(s)=\frac{R_f}{1+sR_fC_f}.
+		\;}
+	\label{eq:superpos_total}
+\end{equation}
+
+\paragraph{Notas prácticas.}
+\begin{itemize}
+	\item Si trabajás en pequeña señal respecto de $\text{VDDA}/2$, tomá $V_{\text{ref}}$ como la \emph{variación} alrededor de ese punto (es decir, $V_{\text{ref}}=0$ si la referencia es DC pura). En ese caso, el término de \eqref{eq:gain_noninv} desaparece y queda sólo el camino inversor \eqref{eq:gain_inverting}.
+	\item Si la no inversora está a una referencia activa (p.ej.\ VDAC), \eqref{eq:superpos_total} te da el efecto simultáneo del estímulo $V_i$ y de esa referencia.
+\end{itemize}
+
+\paragraph{Encadenamiento de etapas (lazo abierto total).}
+Si el AO3 es buffer ($G_3(s)=1$) y AO1, AO2 tienen cada uno la forma \eqref{eq:superpos_total}, entonces la función de lazo abierto (desde la \emph{señal de entrada} hasta la \emph{salida del último AO}, con $V_{\text{ref}}$ fijado según corresponda) es el producto de las ganancias de las etapas activadas por esa señal. Por ejemplo, si sólo excita $V_i$ y las no inversoras están a DC:
+\[
+G_{\text{ol}}(s)
+= \Big(-\frac{Z_{f1}(s)}{R_{i1}}\Big)\,
+\Big(-\frac{Z_{f2}(s)}{R_{i2}}\Big)\,
+(1),
+\quad
+Z_{fk}(s)=\frac{R_{fk}}{1+sR_{fk}C_{fk}}.
+\]

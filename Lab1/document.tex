@@ -1,0 +1,62 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage[utf8]{inputenc}     % <- Para UTF-8
+\usepackage[T1]{fontenc}        % <- Para ñ y tildes correctas
+\usepackage[spanish]{babel}     % <- Para idioma español
+\usepackage{hyperref}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{fancyvrb}
+\usepackage{listings}
+\lstset{
+	basicstyle=\ttfamily\small,
+	breaklines=true,
+	frame=none,
+	columns=fullflexible
+}
+\usepackage{stfloats}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+		T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\usepackage{float}
+
+% Macro para insertar figuras centradas con ancho ajustable
+% Ejemplo de uso \insertarfigura{ruta}{leyenda}{etiqueta}{escala entre 0 y 1}
+\newcommand{\insertarfigura}[4]{
+	\begin{figure}[H]
+		\centerline{\includegraphics[width=#4\linewidth]{#1}}
+		\caption{#2}
+		\label{#3}
+	\end{figure}
+	% Referencia cruzada si se desea en el texto: véase la Fig.~\ref{#4}
+}
+% Macro: \insertarfigurawide{ruta}{caption}{label}{scale}
+\usepackage{cuted} % en el preámbulo
+
+% 
+\newcommand{\insertarfigurawide}[4]{%
+	\begin{figure*}[ht]
+		\centering
+		\includegraphics[width=#4\textwidth]{#1}
+		\caption{#2}
+		\label{#3}
+	\end{figure*}
+}
+
+\usepackage{subcaption} % en el preámbulo
+
+
+
+\begin{document}
+	\input{carat.tex}
+	\input{introduccion.tex}
+	\input{desarrollo.tex}
+	\input{resultados.tex}
+\end{document}
