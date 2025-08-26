@@ -6,6 +6,52 @@
 	round-precision=3,
 	table-number-alignment = center,
 }
+
+% --- Codificación y español ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish]{babel}
+
+% --- Tipografía y microajustes (reduce overfull hbox) ---
+\usepackage{microtype}
+\emergencystretch=2em
+
+% --- Gráficos y floats ---
+\usepackage{graphicx}
+\usepackage{float} % para [H] si lo usas (art/report ok)
+
+% --- Hipervínculos (con soporte unicode) ---
+\usepackage[unicode,hidelinks]{hyperref}
+
+% --- Tablas numéricas y redondeo ---
+\usepackage{siunitx}
+\sisetup{
+	round-mode=places,
+	round-precision=3,
+	table-number-alignment = center,
+}
+
+% --- Tablas más flexibles ---
+\usepackage{booktabs}
+\usepackage{tabularx}
+
+% --- Código: listings con UTF-8 real ---
+\usepackage{listings}
+\usepackage{listingsutf8}
+\lstset{
+	inputencoding=utf8,
+	extendedchars=true,
+	basicstyle=\ttfamily\small,
+	breaklines=true, columns=fullflexible, keepspaces=true,
+	frame=single, numbers=left, numberstyle=\tiny, xleftmargin=1em,
+	% Mapeo por si alguna terminal te mete bytes raros:
+	literate=
+	{á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'\i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+	{Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+	{ñ}{{\~n}}1 {Ñ}{{\~N}}1
+	{¿}{{\textquestiondown}}1 {¡}{{\textexclamdown}}1
+}
+
 % The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
 \usepackage{cite}
 \usepackage[utf8]{inputenc}     % <- Para UTF-8
