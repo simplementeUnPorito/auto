@@ -28,11 +28,9 @@ KCL en el nodo inversor ($i_1=i_2$):
 \]
 Con \eqref{eq:Zf}:
 \begin{equation}
-	\boxed{\;\displaystyle
-		\frac{V_o}{V_i}\Bigg|_{V_{\text{ref}}=0}
-		= -\,\frac{Z_f}{R_i}
-		= -\,\frac{R_f}{R_i}\,\frac{1}{1+sR_f C_f}
-		\;}
+	\frac{V_o}{V_i}\Bigg|_{V_{\text{ref}}=0}
+	= -\,\frac{Z_f}{R_i}
+	= -\,\frac{R_f}{R_i}\,\frac{1}{1+sR_f C_f}
 	\label{eq:gain_inverting}
 \end{equation}
 
@@ -45,27 +43,64 @@ V_o = V_{\text{ref}}\!\left(1+\frac{Z_f}{R_i}\right).
 \]
 Con \eqref{eq:Zf}:
 \begin{equation}
-	\boxed{\;\displaystyle
-		\frac{V_o}{V_{\text{ref}}}\Bigg|_{V_i=0}
-		= 1+\frac{Z_f}{R_i}
-		= 1 + \frac{R_f}{R_i}\,\frac{1}{1+sR_f C_f}
-		\;}
+	\frac{V_o}{V_{\text{ref}}}\Bigg|_{V_i=0}
+	= 1+\frac{Z_f}{R_i}
+	= 1 + \frac{R_f}{R_i}\,\frac{1}{1+sR_f C_f}
 	\label{eq:gain_noninv}
 \end{equation}
 
 \paragraph{Resultado por superposición (salida total).}
 Sumando \eqref{eq:gain_inverting} y \eqref{eq:gain_noninv}:
 \begin{equation}
-	\boxed{\;\displaystyle
-		V_o(s)
-		= \underbrace{\Bigg(-\frac{Z_f(s)}{R_i}\Bigg)}_{\text{camino inversor}}\,V_i(s)
-		\;+\;
-		\underbrace{\Bigg(1+\frac{Z_f(s)}{R_i}\Bigg)}_{\text{camino no inversor}}\,V_{\text{ref}}(s),
-		\quad
-		Z_f(s)=\frac{R_f}{1+sR_fC_f}.
-		\;}
+	V_o(s)
+	= \underbrace{\Bigg(-\frac{Z_f(s)}{R_i}\Bigg)}_{\text{camino inversor}}\,V_i(s)
+	\;+\;
+	\underbrace{\Bigg(1+\frac{Z_f(s)}{R_i}\Bigg)}_{\text{camino no inversor}}\,V_{\text{ref}}(s)
 	\label{eq:superpos_total}
 \end{equation}
+
+\paragraph{MatLab}
+\begin{lstlisting}[style=matlabstyle,caption={Script en Matlab},label={lst:matlab}]
+	
+	%% Definicion de parametros
+	R_1 = 15e3;
+	R_3 = 15e3;
+	C_2 = 100e-9;
+	R_2 = 75e3;
+	R_4 = 75e3;
+	C_1 = 0.2e-6;
+	%% Generar funcion de transferencia d
+	numStage = [-R_3/R_1 -R_4/R_2];
+	denStage = { [C_2*R_3 1], [C_1*R_4 1] };
+	% Usamos celdas para guardar los tf de cada stage
+	Gstage = cell(1,2);
+	G = 1;
+	for i = 1:2
+	Gstage{i} = tf(numStage(i), denStage{i});
+	G = G*Gstage{i};
+	end
+	%% Analizamos en el tiempo
+	[tr, ts, wn] = plot_step_info(G);
+	
+	function [tr, ts, wn] = plot_step_info(G)
+	info = stepinfo(G);
+	tr = info.RiseTime;
+	ts = info.SettlingTime;
+	wn = 1.8 / tr;
+	t_end = 1.1 * ts;
+	if ~isfinite(t_end) || t_end <= 0, t_end = 5 * max(tr, 1e-3); end
+	t = linspace(0, t_end, 2*pi/wn);
+	[y, tout] = step(G, t);
+	figure; plot(tout, y, 'LineWidth', 1.4); grid on; hold on;
+	xlabel('Tiempo [s]'); ylabel('Salida');
+	title(sprintf('Escalón: tr=%.4gs, ts=%.4gs, \\omega_n=%.4g rad/s', tr, ts, wn));
+	xline(tr, '--', sprintf('  t_r=%.3g s', tr), 'LabelOrientation','horizontal');
+	xline(ts,  ':', sprintf('  t_s=%.3g s', ts), 'LabelOrientation','horizontal');
+	legend('G(t)', 'Location', 'best');
+	end
+	
+\end{lstlisting}
+
 
 \paragraph{Notas prácticas.}
 \begin{itemize}

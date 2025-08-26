@@ -53,6 +53,30 @@
 \usepackage{subcaption} % en el preámbulo
 
 
+% --- Configuración para código Matlab ---
+\lstdefinelanguage{Matlab}{
+	morekeywords={break,case,catch,continue,else,elseif,end,for,function,
+		global,if,otherwise,persistent,return,switch,try,while},
+	sensitive=true,
+	morecomment=[l]\%,
+	morestring=[m]',
+}
+\lstdefinestyle{matlabstyle}{
+	language=Matlab,
+	basicstyle=\ttfamily\small,
+	keywordstyle=\color{blue}\bfseries,
+	commentstyle=\color{green!40!black}\itshape,
+	stringstyle=\color{red!60!black},
+	numbers=left,
+	numberstyle=\tiny,
+	stepnumber=1,
+	numbersep=6pt,
+	breaklines=true,
+	showstringspaces=false,
+	frame=single,
+	rulecolor=\color{black!20}
+}
+
 
 \begin{document}
 	\input{carat.tex}
