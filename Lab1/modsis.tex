@@ -15,71 +15,73 @@ Para ello, debemos tener en cuenta lo siguiente:
 \subsection{Analizar el efecto del control}
 
 Se implementó un \textit{script} en \textsc{Matlab} que permite probar varias combinaciones de parámetros y registrar las métricas de cada intento.
-
-\begin{lstlisting}[language=Matlab, caption={Función para diseño PID por prueba y error}, label={lst:disenoPID}]
+\onecolumn % pasa a una columna
+\paragraph{MatLab}
+\begin{lstlisting}[language=Matlab, style = matlabstyle,caption={Función para diseño PID por prueba y error}, label={lst:disenoPID}]
 	function results = diseno_pid(G, filename)
-	% diseno_pid - Bucle interactivo para sintonia PID y selección del mejor ensayo
-	%
-	% Uso:
-	%   [Kp, Ti, Td] = diseno_pid(G, 'log_pid.mat', OSd, trd, tsd)
-	
-	if nargin < 2
-	filename = 'log_pid.mat';
-	end
-	if nargin < 3, OSd = []; end
-	if nargin < 4, trd = []; end
-	if nargin < 5, tsd = []; end
-	
-	results = struct([]);
-	if exist(filename,'file')
-	S = load(filename);
-	if isfield(S,'results'), results = S.results; end
-	end
-	k_iter = numel(results) + 1;
-	
-	while true
-	fprintf('\n--- Parametros PID ---\n');
-	Kp = input('Kp: ');
-	Td = input('Td: ');
-	Ti = input('Ti: ');
-	
-	numC = Kp*[Ti*Td, Ti, 1];
-	denC = [Ti, 0];
-	C = tf(numC, denC);
-	cl = feedback(C*G, 1);
-	
-	info = stepinfo(cl);
-	OS = info.Overshoot;
-	tr = info.RiseTime;
-	ts = info.SettlingTime;
-	
-	% guardar en struct
-	results(k_iter).Kp = Kp;
-	results(k_iter).Ti = Ti;
-	results(k_iter).Td = Td;
-	results(k_iter).Overshoot = OS;
-	results(k_iter).RiseTime = tr;
-	results(k_iter).SettlingTime = ts;
-	save(filename,'results');
-	k_iter = k_iter + 1;
-	
-	resp = input('Continuar? [s/n]: ','s');
-	if isempty(resp) || any(lower(resp(1)) == ['n','q'])
-	disp('Finalizando loop.');
-	break;
-	end
-	end
+		% diseno_pid - Bucle interactivo para sintonia PID y selección del mejor ensayo
+		%
+		% Uso:
+		%   [Kp, Ti, Td] = diseno_pid(G, 'log_pid.mat', OSd, trd, tsd)
+		
+		if nargin < 2
+		filename = 'log_pid.mat';
+		end
+		if nargin < 3, OSd = []; end
+		if nargin < 4, trd = []; end
+		if nargin < 5, tsd = []; end
+		
+		results = struct([]);
+		if exist(filename,'file')
+		S = load(filename);
+		if isfield(S,'results'), results = S.results; end
+		end
+		k_iter = numel(results) + 1;
+		
+		while true
+			fprintf('\n--- Parametros PID ---\n');
+			Kp = input('Kp: ');
+			Td = input('Td: ');
+			Ti = input('Ti: ');
+			
+			numC = Kp*[Ti*Td, Ti, 1];
+			denC = [Ti, 0];
+			C = tf(numC, denC);
+			cl = feedback(C*G, 1);
+			
+			info = stepinfo(cl);
+			OS = info.Overshoot;
+			tr = info.RiseTime;
+			ts = info.SettlingTime;
+			
+			% guardar en struct
+			results(k_iter).Kp = Kp;
+			results(k_iter).Ti = Ti;
+			results(k_iter).Td = Td;
+			results(k_iter).Overshoot = OS;
+			results(k_iter).RiseTime = tr;
+			results(k_iter).SettlingTime = ts;
+			save(filename,'results');
+			k_iter = k_iter + 1;
+			
+			resp = input('Continuar? [s/n]: ','s');
+			if isempty(resp) || any(lower(resp(1)) == ['n','q'])
+				disp('Finalizando loop.');
+				break;
+			end
+		end
 	end
 \end{lstlisting}
 
 \subsection{Resultados obtenidos}
 
 Gracias a la función implementada, podemos comparar el rendimiento de diferentes combinaciones de parámetros PID. 
-La Tabla~\ref{tab:pid_mat} resume los resultados extraídos del archivo \texttt{tabla.mat}.
+La Tabla~\ref{tab:resultadosPID} resume los resultados extraídos del archivo \texttt{tabla.mat}.
 
 % --- INCLUIR LA TABLA GENERADA DESDE EL .MAT ---
 %\input{tabla_pid} % asumiendo que moviste tabla_pid.tex junto a tu main o ajustaste la ruta
 \begin{table}[]
+	\centering
 \begin{tabular}{|S|S|S|S|S|S|}
 
 		\hline
@@ -159,9 +161,9 @@ La Tabla~\ref{tab:pid_mat} resume los resultados extraídos del archivo \texttt{
 		\textbf{1}    & 0.001   & 0           & 76.8492964678658   & 0.00455534299201002  & 0.213695180744633     \\ \hline
 	\end{tabular}
 	\caption{Resultados obtenidos.}
-	\label{tab:versiones}
+	\label{tab:resultadosPID}
 \end{table}
-
+\twocolumn
 
 Parámetros seleccionados (ejemplo):
 \[
