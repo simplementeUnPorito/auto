@@ -132,6 +132,15 @@
 
 
 % --- Configuración para código Matlab ---
+
+% Para listings en 2 columnas sin desbordar
+\lstset{
+	linewidth=\columnwidth,     % fuerza el ancho a la columna
+	xleftmargin=0pt,            % sin margen extra
+	framexleftmargin=0pt,
+	captionpos=b,               % leyenda abajo (recomendado en IEEE)
+}
+
 \lstdefinelanguage{Matlab}{
 	morekeywords={break,case,catch,continue,else,elseif,end,for,function,
 		global,if,otherwise,persistent,return,switch,try,while},
