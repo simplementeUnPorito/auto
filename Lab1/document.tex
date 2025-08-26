@@ -2,10 +2,15 @@
 \IEEEoverridecommandlockouts
 \usepackage{siunitx}
 \sisetup{
-	round-mode=places,
-	round-precision=3,
-	table-number-alignment = center,
+	round-mode          = figures,   % redondeo por cifras significativas
+	round-precision     = 3,         % 3 cifras significativas
+	table-number-alignment = center, % centra columnas
+	scientific-notation = engineering,  % usa científica solo si hace falta
+	retain-unity-mantissa = false,      % evita 1.0e0 para números "normales"
 }
+
+
+
 
 % --- Codificación y español ---
 \usepackage[utf8]{inputenc}
