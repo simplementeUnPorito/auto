@@ -165,21 +165,33 @@ La Tabla~\ref{tab:resultadosPID} resume los resultados extraídos del archivo \t
 \end{table}
 \twocolumn
 
-Parámetros seleccionados (ejemplo):
+Tras comparar el desempeño de múltiples tuplas \((K_p,T_i,T_d)\), optamos por la siguiente configuración por su balance entre velocidad de respuesta, sobrepaso y tiempo de establecimiento:
 \[
 K_p = 0.5,\qquad T_i = 0.005,\qquad T_d = 0.015.
 \]
+Con estos valores, la planta exhibe la dinámica mostrada en la Tabla~\ref{tab:pid_resultados}: un sobrepaso moderado y un asentamiento rápido sin comprometer la estabilidad.
 
-\begin{table}[H]
+
+\begin{table}[!t] % en IEEEtran evitá [H]; en article podés usar [H]
 	\centering
 	\small
+	\setlength{\tabcolsep}{4pt} % menos espacio horizontal en celdas
 	\caption{Resultados de la sintonía por prueba y error}
 	\label{tab:pid_resultados}
-	\begin{tabular}{cccccc}
-		\hline
-		$K_p$ & $T_i$ & $T_d$ & Overshoot [\%] & Rise Time [s] & Settling Time [s] \\
-		\hline
-		0.50 & 0.010 & 0.015 & 3.54 & 0.051 & 0.119 \\
-		\hline
-	\end{tabular}
+	\resizebox{\columnwidth}{!}{%
+		\begin{tabular}{cccccc}
+			\hline
+			$K_p$ & $T_i$ & $T_d$ & Overshoot [\%] & Rise Time [s] & Settling Time [s] \\
+			\hline
+			0.50 & 0.010 & 0.015 & 3.54 & 0.051 & 0.119 \\
+			\hline
+		\end{tabular}%
+	}
 \end{table}
+
+
+
+
+
+\input{zn_step_method.tex}
+
