@@ -59,6 +59,25 @@ Sumando \eqref{eq:gain_inverting} y \eqref{eq:gain_noninv}:
 	\label{eq:superpos_total}
 \end{equation}
 
+\paragraph{Resultado de la Convolucion del Sistema.:}
+Se realiza la convolucion para del resultado de la superposicion de los AO 1 y 2: 
+
+\begin{equation}
+	G_{o1}(s) = \frac{sR_1R_2C_1+2sR_2C_1+R_1}{R_1(sR_2C_1+1)}
+	\label{eq:convolucion1_total}
+\end{equation}
+
+\begin{equation}
+	G_{o2}(s) = \frac{sR_3R_4C_2+2sR_4C_2+R_3}{R_1(sR_4C_2+1)}
+	\label{eq:convolucion2_total}
+\end{equation}
+Se realiza la convolucion de las ecuaciones \eqref{eq:convolucion1_total} y \eqref{eq:convolucion2_total}:
+\begin{equation}
+	G_{o1}(s)*G_{o2}(s) 
+	\label{eq:convolucion_total}
+\end{equation}
+
+\onecolumn
 \paragraph{Matlab} Se muestra el siguiente codigo de Matlab
 
 \begin{lstlisting}[style=matlabstyle,caption={Script en Matlab},label={lst:mat}]
@@ -84,24 +103,26 @@ Sumando \eqref{eq:gain_inverting} y \eqref{eq:gain_noninv}:
 	[tr, ts, wn] = plot_step_info(G);
 	
 	function [tr, ts, wn] = plot_step_info(G)
-	info = stepinfo(G);
-	tr = info.RiseTime;
-	ts = info.SettlingTime;
-	wn = 1.8 / tr;
-	t_end = 1.1 * ts;
-	if ~isfinite(t_end) || t_end <= 0, t_end = 5 * max(tr, 1e-3); end
-	t = linspace(0, t_end, 2*pi/wn);
-	[y, tout] = step(G, t);
-	figure; plot(tout, y, 'LineWidth', 1.4); grid on; hold on;
-	xlabel('Tiempo [s]'); ylabel('Salida');
-	title(sprintf('Escalón: tr=%.4gs, ts=%.4gs, \\omega_n=%.4g rad/s', tr, ts, wn));
-	xline(tr, '--', sprintf('  t_r=%.3g s', tr), 'LabelOrientation','horizontal');
-	xline(ts,  ':', sprintf('  t_s=%.3g s', ts), 'LabelOrientation','horizontal');
-	legend('G(t)', 'Location', 'best');
+		info = stepinfo(G);
+		tr = info.RiseTime;
+		ts = info.SettlingTime;
+		wn = 1.8 / tr;
+		t_end = 1.1 * ts;
+		if ~isfinite(t_end) || t_end <= 0, 
+			t_end = 5 * max(tr, 1e-3); 
+		end
+		t = linspace(0, t_end, 2*pi/wn);
+		[y, tout] = step(G, t);
+		figure; plot(tout, y, 'LineWidth', 1.4); grid on; hold on;
+		xlabel('Tiempo [s]'); ylabel('Salida');
+		title(sprintf('Escalón: tr=%.4gs, ts=%.4gs, \\omega_n=%.4g rad/s', tr, ts, wn));
+		xline(tr, '--', sprintf('  t_r=%.3g s', tr), 'LabelOrientation','horizontal');
+		xline(ts,  ':', sprintf('  t_s=%.3g s', ts), 'LabelOrientation','horizontal');
+		legend('G(t)', 'Location', 'best');
 	end
 	
 \end{lstlisting}
-
+\twocolumn
 
 \paragraph{Notas prácticas.}
 \begin{itemize}
