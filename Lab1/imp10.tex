@@ -32,7 +32,7 @@ Al triplicar la frecuencia de muestreo:
 \[
 f_s = 30 f_{\mathrm{bw}}, \qquad T = \frac{1}{f_s},
 \]
-Podemos ver en la Figura~\ref{fig:fs30} muestra una mejora clara: la respuesta discreta se asemeja mucho más a la continua, con menor error y transitorios más suaves.
+Podemos ver en la Figura~\ref{fig:fs30} muestra una mejora clara: la respuesta discreta se asemeja mucho más a la continua, con menor error con respecto a la continua.
 
 \begin{figure}[!t]
 	\centering
@@ -51,7 +51,7 @@ Al usar parámetros obtenidos con ZN, el control logra buen seguimiento, pero el
 	\label{fig:zn_effort}
 \end{figure}
 
-Para evidenciarlo, añadimos ruido y saturación al esfuerzo. El resultado (Figura~\ref{fig:sat_noise}) confirma que el sistema no puede seguir al escalón bajo esas condiciones.
+Para evidenciarlo, añadimos ruido y saturación al esfuerzo en la simulación. El resultado (Figura~\ref{fig:sat_noise}) confirma que el sistema no puede seguir al escalón bajo esas condiciones.
 
 \begin{figure}[!t]
 	\centering
@@ -60,11 +60,11 @@ Para evidenciarlo, añadimos ruido y saturación al esfuerzo. El resultado (Figu
 	\label{fig:sat_noise}
 \end{figure}
 
----
 
+\onecolumn
 \subsubsection*{Simulación con saturación y ruido}
 
-Se implementó la siguiente función que permite incluir saturación y ruido gaussiano en la referencia:
+La función utilizada en la sección anterior es la siguiente:
 
 \begin{lstlisting}[language=Matlab,style=matlabstyle, caption={PID discreto con saturación y ruido}, label={lst:pid_sat_noise}]
 	function sim_pid_euler(G, T, Kp, Ti, Td, stepSize, sigma, umin, umax)
@@ -129,3 +129,41 @@ Se implementó la siguiente función que permite incluir saturación y ruido gau
 	legend('Referencia','Continuo ideal','Discreto sat+ruido','u_d');
 	end
 \end{lstlisting}
+
+\twocolumn
+
+\subsubsection{Implementación del modelo alternativo y análisis con ruido y saturación}
+
+Dado que la sintonía inicial de Ziegler--Nichols exige un esfuerzo de control incompatible con el actuador disponible, nos centramos en implementar el \emph{modelo alternativo} (PID ajustado por prueba y error con discretización incremental).  
+
+\paragraph{Efectos del ruido (escenario amplificado).}
+Para visualizar con claridad la sensibilidad al ruido (especialmente por el término derivativo), forzamos un caso más severo: desviación estándar del \(10\%\) de la amplitud de referencia. En la simulación:
+
+
+\begin{lstlisting}[language=Matlab,breaklines=true,basicstyle=\ttfamily\footnotesize]
+	sim_pid_euler(G,T/30,Kp,Ti,Td,2.5,0.25,0,5);
+\end{lstlisting}
+
+La Figura~\ref{fig:ruido_10pct} evidencia el efecto del ruido sobre \(u_d[k]\) y la salida discreta, pero sigue dando un resultado aceptable en el seguimiendo de la referencia aun en este caso extremo.
+
+\begin{figure}[!t]
+	\centering
+	\includegraphics[width=\columnwidth]{img/ruido_10pct.png}% <-- exportá esta imagen
+	\caption{Caso ruidoso (sigma $=10\%$ de la amplitud): ondulación amplificada por sensibilidad del término derivativo.}
+	\label{fig:ruido_10pct}
+\end{figure}
+
+\paragraph{Efectos de la saturación (windup) sin ruido.}
+Para aislar el fenómeno de \emph{windup} quitamos el ruido y exigimos amplitud elevada, manteniendo límites del actuador:
+\begin{lstlisting}[language=Matlab,breaklines=true,basicstyle=\ttfamily\footnotesize]
+	sim_pid_euler(G,T/30,Kp,Ti,Td,5,0,0,5);
+\end{lstlisting}
+
+La Figura~\ref{fig:windup} muestra la saturación de \(u_d[k]\) y la consecuente degradación del seguimiento: lento despegue y respuesta sobreamortiguada.
+
+\begin{figure}[!t]
+	\centering
+	\includegraphics[width=\columnwidth]{img/windup.png}% <-- exportá esta imagen
+	\caption{Caso con saturación y sin ruido: evidencia de windup e imposibilidad de seguimiento para amplitudes elevadas.}
+	\label{fig:windup}
+\end{figure}
