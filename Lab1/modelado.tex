@@ -49,15 +49,6 @@ Con \eqref{eq:Zf}:
 	\label{eq:gain_noninv}
 \end{equation}
 
-\paragraph{Resultado por superposición (salida total).}
-Sumando \eqref{eq:gain_inverting} y \eqref{eq:gain_noninv}:
-\begin{equation}
-	V_o(s)
-	= \underbrace{\Bigg(-\frac{Z_f(s)}{R_i}\Bigg)}_{\text{camino inversor}}\,V_i(s)
-	\;+\;
-	\underbrace{\Bigg(1+\frac{Z_f(s)}{R_i}\Bigg)}_{\text{camino no inversor}}\,V_{\text{ref}}(s)
-	\label{eq:superpos_total}
-\end{equation}
 
 \paragraph{Encadenamiento de etapas (lazo abierto total).}
 Si el AO3 es buffer ($G_3(s)=1$) y AO1, AO2 tienen cada uno la forma \eqref{eq:superpos_total}, entonces la función de lazo abierto (desde la \emph{señal de entrada} hasta la \emph{salida del último AO}, con $V_{\text{ref}}$ fijado según corresponda) es el producto de las ganancias de las etapas activadas por esa señal. Por ejemplo, si sólo excita $V_i$ y las no inversoras están a DC:
