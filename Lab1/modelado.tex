@@ -59,22 +59,20 @@ Sumando \eqref{eq:gain_inverting} y \eqref{eq:gain_noninv}:
 	\label{eq:superpos_total}
 \end{equation}
 
-\paragraph{Resultado de la Convolucion del Sistema.:}
-Se realiza la convolucion para del resultado de la superposicion de los AO 1 y 2: 
+\paragraph{Lazo abierto en cascada.}
+La ganancia de lazo abierto total (desde la entrada de la primera etapa hasta la salida final) es el producto:
+
+\[
+	G_{o}(s) = G_{o1}(s)G_{o2}(s)G_{3}(s)
+\]
+
+	
+
+El signo se vuelve positivo:
 
 \begin{equation}
-	G_{o1}(s) = \frac{sR_1R_2C_1+2sR_2C_1+R_1}{R_1(sR_2C_1+1)}
-	\label{eq:convolucion1_total}
-\end{equation}
-
-\begin{equation}
-	G_{o2}(s) = \frac{sR_3R_4C_2+2sR_4C_2+R_3}{R_1(sR_4C_2+1)}
-	\label{eq:convolucion2_total}
-\end{equation}
-Se realiza la convolucion de las ecuaciones \eqref{eq:convolucion1_total} y \eqref{eq:convolucion2_total}:
-\begin{equation}
-	G_{o1}(s)*G_{o2}(s) 
-	\label{eq:convolucion_total}
+	G_{o}(s) = \frac{R_{f1}R_{f2}}{R_{i1}R{i2}}\frac{K}{(1+sR_{f1}C_{f1})(1+sR_{f2}C_{f2})}
+	\label{eq:producto1}
 \end{equation}
 
 \onecolumn
@@ -135,8 +133,5 @@ Si el AO3 es buffer ($G_3(s)=1$) y AO1, AO2 tienen cada uno la forma \eqref{eq:s
 \[
 G_{\text{ol}}(s)
 = \Big(-\frac{Z_{f1}(s)}{R_{i1}}\Big)\,
-\Big(-\frac{Z_{f2}(s)}{R_{i2}}\Big)\,
-(1),
-\quad
-Z_{fk}(s)=\frac{R_{fk}}{1+sR_{fk}C_{fk}}.
+\Big(-\frac{Z_{f2}(s)}{R_{i2}}\Big)\
 \]
