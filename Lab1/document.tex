@@ -169,10 +169,54 @@
 	rulecolor=\color{black!20}
 }
 
+% --- Código C con listings ---
+\usepackage{listings}
+\usepackage{listingsutf8}
+\usepackage{xcolor}
+
+\lstdefinestyle{cstyle}{
+	language=C,
+	inputencoding=utf8,
+	basicstyle=\ttfamily\small,         % fuente monoespaciada
+	keywordstyle=\color{blue}\bfseries, % palabras clave en azul
+	stringstyle=\color{red!60!black},   % strings en rojo oscuro
+	commentstyle=\color{green!40!black}\itshape, % comentarios en verde itálico
+	numbers=left,                       % numerar líneas
+	numberstyle=\tiny,
+	stepnumber=1,
+	numbersep=8pt,
+	showstringspaces=false,
+	breaklines=true,
+	columns=fullflexible,
+	keepspaces=true,
+	frame=single,
+	rulecolor=\color{black!20},
+	linewidth=\columnwidth,             % para que no se salga de columna IEEE
+	xleftmargin=1em
+}
+
+% (Opcional) palabras clave extra de PSoC:
+\lstdefinelanguage{CwithPSOC}[]{C}{
+	morekeywords={uint8,uint16,uint32,int8,int16,int32,
+		bool,true,false,size_t,inline,volatile,
+		CY_ISR,CY_ISR_PROTO,CyGlobalIntEnable,UART_Start,UART_PutString}
+}
+\lstdefinestyle{cpsoc}{style=cstyle,language=CwithPSOC}
+
+% Mapeo de acentos en comentarios (para español):
+\lstset{literate=
+	{á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'\i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+	{Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+	{ñ}{{\~n}}1 {Ñ}{{\~N}}1
+}
+
 
 \begin{document}
 	\input{carat.tex}
 	\input{introduccion.tex}
 	\input{desarrollo.tex}
 	\input{resultados.tex}
+	\onecolumn
+	\tableofcontents
+	
 \end{document}

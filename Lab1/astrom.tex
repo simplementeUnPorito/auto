@@ -1,6 +1,51 @@
 \subsubsection{Implementación del PID de Astr\"om}
-El script de matlab~\ref{lst:mat6}; arma el \textbf{C(s)} analógico ideal (con derivada filtrada). Se cierra el lazo continuo y se usa para fijar 
+\begin{itemize}
+	\item \textbf{Controlador Continuo:}
+\end{itemize}
+
+
+La forma estándar con derivada filtrada es:
+\begin{equation}
+	C(s)=K_p(1+\frac{1}{T_is}+\frac{T_ds}{1+\frac{T_d}{N}s})
+\end{equation}
+\begin{itemize}
+	\item \textbf{Forma incremental (discreta) según Astr\"om:}
+\end{itemize}
+Aplicando Euler hacia atrás (o una variante equivalente usada por Astr\"om) a la parte integral y al derivador filtrado, se obtiene una relación recursiva de segundo orden entre u y e:
+\[
+	U_0u[k]+U_1u[k-1]+U_2u[k-2]=E_0e[k]+E_1e[k-1]+E_2e[k-2]
+\]
+Despejamos u[k]:
+\begin{equation}
+	u[k]=\frac{-U_1}{U_0}u[k-1]+\frac{-U_2}{U_0}u[k-2]+\frac{E_0}{U_0}e[k]+\frac{E_1}{U_0}e[k-1]+\frac{E_2}{U_0}e[k-2]
+\end{equation}
+\begin{itemize}
+	\item \textbf{Definición de coeficientes:}
+\end{itemize}
+\[
+	\alpha_2=\frac{T_dT_i}{T^2},	\qquad	\alpha_1=\frac{NT_i}{T}
+\]
+
+\[
+	\beta_2=\frac{K_p(NT_dT_i+T_dT_i)}{T^2}, \qquad \beta_1=\frac{k_p(NT_i+T_d)}{T}
+\]
+
+\[
+	\beta_0=K_pN,
+\]
+
+\[
+	U_0=\alpha_2+\alpha_1, \qquad U_1=-(2\alpha_2+\alpha_1),
+\]
+\[
+	U_2=\alpha_2, \qquad E_0=\beta_2+\beta_1+\beta_0,
+\]
+\[
+	E_1=-(2\beta_2+\beta_1), \qquad E_2=\beta_2
+\]
+Estos coeficientes serán utilizados en el Matlab~\ref{lst:mat6}
 \onecolumn
+
 \begin{lstlisting}[style=matlabstyle,caption={Script en Matlab},label={lst:mat6}]
 function sim_pid_euler_astrom(G, T, Kp, Ti, Td,N,stepSize,sigma,umin,umax)
 
@@ -80,5 +125,18 @@ end
 
 	
 \end{lstlisting}
-
+\textbf{CAMBIAAAARRR!!!!!!}
+\includegraphics[width=\columnwidth]{img/Astrom1.png}
+\includegraphics[width=\columnwidth]{img/Astrom2.png}
 \twocolumn
+%\insertarfigura{./img/Astrom1.png}{Circuito Modo inversor.}{fig:impedanciaReal}{0.5}
+%\insertarfigura{./img/Astrom2.png}{Circuito Modo inversor.}{fig:impedanciaReal}{0.5}
+\textbf{Se observa en las figuras} que la respuesta ante el ruido mejora un poco, esto es gracias a $T_d$:
+
+\begin{itemize}
+	\item \textbf{Si $T_d$ es grande,} la frecuencia de corte $\omega_c$ es baja $\Rightarrow$ el derivador deja pasar más ruido en la banda de interés.
+	\item \textbf{Si $T_d$ disminuye,} la frecuencia de corte $\omega_c$ aumenta $\Rightarrow$ el filtro atenua más el ruido de alta frecuencia.
+\end{itemize}
+
+
+

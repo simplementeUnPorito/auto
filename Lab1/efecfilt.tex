@@ -1,1 +1,116 @@
 \subsubsection{Analizar efectos del filtro y cambios propuestos}
+Para la implementación del circuito se utilizó un \textbf{Timer} que genera la señal de referencia de forma periódica (figura~\ref{fig:esqPsoc}), almacenando su estado en un registro. De esta manera, también es posible observar el estado lógico de la referencia a través del pin digital \textbf{ref}.
+
+\insertarfigura{./img/Circuito1.png}{Circuito Esquemático utilizado en el Psoc}{fig:esqPsoc}{1}
+
+
+\begin{lstlisting}[style=cstyle,caption={Ejemplo en C},label={lst:c}]
+	#include "project.h"
+	#include <stdio.h>
+	
+	#define ref_max 3.0f
+	#define ref_min 2.0f
+	double ref = ref_min;
+	double e = 0.0;
+	double e_1 = 0.0;
+	double e_2 = 0.0;
+	double u = 0.0;
+	double u_unsat = 0.0;
+	double u_sat = 0.0;
+	double u_1 = 0.0;
+	double u_2 = 0.0;
+	double offset = 2.5f; 
+	uint8 dac_value=0;
+	
+	
+	volatile uint8 flag_5seg = 0;  // Bandera para 5 segundos
+	static uint16 counter = 0;
+	CY_ISR_PROTO(Adquisicion);
+	
+	// ISR del Timer (5 segundos)
+	uint8 flag = '0';
+	float muestra;
+	#define T (double)(1.0/100.0)
+	#define Ts T
+	#define Kp (double) 0.5//4.1
+	#define Ti (double)0.015//0.01
+	#define Td (double)0.005//0.003
+	
+	
+	
+	CY_ISR_PROTO(Adquisicion){
+		//static uint16_t contador = 0;
+		
+		
+		flag = '1';
+		ref = (Status_Reg_1_Read()) ? ref_max : ref_min;
+		isr_1_ClearPending();
+		
+		
+		
+		
+	}
+	
+	
+	int main(void) {
+		uint32 num = counter;
+		char buffer[10];
+		//uint8 i = 0;
+		
+		CyGlobalIntEnable;
+		
+		// Inicializar componentes
+		
+		//UART_Start();           // Iniciar UART
+		Opamp_1_Start();
+		Opamp_2_Start();
+		Opamp_3_Start();
+		ADC_SAR_1_Start();
+		VDAC8_1_Start();
+		Clock_1_Start();
+		isr_1_StartEx(Adquisicion);
+		
+		isr_1_Enable();
+		Timer_1_Start();
+		
+		
+		//float Kp = 0.5;//4.1;
+		
+		//float Td = 0.0003;//0.0001;
+		//float Ti = 0.01;//0.0115;
+		int16 aux=0;
+		VDAC8_1_SetValue(128u);
+		for(;;) {
+			
+			if (flag == '1'){
+				
+				//Cuando se recibe una "I" por el puerto serial
+				//Se inicializa una nueva adquisición de datos
+				flag = '0'; 
+				//Se habilita la digitalización y la INT 1   
+				
+				muestra =ADC_SAR_1_CountsTo_Volts(ADC_SAR_1_GetResult16());
+				// muestra=muestra-2.0;
+				e = ref - muestra; //se calcula el error
+				
+				//se calcula el esfuerzo de control con la ecuacion en diferencia del compensador
+				
+				
+				u =  u_1 + Kp*(((1+(Ts/Ti) + (Td/Ts))*e)  - (1 +(2*Td/Ts))*e_1 + (Td/Ts)*e_2)  ; 
+				
+				dac_value = (uint8)((u / 4.0f) * 255.0f);
+				
+				VDAC8_1_SetValue(dac_value);           
+				
+				u_1 = u;
+				u_2 = u_1;
+				e_2 = e_1;
+				e_1 = e;
+				
+				isr_1_Enable();
+			}
+			
+		}
+	}
+	
+\end{lstlisting}
