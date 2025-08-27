@@ -1,1 +1,84 @@
-\subsubsection{Implementación del PID de Astrom}
+\subsubsection{Implementación del PID de Astr\"om}
+
+\onecolumn
+\begin{lstlisting}[style=matlabstyle,caption={Script en Matlab},label={lst:mat6}]
+function sim_pid_euler_astrom(G, T, Kp, Ti, Td,N,stepSize,sigma,umin,umax)
+
+% ===== Coeficientes PID incremental (Euler + filtro derivativo N) =====
+alpha2 = Td*Ti/(T^2);
+alpha1 = N*Ti/T;
+beta2  = Kp*(N*Td*Ti + Td*Ti)/(T^2);
+beta1  = Kp*(N*Ti + Td)/T;
+beta0  = Kp*N;
+U0 = alpha2 + alpha1;
+U1 = -(2*alpha2 + alpha1);
+U2 = alpha2;
+E0 = beta2 + beta1 + beta0;
+E1 = -(2*beta2 + beta1);
+E2 = beta2;
+% --- Control analógico ---
+numC = Kp*[Ti*Td, Ti, 1];
+denC = [Ti, 0];
+controlador = tf(numC, denC);
+cloop_c = feedback(controlador*G, 1);
+info = stepinfo(cloop_c);
+tend = info.SettlingTime*3;
+wn = (1.8/ info.RiseTime);
+Tstep = (2*pi/wn)/3000;
+t = 0:Tstep:tend;
+td = 0:T:tend;
+%yc = step(cloop_c, t);
+refc  = stepSize*ones(size(t)) + sigma*randn(size(t));   % ref continua
+% Salida continua con la MISMA referencia (ZOH)
+yc = lsim(cloop_c, refc, t);
+% "Digitalización" por muestreo ideal en kT:
+refd  = interp1(t, refc, td, 'linear', 'extrap');        % r[k] = r_c(kT)
+% --- Discretización y lazo discreto ---
+td = 0:T:tend;
+Gd = c2d(G, T, 'zoh');
+[numD, denD] = tfdata(Gd, 'v');
+b0 = numD(2);
+b1 = numD(3);
+a1 = denD(2);
+a2 = denD(3);
+yd   = zeros(size(td));
+ed   = zeros(size(td));
+ud   = zeros(size(td));
+%refd = ones(size(td));
+for k = 3:numel(td)-1
+	ed(k) = refd(k) - yd(k);
+	ud_sinsaturar = (-U1*ud(k-1) + -U2*ud(k-2) + E0*ed(k) + E1*ed(k-1) + E2*ed(k-2))/U0;
+	if ud_sinsaturar >umax
+		ud(k)=umax;
+	elseif ud_sinsaturar<umin
+		ud(k) = umin;
+	else
+		ud(k) = ud_sinsaturar;
+	end
+	yd(k+1) = b0*ud(k) + b1*ud(k-1) - a1*yd(k) - a2*yd(k-1);
+end
+% === Graficar ===
+yshift = circshift(yd, -2);
+figure;
+yyaxis left
+plot(t*1000, refc, ':','Color','#B0B0B0'); hold on;
+plot(t*1000, yc, '--','LineWidth',1.3);
+stairs(td*1000, yshift,'-','LineWidth',1.2);
+ylabel('Salida');
+yyaxis right
+plot(td*1000, ud, 'r--','LineWidth',1.2);
+ylabel('u_d(k)');
+xlabel('Tiempo [ms]');
+title(sprintf('PID Astrom: Kp=%.3g, Ti=%.3g, Td=%.3g, N=%.3g', Kp, Ti, Td,N));
+legend(sprintf('Escalon Ruidoso (A=%.3g, $\\sigma$=%.3g)', stepSize, sigma), ...
+'Respuesta al Escalon Continua sin Wind-Up', ...
+'Respuesta al Escalon Discreta con Wind-Up', ...
+sprintf('Esfuerzo de Control (Rango:%.3g-%.3g)',umin,umax), ...
+'Location', 'best', 'Interpreter','latex');
+grid on;
+end
+
+	
+\end{lstlisting}
+
+\twocolumn
