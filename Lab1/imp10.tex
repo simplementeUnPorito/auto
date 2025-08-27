@@ -1,3 +1,4 @@
+\twocolumn
 \subsubsection{ Implementación con un tiempo de muestreo de 10 veces el ancho de banda del sistema
 }
 
@@ -13,6 +14,7 @@ La simulación se realiza con:
 \]
 
 En la Figura~\ref{fig:fs10} se observa que la respuesta discreta no reproduce bien a la continua: se introduce más retardo y el seguimiento al escalón empeora.
+Un muestreo de 10 veces el ancho de banda apenas alcanza para representar la dinámica dominante. El efecto combinado del ZOH y la discretización generan un retardo en la fase, reduciendo el desempeño.  
 
 \begin{figure}[!t]
 	\centering
@@ -21,9 +23,7 @@ En la Figura~\ref{fig:fs10} se observa que la respuesta discreta no reproduce bi
 	\label{fig:fs10}
 \end{figure}
 
-\paragraph{Discusión.} Un muestreo $10\times$ el ancho de banda apenas alcanza para representar la dinámica dominante. El efecto combinado del ZOH y del derivativo incrementa el retardo de fase, reduciendo el desempeño.  
 
----
 
 \subsubsection{ Implementación con un tiempo de muestreo de 30 veces el ancho de banda del sistema
 }
@@ -32,7 +32,7 @@ Al triplicar la frecuencia de muestreo:
 \[
 f_s = 30 f_{\mathrm{bw}}, \qquad T = \frac{1}{f_s},
 \]
-la Figura~\ref{fig:fs30} muestra una mejora clara: la respuesta discreta se asemeja mucho más a la continua, con menor error y transitorios más suaves.
+Podemos ver en la Figura~\ref{fig:fs30} muestra una mejora clara: la respuesta discreta se asemeja mucho más a la continua, con menor error y transitorios más suaves.
 
 \begin{figure}[!t]
 	\centering
