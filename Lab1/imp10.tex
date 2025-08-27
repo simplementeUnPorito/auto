@@ -1,1 +1,131 @@
-\subsubsection{Implementar con un tiempo de muestreo de 10 veces el ancho de banda del sistema y evaluar el comportamiento}
+\subsubsection{ Implementación con un tiempo de muestreo de 10 veces el ancho de banda del sistema
+}
+
+
+Si muestreamos 10 veces el ancho de banda:
+\[
+f_s = 10 f_{\mathrm{bw}}, \qquad T = \frac{1}{f_s}.
+\]
+
+La simulación se realiza con:
+\[
+\texttt{sim\_pid\_euler\_ideal(G,\,T,\,Kp,\,Ti,\,Td,\,1);}
+\]
+
+En la Figura~\ref{fig:fs10} se observa que la respuesta discreta no reproduce bien a la continua: se introduce más retardo y el seguimiento al escalón empeora.
+
+\begin{figure}[!t]
+	\centering
+	\includegraphics[width=\columnwidth]{img/fs10.png}
+	\caption{Respuesta con $f_s=10 f_{\mathrm{bw}}$: la discretización no es suficiente y la respuesta discreta se aparta del continuo.}
+	\label{fig:fs10}
+\end{figure}
+
+\paragraph{Discusión.} Un muestreo $10\times$ el ancho de banda apenas alcanza para representar la dinámica dominante. El efecto combinado del ZOH y del derivativo incrementa el retardo de fase, reduciendo el desempeño.  
+
+---
+
+\subsubsection{ Implementación con un tiempo de muestreo de 30 veces el ancho de banda del sistema
+}
+
+Al triplicar la frecuencia de muestreo:
+\[
+f_s = 30 f_{\mathrm{bw}}, \qquad T = \frac{1}{f_s},
+\]
+la Figura~\ref{fig:fs30} muestra una mejora clara: la respuesta discreta se asemeja mucho más a la continua, con menor error y transitorios más suaves.
+
+\begin{figure}[!t]
+	\centering
+	\includegraphics[width=\columnwidth]{img/fs30.png}
+	\caption{Respuesta con $f_s=30 f_{\mathrm{bw}}$: el lazo discreto reproduce con mayor fidelidad al continuo.}
+	\label{fig:fs30}
+\end{figure}
+
+\paragraph{Limitación con Ziegler--Nichols.}  
+Al usar parámetros obtenidos con ZN, el control logra buen seguimiento, pero el esfuerzo de control $u_d[k]$ supera en más de dos órdenes de magnitud la capacidad de los DAC del PSoC (Figura~\ref{fig:zn_effort}). Esto vuelve la solución impracticable.
+
+\begin{figure}[!t]
+	\centering
+	\includegraphics[width=\columnwidth]{img/zn_effort.png}
+	\caption{Sintonía ZN: buena respuesta, pero esfuerzo $u_d[k]$ excesivo (no implementable).}
+	\label{fig:zn_effort}
+\end{figure}
+
+Para evidenciarlo, añadimos ruido y saturación al esfuerzo. El resultado (Figura~\ref{fig:sat_noise}) confirma que el sistema no puede seguir al escalón bajo esas condiciones.
+
+\begin{figure}[!t]
+	\centering
+	\includegraphics[width=\columnwidth]{img/sat_noise.png}
+	\caption{PID discreto con ruido y saturación: se observa windup y pérdida total del seguimiento.}
+	\label{fig:sat_noise}
+\end{figure}
+
+---
+
+\subsubsection*{Simulación con saturación y ruido}
+
+Se implementó la siguiente función que permite incluir saturación y ruido gaussiano en la referencia:
+
+\begin{lstlisting}[language=Matlab,style=matlabstyle, caption={PID discreto con saturación y ruido}, label={lst:pid_sat_noise}]
+	function sim_pid_euler(G, T, Kp, Ti, Td, stepSize, sigma, umin, umax)
+	% --- Control continuo (referencia) ---
+	numC = Kp*[Ti*Td, Ti, 1]; denC = [Ti, 0];
+	controlador = tf(numC, denC);
+	cloop_c = feedback(controlador*G, 1);
+	info  = stepinfo(cloop_c);
+	tend  = 3*info.SettlingTime;
+	wn    = 1.8/info.RiseTime;
+	Tstep = (2*pi/wn)/1000;
+	t  = 0:Tstep:tend;
+	td = 0:T:tend;
+	
+	% Referencia con ruido
+	refc = stepSize*ones(size(t)) + sigma*randn(size(t));
+	yc   = lsim(cloop_c, refc, t);
+	refd = interp1(t, refc, td, 'linear', 'extrap');
+	
+	% --- Planta discreta (ZOH) ---
+	Gd = c2d(G, T, 'zoh');
+	[numD, denD] = tfdata(Gd, 'v');
+	b0 = numD(2); b1 = numD(3);
+	a1 = denD(2); a2 = denD(3);
+	
+	% Inicialización
+	yd = zeros(size(td));
+	ed = zeros(size(td));
+	ud = zeros(size(td));
+	
+	% --- PID incremental con saturación ---
+	for k = 3:numel(td)-1
+	ed(k) = refd(k) - yd(k);
+	u_inc = ud(k-1) + Kp*((1+T/Ti+Td/T)*ed(k) ...
+	-(1+2*Td/T)*ed(k-1) ...
+	+(Td/T)*ed(k-2));
+	% Saturación
+	if u_inc > umax
+	ud(k) = umax;
+	elseif u_inc < umin
+	ud(k) = umin;
+	else
+	ud(k) = u_inc;
+	end
+	% Planta discreta
+	yd(k+1) = b0*ud(k) + b1*ud(k-1) - a1*yd(k) - a2*yd(k-1);
+	end
+	
+	% --- Gráficos ---
+	yshift = circshift(yd, -2);
+	figure; hold on; grid on;
+	yyaxis left
+	plot(t*1000, refc, ':','Color',[0.7 0.7 0.7]);
+	plot(t*1000, yc,  '--','LineWidth',1.3);
+	stairs(td*1000, yshift,'-','LineWidth',1.2);
+	ylabel('Salida');
+	yyaxis right
+	plot(td*1000, ud, 'r--','LineWidth',1.2);
+	ylabel('u_d[k]');
+	xlabel('Tiempo [ms]');
+	title(sprintf('PID discreto: Kp=%.3g, Ti=%.3g, Td=%.3g', Kp, Ti, Td));
+	legend('Referencia','Continuo ideal','Discreto sat+ruido','u_d');
+	end
+\end{lstlisting}
