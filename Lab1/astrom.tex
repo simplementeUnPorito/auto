@@ -1,5 +1,5 @@
 \subsubsection{Implementación del PID de Astr\"om}
-
+El script de matlab~\ref{lst:mat6}; arma el \textbf{C(s)} analógico ideal (con derivada filtrada). Se cierra el lazo continuo y se usa para fijar 
 \onecolumn
 \begin{lstlisting}[style=matlabstyle,caption={Script en Matlab},label={lst:mat6}]
 function sim_pid_euler_astrom(G, T, Kp, Ti, Td,N,stepSize,sigma,umin,umax)
