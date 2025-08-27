@@ -1,1 +1,100 @@
-\subsubsection{Discretización del sistema}
+\subsubsection{Discretización del sistema y el compensador}
+
+Para implementar el PID en forma digital partimos del controlador continuo y sustituimos la derivada por una aproximación en diferencias. Usaremos Euler hacia atrás (robusta y causal):
+\[
+\left.\frac{dx(t)}{dt}\right|_{t=kT} \approx \frac{x[k]-x[k-1]}{T}.
+\]
+
+
+Aplicado al PID continuo y reordenando en forma \emph{incremental}, se obtiene la ley de control discreta ``textbook'':
+\begingroup\small
+\begin{equation}
+	\label{eq:pid_incremental}
+	\begin{aligned}
+		u_d[k] = u_d[k-1] + K_p \big[\, &
+		\left(1+\tfrac{T}{T_i}+\tfrac{T_d}{T}\right)e_d[k] \\
+		& -\left(1+\tfrac{2T_d}{T}\right)e_d[k-1]
+		+\left(\tfrac{T_d}{T}\right)e_d[k-2] \big].
+	\end{aligned}
+\end{equation}
+\endgroup
+
+
+
+\paragraph{Planta discreta con ZOH.}
+Para cerrar el lazo en simulación digital con una planta analógica \(G(s)\), modelamos la digitalización con un retenedor de orden cero (ZOH) y muestreo \(T\):
+\[
+G_d(z) \;=\; \mathrm{c2d}\!\left(G(s),\,T,\,\texttt{'zoh'}\right).
+\]
+Esto captura el efecto de mantener constante la señal entre muestras, que es lo que hace un DAC ideal con ZOH.
+
+\paragraph{Elección del tiempo de muestreo.}
+Conocido el tiempo de subida \(t_r\) (Tabla~\ref{tab:pid_resultados}), para un segundo orden típico \( \omega_n \approx 1.8/t_r\). Un periodo característico es \(T_0 = 2\pi/\omega_n\). Como regla práctica, debemos utilizar un \(T\ll T_0\).
+
+
+
+\onecolumn
+\paragraph{Implementación utilizada.}
+Primero comparamos contra el control \emph{continuo} (referencia) y luego simulamos el \emph{discreto} sobre \(G_d\). A continuación, la función:
+
+\begin{lstlisting}[language=Matlab,style=matlabstyle, caption={Simulacion PID incremental (Euler) vs continuo}, label={lst:pid_euler_ideal}]
+	function sim_pid_euler_ideal(G, T, Kp, Ti, Td, stepSize)
+	% --- Control continuo (referencia) ---
+	numC = Kp*[Ti*Td, Ti, 1];
+	denC = [Ti, 0];
+	controlador = tf(numC, denC);
+	cloop_c = feedback(controlador*G, 1);
+	info  = stepinfo(cloop_c);
+	tend  = 3*info.SettlingTime;
+	wn    = 1.8/info.RiseTime;
+	Tstep = (2*pi/wn)/3000;   % paso muy fino para "continuo" ideal
+	t  = 0:Tstep:tend;
+	td = 0:T:tend;
+	
+	% Referencia
+	refc = stepSize*ones(size(t));
+	yc   = lsim(cloop_c, refc, t);
+	refd = interp1(t, refc, td, 'linear', 'extrap');
+	
+	% --- Planta discreta (ZOH) ---
+	Gd = c2d(G, T, 'zoh');
+	[numD, denD] = tfdata(Gd, 'v');
+	
+	% OJO: asumimos forma b0 + b1 z^-1 + b2 z^-2 / (1 + a1 z^-1 + a2 z^-2)
+	% ajusta indices segun el orden real de Gd
+	b0 = numD(2); b1 = numD(3);
+	a1 = denD(2); a2 = denD(3);
+	
+	% Inicializacion
+	yd = zeros(size(td));
+	ed = zeros(size(td));
+	ud = zeros(size(td));
+	
+	% --- PID incremental (Euler atras) ---
+	for k = 3:numel(td)-1
+	ed(k) = refd(k) - yd(k);
+	ud(k) = ud(k-1) + Kp*((1+T/Ti+Td/T)*ed(k) ...
+	-(1+2*Td/T)*ed(k-1) ...
+	+(Td/T)*ed(k-2));
+	% Planta discreta (diferencia)
+	yd(k+1) = b0*ud(k) + b1*ud(k-1) - a1*yd(k) - a2*yd(k-1);
+	end
+	
+	% --- Graficos ---
+	yshift = circshift(yd, -2); % alinear por uso de e[k-2]
+	figure; grid on; hold on;
+	yyaxis left
+	plot(t*1000, refc, ':');         % referencia
+	plot(t*1000, yc,  '--','LineWidth',1.3);  % continuo
+	stairs(td*1000, yshift,'-','LineWidth',1.2); % discreto
+	ylabel('Salida');
+	yyaxis right
+	plot(td*1000, ud, 'r--','LineWidth',1.2);
+	ylabel('u_d[k]');
+	xlabel('Tiempo [ms]');
+	title(sprintf('PID Euler: Kp=%.3g, Ti=%.3g, Td=%.3g', Kp, Ti, Td));
+	legend('Referencia','Continuo','Discreto','u_d','Location','best');
+	end
+\end{lstlisting}
+
+
