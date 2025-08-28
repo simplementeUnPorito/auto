@@ -112,13 +112,25 @@ int main(void) {
 \end{lstlisting}
 \twocolumn
 \paragraph{Resultados Osciloscopio}
-En primer lugar, se simuló el \textbf{textbook} utilizando dos frecuencias diferentes: \SI{100}{\hertz} y \SI{300}{\hertz}.
-
+En primer lugar, se realizó la experiencia práctica con el \textbf{textbook}, utilizando dos frecuencias diferentes: \SI{100}{\hertz} y \SI{300}{\hertz}.
 \insertarfigura{./img/textbook100.jpg}{Implementación a \SI{100}{\hertz}}{fig:imp100}{1}
+
+
+
 \insertarfigura{./img/textbook300.jpg}{Implementación a \SI{300}{\hertz}}{fig:imp300}{1}
 
-\insertarfigura{./img/sinAstrom.jpg}{Implementación sin Astr\"om}{fig:impsas}{1}
-\insertarfigura{./img/sinAstrom1.jpg}{Implementación sin Astr\"om}{fig:impsas1}{1}
+En la figura~\ref{fig:imp100} y~\ref{fig:imp300}, se observan las señales \textbf{cían} que será la \textit{referencia}, \textbf{magenta} el cual es el \textit{esfuerzo de control} y la señal \textbf{amarilla} es la \textit{señal de salida}. \hfill \break
+La implementación práctica con el circuito textbook demuestra que, a \SI{100}{\hertz} (figura~\ref{fig:imp100}), el PID logra un buen seguimiento de la referencia, mientras que a \SI{300}{\hertz} (figura~\ref{fig:imp300}) la respuesta de la salida se ve muy atenuada, lo que evidencia las limitaciones dinámicas del sistema. Cabe destacar que, aunque a \SI{100}{\hertz} la respuesta parezca adecuada, esta frecuencia es aproximadamente diez veces mayor que el ancho de banda del sistema, mientras que a \SI{300}{\hertz} es treinta veces mayor. En consecuencia, la salida aparenta seguir la referencia de muy bien, pero al aumentar la referencia se hace evidente la incapacidad del sistema para responder correctamente.
+
+Luego se hizo la experiencia práctica con saturaci\'on y sin saturaci\'on, ambos sin Astr\"om:
+\insertarfigura{./img/sinAstrom.jpg}{Implementación sin saturaci\'on}{fig:satsina}{1}
+\insertarfigura{./img/sinAstrom1.jpg}{Implementación con saturaci\'on}{fig:sinsatsina}{1}
+
+En la figura~\ref{fig:satsina} y~\ref{fig:sinsatsina}, se observan las señales \textbf{cían} que será la \textit{referencia}, \textbf{magenta} el cual es el \textit{esfuerzo de control} y la señal \textbf{amarilla} es la \textit{señal de salida}. \hfill \break
+Antes de implementar el método de Aström, se evaluó el circuito a \SI{300}{\hertz} con y sin saturación. 
+\textbf{Con saturación}, el esfuerzo de control se recorta en los límites, lo que incrementa el error y atenúa aún más la salida. 
+\textbf{Sin saturación}, el esfuerzo alcanza picos mayores y la respuesta mejora levemente; sin embargo, la frecuencia de referencia permanece muy por encima del ancho de banda del sistema, por lo que el seguimiento sigue siendo deficiente. 
+Estos resultados reflejan que la principal limitación es dinámica (banda de paso) y que la saturación agrava el desempeño, además de introducir riesgo de \emph{windup} del integrador. \hfill \break
 
 \onecolumn
 \paragraph{Modificación del código para la implementación del método de Astr\"om}
@@ -160,5 +172,14 @@ else u = u_unsat;
 \end{lstlisting}
 
 \twocolumn
+
+Posteriormente, se realizó la experiencia práctica con y sin saturación, en ambos casos utilizando el método de Astr\"om.
 \insertarfigura{./img/sinsat300.jpg}{Implementación sin Saturar a \SI{300}{\hertz}, con Astr\"om}{fig:sinsat300}{1}
 \insertarfigura{./img/sat300.jpg}{Implementación Saturarando a \SI{300}{\hertz}, con Astr\"om}{fig:sat300}{1}
+
+En la figura~\ref{fig:sinsat300} y~\ref{fig:sat300}, se observan las señales \textbf{cían} que será la \textit{referencia},la señal \textbf{amarilla} es la \textit{señal de salida} y \textbf{magenta} el cual es el \textit{esfuerzo de control}. \hfill \break
+
+
+
+
+
