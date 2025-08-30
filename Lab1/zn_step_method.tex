@@ -1,10 +1,16 @@
+\twocolumn
 \section{Sintonía PID en Lazo Abierto (Ziegler--Nichols, método de respuesta al escalón)}
 
-El método consiste en analizar la respuesta al escalón de la planta en lazo abierto, identificar el punto de \emph{máxima pendiente} y trazar la tangente en ese punto. A partir de las intersecciones de esa recta con el nivel inicial (0) y el valor final \(K=\mathrm{dcgain}(G)\), se obtienen los parámetros \(\,L\,\) (tiempo muerto aparente) y \(\,T\,\) (constante aparente) del modelo. Con \(L\) y \(T\) se definen las ganancias iniciales del PID según Ziegler--Nichols.
+El método consiste en analizar la respuesta al escalón de la planta en lazo abierto, identificar el punto de \emph{máxima pendiente} y trazar la tangente en ese punto. A partir de las intersecciones de esa recta con el nivel inicial (0) y el valor final de tiempo estacionario \(K\), se obtienen los parámetros \(\,L\,\) (tiempo muerto aparente) y \(\,T\,\) (constante aparente) del modelo. Con \(L\) y \(T\) se definen las ganancias iniciales del PID según Ziegler--Nichols.
 
 Para esto se utilizó el siguiente script de MatLab:
-\onecolumn
-\subsection{Script utilizado}
+
+
+\begin{strip}
+	\vspace{-\baselineskip} % ajusta si ves demasiado aire arriba
+	\noindent
+	\begin{minipage}{0.98\textwidth}
+
 \begin{lstlisting}[language=Matlab,style = matlabstyle, caption={ZN por respuesta al escalon: extraccion de L y T y calculo de PID}, label={lst:zn_step}, frame=single]
 	% ======= Step Response Method (ZN) =======
 	[L, T, S, t_max] = zn_step_params(G, ts, wn);
@@ -40,16 +46,16 @@ Para esto se utilizó el siguiente script de MatLab:
 	end
 \end{lstlisting}
 
-\twocolumn
+\end{minipage}
+\vspace{-\baselineskip} % ajusta si ves aire abajo
+\end{strip}
 
 La función genera como salida la respuesta al escalón de la planta junto con la tangente en el punto de máxima pendiente, señalando los valores de \(L\) y \(L+T\). En la Figura~\ref{fig:zn_step_out} se muestra la gráfica exportada desde Matlab.
 
-\begin{figure}[!t]
-	\centering
-	\includegraphics[width=\columnwidth]{img/zn_step_response.png} % <-- coloca aquí tu imagen exportada
-	\caption{Respuesta al escalón en lazo abierto con la tangente en el punto de máxima pendiente y la Respuesta al escalon en lazo cerrado usando los valores de \(K_p,T_i\) y \(T_d\) obtenidos por el metodo.}
-	\label{fig:zn_step_out}
-\end{figure}
+
+
+\insertarfigurawide{./img/zn_step_response.png}{Respuesta al escalón en lazo abierto (curva azul oscuro) con la tangente (linea roja punteada) en el punto de máxima pendiente (punto rojo) y la Respuesta al escalon en lazo cerrado (curva celeste) usando los valores de \(K_p,T_i\) y \(T_d\) obtenidos por el metodo.}{fig:zn_step_out}{1}
+
 
 \subsubsection*{Cálculo de \(K\), \(L\) y \(T\)}
 \begin{itemize}
@@ -76,7 +82,6 @@ La función genera como salida la respuesta al escalón de la planta junto con l
 		\end{tabular}%
 	}
 \end{table}
-
 
 Aplicando este método a nuestra planta se encontró:
 \[

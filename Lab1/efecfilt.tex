@@ -1,15 +1,14 @@
+\insertarfigurawide{./img/Circuito1.png}{Circuito Esquemático utilizado en el Psoc.}{fig:esqPsoc}{0.8}
+
 \subsubsection{Analizar efectos del filtro y cambios propuestos}
 Para la implementación del circuito se utilizó un \textbf{Timer} que genera la señal de referencia de forma periódica (figura~\ref{fig:esqPsoc}), almacenando su estado en un registro. De esta manera, también es posible observar el estado lógico de la referencia a través del pin digital \textbf{ref}.  
 
-Durante la práctica no se disponía de resistencias de \SI{75}{k\ohm}, por lo que se reemplazaron por un valor cercano de \SI{82}{k\ohm}. Si bien el polo generado no presenta una variación significativa, los parámetros de sintonía $K_p$, $T_i$ y $T_d$ sí se ven afectados de manera considerable, como se mostrará más adelante.
+Durante la práctica no se disponía de resistencias de \(75k\Omega\), por lo que se reemplazaron por un valor cercano de \(82k\Omega\). Si bien el polo generado no presenta una variación significativa, los parámetros de sintonía $K_p$, $T_i$ y $T_d$ sí se ven afectados de manera considerable, como se mostrará más adelante.
 
-
-\insertarfigura{./img/Circuito1.png}{Circuito Esquemático utilizado en el Psoc}{fig:esqPsoc}{1}
+El código \ref{lst:c} fue desarrollado para el calculo del esfuerzo de control.
 \onecolumn
-
-\paragraph{Código implementado en el PSoC}\hfill \break
-
-\begin{lstlisting}[style=cstyle,caption={Código completo del PSoC},label={lst:c}]
+\begin{minipage}{0.98\textwidth}
+	\begin{lstlisting}[style=cstyle]
 #include "project.h"
 #include <stdio.h>
 
@@ -46,7 +45,7 @@ CY_ISR_PROTO(Adquisicion){
 	flag = '1';
 	ref = (Status_Reg_1_Read()) ? ref_max : ref_min;
 	isr_1_ClearPending();
-
+	
 }
 
 int main(void) {
@@ -76,6 +75,13 @@ int main(void) {
 	//float Ti = 0.01;//0.0115;
 	int16 aux=0;
 	VDAC8_1_SetValue(128u);
+\end{lstlisting}
+\end{minipage}
+
+
+
+\begin{minipage}{0.98\textwidth}
+\begin{lstlisting}[style=cstyle,caption={Código completo del PSoC},label={lst:c}]
 	for(;;) {
 		
 		if (flag == '1'){
@@ -108,29 +114,25 @@ int main(void) {
 		
 	}
 }
-	
 \end{lstlisting}
+\end{minipage}
 \twocolumn
 \paragraph{Resultados Osciloscopio}
-En primer lugar, se realizó la experiencia práctica con el \textbf{textbook}, utilizando dos frecuencias diferentes: \SI{100}{\hertz} y \SI{300}{\hertz}.
+En primer lugar, se realizó la experiencia práctica con el \textbf{textbook}, utilizando dos frecuencias de muestreo diferentes: \SI{100}{\hertz} y \SI{300}{\hertz}.
 \insertarfigura{./img/textbook100.jpg}{Implementación a \SI{100}{\hertz}}{fig:imp100}{1}
-
-
-
 \insertarfigura{./img/textbook300.jpg}{Implementación a \SI{300}{\hertz}}{fig:imp300}{1}
 
 En la figura~\ref{fig:imp100} y~\ref{fig:imp300}, se observan las señales \textbf{cían} que será la \textit{referencia}, \textbf{magenta} el cual es el \textit{esfuerzo de control} y la señal \textbf{amarilla} es la \textit{señal de salida}. \hfill \break
-La implementación práctica con el circuito textbook demuestra que, a \SI{100}{\hertz} (figura~\ref{fig:imp100}), el PID logra un buen seguimiento de la referencia, mientras que a \SI{300}{\hertz} (figura~\ref{fig:imp300}) la respuesta de la salida se ve muy atenuada, lo que evidencia las limitaciones dinámicas del sistema. Cabe destacar que, aunque a \SI{100}{\hertz} la respuesta parezca adecuada, esta frecuencia es aproximadamente diez veces mayor que el ancho de banda del sistema, mientras que a \SI{300}{\hertz} es treinta veces mayor. En consecuencia, la salida aparenta seguir la referencia de muy bien, pero al aumentar la referencia se hace evidente la incapacidad del sistema para responder correctamente.
+La implementación práctica con el circuito textbook demuestra que, a \SI{100}{\hertz} (figura~\ref{fig:imp100}), el PID logra el seguimiento de la referencia, pero en la implementación a \SI{300}{\hertz} (figura~\ref{fig:imp300}) la respuesta de la respuesta se asemeja más a lo esperado con por los calculos, presentando un pico de esfuerzo al inicio del pulso.
 
-Luego se hizo la experiencia práctica con saturaci\'on y sin saturaci\'on, ambos sin Astr\"om:
-\insertarfigura{./img/sinAstrom.jpg}{Implementación sin saturaci\'on}{fig:satsina}{1}
-\insertarfigura{./img/sinAstrom1.jpg}{Implementación con saturaci\'on}{fig:sinsatsina}{1}
 
-En la figura~\ref{fig:satsina} y~\ref{fig:sinsatsina}, se observan las señales \textbf{cían} que será la \textit{referencia}, \textbf{magenta} el cual es el \textit{esfuerzo de control} y la señal \textbf{amarilla} es la \textit{señal de salida}. \hfill \break
-Antes de implementar el método de Aström, se evaluó el circuito a \SI{300}{\hertz} con y sin saturación. 
-\textbf{Con saturación}, el esfuerzo de control se recorta en los límites, lo que incrementa el error y atenúa aún más la salida. 
-\textbf{Sin saturación}, el esfuerzo alcanza picos mayores y la respuesta mejora levemente; sin embargo, la frecuencia de referencia permanece muy por encima del ancho de banda del sistema, por lo que el seguimiento sigue siendo deficiente. 
-Estos resultados reflejan que la principal limitación es dinámica (banda de paso) y que la saturación agrava el desempeño, además de introducir riesgo de \emph{windup} del integrador. \hfill \break
+\insertarfigura{./img/sinAstrom.jpg}{Implementación sin manejo de la saturaci\'on}{fig:satsina}{1}
+
+
+En la figura~\ref{fig:satsina}, se observan las señales \textbf{cían} que será la \textit{referencia}, \textbf{magenta} el cual es el \textit{esfuerzo de control} y la señal \textbf{amarilla} es la \textit{señal de salida}. \hfill \break
+Antes de implementar el método de Aström, se evaluó el circuito a \SI{300}{\hertz} saturando la referencia. 
+\textbf{Con saturación}, el esfuerzo de control se recorta en los límites, lo que incrementa el error, además que al realizar el cálculo del esfuerzo sin cuidado, se puede dar giro de los bits, como se ve en la figura \ref{fig:satsina}. 
+
 
 \onecolumn
 \paragraph{Modificación del código para la implementación del método de Astr\"om}
@@ -177,7 +179,8 @@ Posteriormente, se realizó la experiencia práctica con y sin saturación, en a
 \insertarfigura{./img/sinsat300.jpg}{Implementación sin Saturar a \SI{300}{\hertz}, con Astr\"om}{fig:sinsat300}{1}
 \insertarfigura{./img/sat300.jpg}{Implementación Saturarando a \SI{300}{\hertz}, con Astr\"om}{fig:sat300}{1}
 
-En la figura~\ref{fig:sinsat300} y~\ref{fig:sat300}, se observan las señales \textbf{cían} que será la \textit{referencia},la señal \textbf{amarilla} es la \textit{señal de salida} y \textbf{magenta} el cual es el \textit{esfuerzo de control}. \hfill \break
+En la figura~\ref{fig:sinsat300} y~\ref{fig:sat300}, se observan las señales \textbf{cían} que será la \textit{referencia},la señal \textbf{amarilla} es la \textit{señal de salida} y \textbf{magenta} el cual es el \textit{esfuerzo de control}.
+Se puede ver cómo el esfuerzo presenta una paulatina mejora en su inmunidad ante el ruido y además evita el \textit{Wind-up} y no linealidades inesperadas e indeseadas. \hfill \break
 
 
 

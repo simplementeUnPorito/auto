@@ -1,6 +1,6 @@
 \subsubsection{Discretización del sistema y el compensador}
 
-Para implementar el PID en forma digital partimos del controlador continuo y sustituimos la derivada por una aproximación en diferencias. Usaremos Euler hacia atrás (robusta y causal):
+Para implementar el PID en forma digital partimos del controlador continuo y sustituimos las derivadas (multiplicar por \(s\) en el la el reino de la frecuencia) por una aproximación en ecuación en diferencias. Usaremos Euler hacia atrás:
 \[
 \left.\frac{dx(t)}{dt}\right|_{t=kT} \approx \frac{x[k]-x[k-1]}{T}.
 \]
@@ -26,18 +26,22 @@ Para cerrar el lazo en simulación digital con una planta analógica \(G(s)\), m
 \[
 G_d(z) \;=\; \mathrm{c2d}\!\left(G(s),\,T,\,\texttt{'zoh'}\right).
 \]
-Esto captura el efecto de mantener constante la señal entre muestras, que es lo que hace un DAC ideal con ZOH.
+Esto captura el efecto de mantener constante la señal entre muestras, que es lo que haría un DAC ideal.
 
 \paragraph{Elección del tiempo de muestreo.}
-Conocido el tiempo de subida \(t_r\) (Tabla~\ref{tab:pid_resultados}), para un segundo orden típico \( \omega_n \approx 1.8/t_r\). Un periodo característico es \(T_0 = 2\pi/\omega_n\). Como regla práctica, debemos utilizar un \(T\ll T_0\).
+Conocido el tiempo de subida \(t_r\) (Tabla~\ref{tab:pid_resultados}), y suponiendo que el sistema es de segundo orden, sabemos que  \( \omega_n \approx 1.8/t_r\). Siendo entonces \(T_0 = 2\pi/\omega_n\). podemos tomar como regla práctica un periodo de muestreo \(T\ll T_0\) como suficiente para obtener resultados similares con el controlador digitalizado a lo diseñado en tiempo continuo.
 
 
 
-\onecolumn
+
 \paragraph{Implementación utilizada.}
-Primero comparamos contra el control \emph{continuo} (referencia) y luego simulamos el \emph{discreto} sobre \(G_d\). A continuación, la función:
+Para comparar el control \emph{continuo} (referencia) y su versión \emph{disctretizada} con un tiempo de muestreo \(T\), desarrollamos la siguiente función:
 
-\begin{lstlisting}[language=Matlab,style=matlabstyle, caption={Simulacion PID incremental (Euler) vs continuo}, label={lst:pid_euler_ideal}]
+\begin{strip}
+	\vspace{-\baselineskip} % ajusta si ves demasiado aire arriba
+	\noindent
+	\begin{minipage}{0.98\textwidth}
+\begin{lstlisting}[language=Matlab,style=matlabstyle]
 	function sim_pid_euler_ideal(G, T, Kp, Ti, Td, stepSize)
 	% --- Control continuo (referencia) ---
 	numC = Kp*[Ti*Td, Ti, 1];
@@ -55,11 +59,24 @@ Primero comparamos contra el control \emph{continuo} (referencia) y luego simula
 	refc = stepSize*ones(size(t));
 	yc   = lsim(cloop_c, refc, t);
 	refd = interp1(t, refc, td, 'linear', 'extrap');
-	
-	% --- Planta discreta (ZOH) ---
+
+\end{lstlisting}
+
+\end{minipage}
+\vspace{-\baselineskip} % ajusta si ves aire abajo
+\end{strip}
+
+
+
+
+\begin{strip}
+	\vspace{-\baselineskip} % ajusta si ves demasiado aire arriba
+	\noindent
+	\begin{minipage}{0.98\textwidth}
+		\begin{lstlisting}[language=Matlab,style=matlabstyle, caption={Simulacion PID incremental (Euler) vs continuo}, label={lst:pid_euler_ideal}]
+		% --- Planta discreta (ZOH) ---
 	Gd = c2d(G, T, 'zoh');
 	[numD, denD] = tfdata(Gd, 'v');
-	
 	% OJO: asumimos forma b0 + b1 z^-1 + b2 z^-2 / (1 + a1 z^-1 + a2 z^-2)
 	% ajusta indices segun el orden real de Gd
 	b0 = numD(2); b1 = numD(3);
@@ -95,6 +112,8 @@ Primero comparamos contra el control \emph{continuo} (referencia) y luego simula
 	title(sprintf('PID Euler: Kp=%.3g, Ti=%.3g, Td=%.3g', Kp, Ti, Td));
 	legend('Referencia','Continuo','Discreto','u_d','Location','best');
 	end
-\end{lstlisting}
-
-
+		\end{lstlisting}
+		
+	\end{minipage}
+	\vspace{-\baselineskip} % ajusta si ves aire abajo
+\end{strip}

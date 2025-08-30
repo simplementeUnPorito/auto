@@ -1,144 +1,128 @@
+
+\insertarfigurawide{./img/Astrom1.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada) saturable, utilizando el primer compensador diseñado, añadiendo ruido a la entrada (curva gris clara) con \(\sigma = 10\%\), utilizando las modificaciones propuestas en el capitulo 6 del Astr\"om.}{fig:astrom1}{0.8}
+
 \subsubsection{Implementación del PID de Astr\"om}
 
 \paragraph{Controlador Continuo}
-
-La forma estándar con derivada filtrada es:
+Para esta implementación, se procedió a añadir un polo al término derivativo, con el objetivo de disminuir su efecto amplificador sobre el ruido de alta frecuencia. Asimismo, la ecuación de transferencia del compensador queda de la siguiente forma:
 \begin{equation}
-	C(s)=K_p(1+\frac{1}{T_is}+\frac{T_ds}{1+\frac{T_d}{N}s})
+	C(s)=K_p\left(1+\frac{1}{T_is}+\frac{T_ds}{1+\frac{T_d}{N}s}\right)
 \end{equation}
 
 \paragraph{Forma incremental (discreta) según Astr\"om}
-Aplicando Euler hacia atrás (o una variante equivalente usada por Astr\"om) a la parte integral y al derivador filtrado, se obtiene una relación recursiva de segundo orden entre u y e:
+Aplicando la aproximación de Euler hacia atrás para las derivadas, previo a derivar ambas partes de la ecuación (buscando reducir la parte integral), se obtiene una ecuación en diferencia de segundo orden entre el esfuerzo \(u[k]\) y el error \(e[k]\):
 
-\[
-	U_0u[k]+U_1u[k-1]+U_2u[k-2]=E_0e[k]+E_1e[k-1]+E_2e[k-2]
-\]
-Despejamos u[k]:
+
 \begin{equation}
-	u[k]=\frac{-U_1}{U_0}u[k-1]+\frac{-U_2}{U_0}u[k-2]+\frac{E_0}{U_0}e[k]+\frac{E_1}{U_0}e[k-1]+\frac{E_2}{U_0}e[k-2]
+	\begin{aligned}
+			&U_0u[k]+U_1u[k-1]+U_2u[k-2] =\\
+			&E_0e[k]+E_1e[k-1]+E_2e[k-2]
+	\end{aligned}
 \end{equation}
-
-
-\paragraph{Definición de coeficientes}
+Despejando \(u[k]\):
+\begin{equation}
+	\begin{aligned}
+	u[k]=\frac{-U_1}{U_0}u[k-1]+\frac{-U_2}{U_0}u[k-2]\\
+	+\frac{E_0}{U_0}e[k]+\frac{E_1}{U_0}e[k-1]+\frac{E_2}{U_0}e[k-2]
+	\end{aligned}
+\end{equation}
+Dado:
 \[
-	\alpha_2=\frac{T_dT_i}{T^2},	\qquad	\alpha_1=\frac{NT_i}{T}
+	\begin{aligned}
+		\alpha_2 &= \frac{T_d T_i}{T^2}, 
+		&\qquad \alpha_1 &= \frac{N T_i}{T}, \\[6pt]
+		\beta_2  &= \frac{K_p\,(N T_d T_i + T_d T_i)}{T^2}, 
+		&\qquad \beta_1 &= \frac{K_p\,(N T_i + T_d)}{T}, \\[6pt]
+		\beta_0  &= K_p N, 
+		&\qquad U_0 &= \alpha_2 + \alpha_1, \\[6pt]
+		U_1 &= -(2\alpha_2 + \alpha_1), 
+		&\qquad U_2 &= \alpha_2, \\[6pt]
+		E_0 &= \beta_2 + \beta_1 + \beta_0, 
+		&\qquad E_1 &= -(2\beta_2 + \beta_1), \\[6pt]
+		E_2 &= \beta_2
+	\end{aligned}
 \]
 
-\[
-	\beta_2=\frac{K_p(NT_dT_i+T_dT_i)}{T^2}, \qquad \beta_1=\frac{k_p(NT_i+T_d)}{T}
-\]
+Utilizando lo calculado, se desarrolló la función \ref{lst:mat6} de Matlab para la simulación del nuevo compensador.
+Se observa en las figura \ref{fig:astrom1} que la respuesta ante el ruido mejora un poco, esto es gracias al polo que se ingresó en el termino derivativo $T_d$, cuya motivo de mejora se denotó anteriormente. Además, en la figura \ref{fig:astrom2} se puede ver como el sistema reacciona ante la saturación.
 
-\[
-	\beta_0=K_pN,
-\]
 
-\[
-	U_0=\alpha_2+\alpha_1, \qquad U_1=-(2\alpha_2+\alpha_1),
-\]
-\[
-	U_2=\alpha_2, \qquad E_0=\beta_2+\beta_1+\beta_0,
-\]
-\[
-	E_1=-(2\beta_2+\beta_1), \qquad E_2=\beta_2
-\]
-Estos coeficientes serán utilizados en el Matlab~\ref{lst:mat6}
 \onecolumn
-\paragraph{Tenemos el siguiente codigo en Matlab}\hfill \break
-\begin{lstlisting}[style=matlabstyle,caption={Script en Matlab},label={lst:mat6}]
-function sim_pid_euler_astrom(G, T, Kp, Ti, Td,N,stepSize,sigma,umin,umax)
-
-% ===== Coeficientes PID incremental (Euler + filtro derivativo N) =====
-alpha2 = Td*Ti/(T^2);
-alpha1 = N*Ti/T;
-beta2  = Kp*(N*Td*Ti + Td*Ti)/(T^2);
-beta1  = Kp*(N*Ti + Td)/T;
-beta0  = Kp*N;
-U0 = alpha2 + alpha1;
-U1 = -(2*alpha2 + alpha1);
-U2 = alpha2;
-E0 = beta2 + beta1 + beta0;
-E1 = -(2*beta2 + beta1);
-E2 = beta2;
-% --- Control analógico ---
-numC = Kp*[Ti*Td, Ti, 1];
-denC = [Ti, 0];
-controlador = tf(numC, denC);
-cloop_c = feedback(controlador*G, 1);
-info = stepinfo(cloop_c);
-tend = info.SettlingTime*3;
-wn = (1.8/ info.RiseTime);
-Tstep = (2*pi/wn)/3000;
-t = 0:Tstep:tend;
-td = 0:T:tend;
-%yc = step(cloop_c, t);
-refc  = stepSize*ones(size(t)) + sigma*randn(size(t));   % ref continua
-% Salida continua con la MISMA referencia (ZOH)
-yc = lsim(cloop_c, refc, t);
-% "Digitalización" por muestreo ideal en kT:
-refd  = interp1(t, refc, td, 'linear', 'extrap');        % r[k] = r_c(kT)
-% --- Discretización y lazo discreto ---
-td = 0:T:tend;
-Gd = c2d(G, T, 'zoh');
-[numD, denD] = tfdata(Gd, 'v');
-b0 = numD(2);
-b1 = numD(3);
-a1 = denD(2);
-a2 = denD(3);
-yd   = zeros(size(td));
-ed   = zeros(size(td));
-ud   = zeros(size(td));
-%refd = ones(size(td));
-for k = 3:numel(td)-1
+\begin{lstlisting}[language=Matlab,style=matlabstyle, caption={Función para la simulación del PID de  Astr\"om discreto con saturación y ruido.}, label={lst:mat6}]
+	function sim_pid_euler_astrom(G, T, Kp, Ti, Td,N,stepSize,sigma,umin,umax)
+	
+	% ===== Coeficientes PID incremental (Euler + filtro derivativo N) =====
+	alpha2 = Td*Ti/(T^2);alpha1 = N*Ti/T; beta2  = Kp*(N*Td*Ti + Td*Ti)/(T^2);
+	beta1  = Kp*(N*Ti + Td)/T;beta0  = Kp*N;U0 = alpha2 + alpha1;U1 = -(2*alpha2 + alpha1);
+	U2 = alpha2;E0 = beta2 + beta1 + beta0;E1 = -(2*beta2 + beta1);E2 = beta2;
+	% --- Control analógico ---
+	numC = Kp*[Ti*Td, Ti, 1];
+	denC = [Ti, 0];
+	controlador = tf(numC, denC);
+	cloop_c = feedback(controlador*G, 1);
+	info = stepinfo(cloop_c);
+	tend = info.SettlingTime*3;
+	wn = (1.8/ info.RiseTime);
+	Tstep = (2*pi/wn)/3000;
+	t = 0:Tstep:tend;
+	td = 0:T:tend;
+	refc  = stepSize*ones(size(t)) + sigma*randn(size(t));   % ref continua
+	% Salida continua con la MISMA referencia (ZOH)
+	yc = lsim(cloop_c, refc, t);
+	% "Digitalización" por muestreo ideal en kT:
+	refd  = interp1(t, refc, td, 'linear', 'extrap');        % r[k] = r_c(kT)
+	% --- Discretización y lazo discreto ---
+	td = 0:T:tend;
+	Gd = c2d(G, T, 'zoh');
+	[numD, denD] = tfdata(Gd, 'v');
+	b0 = numD(2);b1 = numD(3);a1 = denD(2);a2 = denD(3);
+	yd   = zeros(size(td));ed   = zeros(size(td));ud   = zeros(size(td));
+	for k = 3:numel(td)-1
 	ed(k) = refd(k) - yd(k);
 	ud_sinsaturar = (-U1*ud(k-1) + -U2*ud(k-2) + E0*ed(k) + E1*ed(k-1) + E2*ed(k-2))/U0;
 	if ud_sinsaturar >umax
-		ud(k)=umax;
+	ud(k)=umax;
 	elseif ud_sinsaturar<umin
-		ud(k) = umin;
+	ud(k) = umin;
 	else
-		ud(k) = ud_sinsaturar;
+	ud(k) = ud_sinsaturar;
 	end
 	yd(k+1) = b0*ud(k) + b1*ud(k-1) - a1*yd(k) - a2*yd(k-1);
-end
-% === Graficar ===
-yshift = circshift(yd, -2);
-figure;
-yyaxis left
-plot(t*1000, refc, ':','Color','#B0B0B0'); hold on;
-plot(t*1000, yc, '--','LineWidth',1.3);
-stairs(td*1000, yshift,'-','LineWidth',1.2);
-ylabel('Salida');
-yyaxis right
-plot(td*1000, ud, 'r--','LineWidth',1.2);
-ylabel('u_d(k)');
-xlabel('Tiempo [ms]');
-title(sprintf('PID Astrom: Kp=%.3g, Ti=%.3g, Td=%.3g, N=%.3g', Kp, Ti, Td,N));
-legend(sprintf('Escalon Ruidoso (A=%.3g, $\\sigma$=%.3g)', stepSize, sigma), ...
-'Respuesta al Escalon Continua sin Wind-Up', ...
-'Respuesta al Escalon Discreta con Wind-Up', ...
-sprintf('Esfuerzo de Control (Rango:%.3g-%.3g)',umin,umax), ...
-'Location', 'best', 'Interpreter','latex');
-grid on;
-end
-
-	
+	end
+	% === Graficar ===
+	yshift = circshift(yd, -2);
+	figure;
+	yyaxis left
+	plot(t*1000, refc, ':','Color','#B0B0B0'); hold on;
+	plot(t*1000, yc, '--','LineWidth',1.3);
+	stairs(td*1000, yshift,'-','LineWidth',1.2);
+	ylabel('Salida');
+	yyaxis right
+	plot(td*1000, ud, 'r--','LineWidth',1.2);
+	ylabel('u_d(k)');
+	xlabel('Tiempo [ms]');
+	title(sprintf('PID Astrom: Kp=%.3g, Ti=%.3g, Td=%.3g, N=%.3g', Kp, Ti, Td,N));
+	legend(sprintf('Escalon Ruidoso (A=%.3g, $\\sigma$=%.3g)', stepSize, sigma), ...
+	'Respuesta al Escalon Continua sin Wind-Up', ...
+	'Respuesta al Escalon Discreta con Wind-Up', ...
+	sprintf('Esfuerzo de Control (Rango:%.3g-%.3g)',umin,umax), ...
+	'Location', 'best', 'Interpreter','latex');
+	grid on;
+	end
 \end{lstlisting}
-\textbf{CAMBIAAAARRR!!!!!!}
-\includegraphics[width=\columnwidth]{img/Astrom1.png}
-\includegraphics[width=\columnwidth]{img/Astrom2.png}
-\twocolumn
+
+
+
 %\insertarfigura{./img/Astrom1.png}{Circuito Modo inversor.}{fig:impedanciaReal}{0.5}
 %\insertarfigura{./img/Astrom2.png}{Circuito Modo inversor.}{fig:impedanciaReal}{0.5}
-\textbf{Se observa en las figuras} que la respuesta ante el ruido mejora un poco, esto es gracias a $T_d$:
 
-\begin{itemize}
-	\item \textbf{Si $T_d$ es grande,} la frecuencia de corte $\omega_c$ es baja $\Rightarrow$ el derivador deja pasar más ruido en la banda de interés.
-	\item \textbf{Si $T_d$ disminuye,} la frecuencia de corte $\omega_c$ aumenta $\Rightarrow$ el filtro atenua más el ruido de alta frecuencia.
-\end{itemize}
 
 %Dando los siguientes resultados:
 %sim_pid_euler_astrom(G, T/30, Kp, Ti, Td,8,2.5,0.25,0,5);
 %sim_pid_euler_astrom(G, T/30, Kp, Ti, Td,8,5,0,0,5);
 
 
+\clearpage
+\twocolumn
 
+\insertarfigurawide{./img/Astrom2.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada) saturable, utilizando el primer compensador diseñado, con un escalón de 5V, utilizando las modificaciones propuestas en el capitulo 6 del Astr\"om.}{fig:astrom2}{1}

@@ -9,6 +9,11 @@
 	retain-unity-mantissa = false,      % evita 1.0e0 para números "normales"
 }
 
+\usepackage{multicol}
+% preámbulo
+\usepackage{graphicx}
+% (opcional) mejor control de flotantes anchos al fondo
+\usepackage{stfloats} % permite [!b] en figure*
 
 
 
@@ -39,6 +44,7 @@
 % --- Tablas más flexibles ---
 \usepackage{booktabs}
 \usepackage{tabularx}
+\usepackage{balance}   % para balancear las columnas antes del strip si querés
 
 % --- Código: listings con UTF-8 real ---
 \usepackage{listings}
@@ -56,6 +62,16 @@
 	{ñ}{{\~n}}1 {Ñ}{{\~N}}1
 	{¿}{{\textquestiondown}}1 {¡}{{\textexclamdown}}1
 }
+
+\usepackage{cuted} % preámbulo
+% === Dependencias mínimas ===
+\usepackage{cuted}    % para strip
+\usepackage{listings} % ya lo usás
+\usepackage{xparse}   % interfaz de comandos
+\usepackage{etoolbox} % utilidades
+% (no requiere pgf/tikz)
+
+
 
 % The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
 \usepackage{cite}

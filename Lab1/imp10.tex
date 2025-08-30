@@ -1,9 +1,9 @@
-\twocolumn
+
 \subsubsection{ Implementación con un tiempo de muestreo de 10 veces el ancho de banda del sistema
 }
 
 
-Si muestreamos 10 veces el ancho de banda:
+Si deseamos muestrear con una frecuencia 10 veces superior el ancho de banda estimado:
 \[
 f_s = 10 f_{\mathrm{bw}}, \qquad T = \frac{1}{f_s}.
 \]
@@ -13,15 +13,13 @@ La simulación se realiza con:
 \texttt{sim\_pid\_euler\_ideal(G,\,T,\,Kp,\,Ti,\,Td,\,1);}
 \]
 
-En la Figura~\ref{fig:fs10} se observa que la respuesta discreta no reproduce bien a la continua: se introduce más retardo y el seguimiento al escalón empeora.
-Un muestreo de 10 veces el ancho de banda apenas alcanza para representar la dinámica dominante. El efecto combinado del ZOH y la discretización generan un retardo en la fase, reduciendo el desempeño.  
+En la Figura~\ref{fig:fs10} se observa que la respuesta discreta no reproduce bien a la continua: se introduce retardo debido a la frecuencia de muestreo insuficiente, oscila al inicio del seguimiento y en general, la respuesta al escalón no desempeña como se planteó en el diseño continuo.
+Un muestreo de 10 veces el ancho de banda se hace incapaz de emular al compesandor analógico diseñado.
 
-\begin{figure}[!t]
-	\centering
-	\includegraphics[width=\columnwidth]{img/fs10.png}
-	\caption{Respuesta con $f_s=10 f_{\mathrm{bw}}$: la discretización no es suficiente y la respuesta discreta se aparta del continuo.}
-	\label{fig:fs10}
-\end{figure}
+
+
+
+\insertarfigurawide{./img/fs10.png}{Respuesta al escalón con $f_s=10 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada), utilizando el primer compensador diseñado.}{fig:fs10}{1}
 
 
 
@@ -32,106 +30,99 @@ Al triplicar la frecuencia de muestreo:
 \[
 f_s = 30 f_{\mathrm{bw}}, \qquad T = \frac{1}{f_s},
 \]
-Podemos ver en la Figura~\ref{fig:fs30} muestra una mejora clara: la respuesta discreta se asemeja mucho más a la continua, con menor error con respecto a la continua.
+Podemos ver en la Figura~\ref{fig:fs30} muestra una mejora clara: la respuesta discreta se asemeja mucho más a la continua, con menor error con respecto a la misma.
 
-\begin{figure}[!t]
-	\centering
-	\includegraphics[width=\columnwidth]{img/fs30.png}
-	\caption{Respuesta con $f_s=30 f_{\mathrm{bw}}$: el lazo discreto reproduce con mayor fidelidad al continuo.}
-	\label{fig:fs30}
-\end{figure}
 
+\insertarfigurawide{./img/fs30.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada), utilizando el primer compensador diseñado.}{fig:fs30}{1}
 \paragraph{Limitación con Ziegler--Nichols.}  
-Al usar parámetros obtenidos con ZN, el control logra buen seguimiento, pero el esfuerzo de control $u_d[k]$ supera en más de dos órdenes de magnitud la capacidad de los DAC del PSoC (Figura~\ref{fig:zn_effort}). Esto vuelve la solución impracticable.
-
-\begin{figure}[!t]
-	\centering
-	\includegraphics[width=\columnwidth]{img/zn_effort.png}
-	\caption{Sintonía ZN: buena respuesta, pero esfuerzo $u_d[k]$ excesivo (no implementable).}
-	\label{fig:zn_effort}
-\end{figure}
-
-Para evidenciarlo, añadimos ruido y saturación al esfuerzo en la simulación. El resultado (Figura~\ref{fig:sat_noise}) confirma que el sistema no puede seguir al escalón bajo esas condiciones.
-
-\begin{figure}[!t]
-	\centering
-	\includegraphics[width=\columnwidth]{img/sat_noise.png}
-	\caption{PID discreto con ruido y saturación: se observa windup y pérdida total del seguimiento.}
-	\label{fig:sat_noise}
-\end{figure}
+Al usar parámetros obtenidos con el método de Ziegler-Nichols, el control logra buen seguimiento, pero el esfuerzo de control $u_d[k]$ supera en más de dos órdenes de magnitud la capacidad de los DAC del PSoC (Figura~\ref{fig:zn_effort}), lo que lo vuelve una solución impracticable.
 
 
-\onecolumn
-\subsubsection*{Simulación con saturación y ruido}
+\insertarfigurawide{./img/zn_effort.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada), utilizando el segundo compensador diseñado.}{fig:zn_effort}{1}
 
-La función utilizada en la sección anterior es la siguiente:
+Para evidenciarlo, añadimos ruido y saturación al esfuerzo en la simulación. El resultado (Figura~\ref{fig:sat_noise}) confirma que el sistema no puede seguir al escalón bajo esas condiciones, por lo que el compensador es descartado.
 
-\begin{lstlisting}[language=Matlab,style=matlabstyle, caption={PID discreto con saturación y ruido}, label={lst:pid_sat_noise}]
+
+\insertarfigurawide{./img/sat_noise.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada) saturable, utilizando el segundo compensador diseñado, añadiendo ruido a la entrada (curva gris clara).}{fig:sat_noise}{1}
+
+\clearpage
+\newpage
+La función utilizada en para la simulación anterior es la siguiente:
+
+\begin{strip}
+	\vspace{-\baselineskip} % ajusta si ves demasiado aire arriba
+	\noindent
+	\begin{minipage}{0.98\textwidth}
+		
+\begin{lstlisting}[language=Matlab,style=matlabstyle, caption={función para la simulación del PID discreto con saturación y ruido.}, label={lst:pid_sat_noise}]
 	function sim_pid_euler(G, T, Kp, Ti, Td, stepSize, sigma, umin, umax)
-	% --- Control continuo (referencia) ---
-	numC = Kp*[Ti*Td, Ti, 1]; denC = [Ti, 0];
-	controlador = tf(numC, denC);
-	cloop_c = feedback(controlador*G, 1);
-	info  = stepinfo(cloop_c);
-	tend  = 3*info.SettlingTime;
-	wn    = 1.8/info.RiseTime;
-	Tstep = (2*pi/wn)/1000;
-	t  = 0:Tstep:tend;
-	td = 0:T:tend;
-	
-	% Referencia con ruido
-	refc = stepSize*ones(size(t)) + sigma*randn(size(t));
-	yc   = lsim(cloop_c, refc, t);
-	refd = interp1(t, refc, td, 'linear', 'extrap');
-	
-	% --- Planta discreta (ZOH) ---
-	Gd = c2d(G, T, 'zoh');
-	[numD, denD] = tfdata(Gd, 'v');
-	b0 = numD(2); b1 = numD(3);
-	a1 = denD(2); a2 = denD(3);
-	
-	% Inicialización
-	yd = zeros(size(td));
-	ed = zeros(size(td));
-	ud = zeros(size(td));
-	
-	% --- PID incremental con saturación ---
-	for k = 3:numel(td)-1
-	ed(k) = refd(k) - yd(k);
-	u_inc = ud(k-1) + Kp*((1+T/Ti+Td/T)*ed(k) ...
-	-(1+2*Td/T)*ed(k-1) ...
-	+(Td/T)*ed(k-2));
-	% Saturación
-	if u_inc > umax
-	ud(k) = umax;
-	elseif u_inc < umin
-	ud(k) = umin;
-	else
-	ud(k) = u_inc;
-	end
-	% Planta discreta
-	yd(k+1) = b0*ud(k) + b1*ud(k-1) - a1*yd(k) - a2*yd(k-1);
-	end
-	
-	% --- Gráficos ---
-	yshift = circshift(yd, -2);
-	figure; hold on; grid on;
-	yyaxis left
-	plot(t*1000, refc, ':','Color',[0.7 0.7 0.7]);
-	plot(t*1000, yc,  '--','LineWidth',1.3);
-	stairs(td*1000, yshift,'-','LineWidth',1.2);
-	ylabel('Salida');
-	yyaxis right
-	plot(td*1000, ud, 'r--','LineWidth',1.2);
-	ylabel('u_d[k]');
-	xlabel('Tiempo [ms]');
-	title(sprintf('PID discreto: Kp=%.3g, Ti=%.3g, Td=%.3g', Kp, Ti, Td));
-	legend('Referencia','Continuo ideal','Discreto sat+ruido','u_d');
+		% --- Control continuo (referencia) ---
+		numC = Kp*[Ti*Td, Ti, 1]; denC = [Ti, 0];
+		controlador = tf(numC, denC);
+		cloop_c = feedback(controlador*G, 1);
+		info  = stepinfo(cloop_c);
+		tend  = 3*info.SettlingTime;
+		wn    = 1.8/info.RiseTime;
+		Tstep = (2*pi/wn)/1000;
+		t  = 0:Tstep:tend;
+		td = 0:T:tend;
+		
+		% Referencia con ruido
+		refc = stepSize*ones(size(t)) + sigma*randn(size(t));
+		yc   = lsim(cloop_c, refc, t);
+		refd = interp1(t, refc, td, 'linear', 'extrap');
+		
+		% --- Planta discreta (ZOH) ---
+		Gd = c2d(G, T, 'zoh');
+		[numD, denD] = tfdata(Gd, 'v');
+		b0 = numD(2); b1 = numD(3);
+		a1 = denD(2); a2 = denD(3);
+		
+		% Inicialización
+		yd = zeros(size(td));
+		ed = zeros(size(td));
+		ud = zeros(size(td));
+		
+		% --- PID incremental con saturación ---
+		for k = 3:numel(td)-1
+			ed(k) = refd(k) - yd(k);
+			u_inc = ud(k-1) + Kp*((1+T/Ti+Td/T)*ed(k) ...
+			-(1+2*Td/T)*ed(k-1) ...
+			+(Td/T)*ed(k-2));
+			% Saturación
+			if u_inc > umax
+				ud(k) = umax;
+			elseif u_inc < umin
+				ud(k) = umin;
+			else
+				ud(k) = u_inc;
+			end
+			% Planta discreta
+			yd(k+1) = b0*ud(k) + b1*ud(k-1) - a1*yd(k) - a2*yd(k-1);
+		end
+		
+		% --- Gráficos ---
+		yshift = circshift(yd, -2);
+		figure; hold on; grid on;
+		yyaxis left
+		plot(t*1000, refc, ':','Color',[0.7 0.7 0.7]);
+		plot(t*1000, yc,  '--','LineWidth',1.3);
+		stairs(td*1000, yshift,'-','LineWidth',1.2);
+		ylabel('Salida');
+		yyaxis right
+		plot(td*1000, ud, 'r--','LineWidth',1.2);
+		ylabel('u_d[k]');
+		xlabel('Tiempo [ms]');
+		title(sprintf('PID discreto: Kp=%.3g, Ti=%.3g, Td=%.3g', Kp, Ti, Td));
+		legend('Referencia','Continuo ideal','Discreto sat+ruido','u_d');
 	end
 \end{lstlisting}
-
-\twocolumn
-
+\end{minipage}
+\vspace{-\baselineskip} % ajusta si ves aire abajo
+\end{strip}
+\clearpage
+\newpage
+\balance
 \subsubsection{Implementación del modelo alternativo y análisis con ruido y saturación}
 
 Dado que la sintonía inicial de Ziegler--Nichols exige un esfuerzo de control incompatible con el actuador disponible, nos centramos en implementar el \emph{modelo alternativo} (PID ajustado por prueba y error con discretización incremental).  
@@ -146,12 +137,7 @@ Para visualizar con claridad la sensibilidad al ruido (especialmente por el tér
 
 La Figura~\ref{fig:ruido_10pct} evidencia el efecto del ruido sobre \(u_d[k]\) y la salida discreta, pero sigue dando un resultado aceptable en el seguimiendo de la referencia aun en este caso extremo.
 
-\begin{figure}[!t]
-	\centering
-	\includegraphics[width=\columnwidth]{img/ruido_10pct.png}% <-- exportá esta imagen
-	\caption{Caso ruidoso (sigma $=10\%$ de la amplitud): ondulación amplificada por sensibilidad del término derivativo.}
-	\label{fig:ruido_10pct}
-\end{figure}
+
 
 \paragraph{Efectos de la saturación (windup) sin ruido.}
 Para aislar el fenómeno de \emph{windup} quitamos el ruido y exigimos amplitud elevada, manteniendo límites del actuador:
@@ -161,9 +147,10 @@ Para aislar el fenómeno de \emph{windup} quitamos el ruido y exigimos amplitud 
 
 La Figura~\ref{fig:windup} muestra la saturación de \(u_d[k]\) y la consecuente degradación del seguimiento: lento despegue y respuesta sobreamortiguada.
 
-\begin{figure}[!t]
-	\centering
-	\includegraphics[width=\columnwidth]{img/windup.png}% <-- exportá esta imagen
-	\caption{Caso con saturación y sin ruido: evidencia de windup e imposibilidad de seguimiento para amplitudes elevadas.}
-	\label{fig:windup}
-\end{figure}
+\clearpage
+
+\insertarfigurawide{./img/ruido_10pct.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada) saturable, utilizando el primer compensador diseñado, añadiendo ruido a la entrada (curva gris clara) con \(\sigma = 10\%\).}{fig:ruido_10pct}{1}
+
+\insertarfigurawide{./img/windup.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada) saturable, utilizando el primer compensador diseñado, con un escalón de 5V.}{fig:windup}{1}
+
+\clearpage

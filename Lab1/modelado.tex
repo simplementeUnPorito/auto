@@ -1,57 +1,53 @@
 \subsection{Modelado}
-\subsubsection{Obtener la función de transferencia de lazo abierto}
+\subsubsection{Obtención de la función de transferencia en lazo abierto}
 
-\paragraph{Impedancia de realimentación (paralelo $R_f \parallel C_f$).}
+La planta puede interpretarse como la conexión en cascada de dos filtros activos de primer orden. Cada uno posee la misma topología: un amplificador operacional en configuración inversora cuya impedancia de realimentación está compuesta por una resistencia en paralelo con un capacitor.
 
-\insertarfigura{./img/circuito.png}{Circuito esquemático.}{fig:circuitoini}{1}
-
-
+\paragraph{Impedancia de realimentación.}  
+Para el paralelo $R_f \parallel C_f$, se obtiene:
 \begin{equation}
 	Z_f \;=\; R_f \parallel \frac{1}{sC_f}
-	\;=\; \frac{R_f\cdot \frac{1}{sC_f}}{R_f + \frac{1}{sC_f}}
 	\;=\; \frac{R_f}{1 + s R_f C_f}
 	\label{eq:Zf}
 \end{equation}
 
-\insertarfigura{./img/CircRealim.png}{Circuito Modo inversor.}{fig:impedanciaReal}{0.5}
+\insertarfigura{./img/circuito.png}{Circuito esquemático de la planta, que emula el comportamiento dinámico de un motor de CC.}{fig:circuitoini}{1}
 
-\paragraph{Esquema general del AO (entrada en $R_i$ al nodo inversor.}
-Sea $V_{\text{ref}}$ la tensión aplicada a la entrada no inversora (por ejemplo, $V_{\text{ref}}=0$). La salida es:
-\[
-V_o \;=\;  V_o\big|_{V_i=0}
-\]
+\insertarfigura{./img/CircRealim.png}{Configuración inversora con un polo simple en la realimentación.}{fig:impedanciaReal}{0.5}
 
-\textbf{(A) Aporte de $V_i$ con $V_{\text{ref}}=0$ (no inversora a masa AC).}
-Por cortocircuito virtual, $V_n=V_p=0$. Corrientes:
+El sistema trabaja sobre una tensión de referencia en continua $V_{\text{cc}}/2 = 2.5$ V. En los cálculos posteriores se toma dicho valor como punto de referencia.
+
+\paragraph{Ganancia de una etapa (entrada inversora).}  
+Con $V_{\text{ref}}=0$, se cumple el cortocircuito virtual ($V_p = V_n = 0$). Aplicando KCL en el nodo inversor:
 \[
-i_1=\frac{V_i-0}{R_i}
+\frac{V_i}{R_i} \;=\; \frac{-V_o}{Z_f}
+\quad\Rightarrow\quad
+\frac{V_o}{V_i} \;=\; -\,\frac{Z_f}{R_i}
 \]
-KCL en el nodo inversor ($i_1=i_2$):
-\[
-\frac{V_i}{R_i}=\frac{-V_o}{Z_f}
-\;\;\Rightarrow\;\;
-\frac{V_o}{V_i}=-\frac{Z_f}{R_i}
-\]
-Con \eqref{eq:Zf}:
+y reemplazando \eqref{eq:Zf}:
 \begin{equation}
 	\frac{V_o}{V_i}\Bigg|_{V_{\text{ref}}=0}
-	= -\,\frac{Z_f}{R_i}
 	= -\,\frac{R_f}{R_i}\,\frac{1}{1+sR_f C_f}
 	\label{eq:gain_inverting}
 \end{equation}
 
-
-\paragraph{Encadenamiento de etapas (lazo abierto total).}
-Si el AO3 es buffer ($G_3(s)=1$) y AO1, AO2 tienen cada uno la forma \eqref{eq:gain_inverting}, entonces la función de lazo abierto (desde la \emph{señal de entrada} hasta la \emph{salida del último AO}), es el producto de las ganancias de las etapas activadas por esa señal, finalmente la ganancia será:
+\paragraph{Encadenamiento de etapas.}  
+Como ambas etapas AO1 y AO2 responden a la forma \eqref{eq:gain_inverting}, la ganancia total en lazo abierto resulta del producto de sus transferencias:
 \[
 G_{\text{ol}}(s)
 = \Big(-\frac{Z_{f1}(s)}{R_{i1}}\Big)\,
-\Big(-\frac{Z_{f2}(s)}{R_{i2}}\Big)\
+\Big(-\frac{Z_{f2}(s)}{R_{i2}}\Big)
 \]
-\paragraph{Matlab} Se muestra el siguiente código de Matlab, el cual arma las dos etapas de 1er orden, realiza la multiplicación en cascada para el lazo abierto y mide los tiempos de respuesta al escalón.
 
-\onecolumn
+\paragraph{Implementación en Matlab.}  
+El siguiente código genera cada etapa de primer orden, calcula la función en lazo abierto y extrae información temporal de la respuesta al escalón:
 
+
+
+\begin{strip}
+\vspace{-\baselineskip} % ajusta si ves demasiado aire arriba
+\noindent
+\begin{minipage}{0.98\textwidth}
 \begin{lstlisting}[style=matlabstyle,caption={Script en Matlab},label={lst:mat}]
 	
 	%% Definicion de parametros
@@ -94,14 +90,20 @@ G_{\text{ol}}(s)
 	end
 	
 \end{lstlisting}
-\twocolumn
-\insertarfigurawide{./img/EscalonLazoAb.png}{Escalón del lazo Abierto.}{fig:escalonLazoab}{1}
-\paragraph{Resultados numéricos(respuesta al escalón)} Se sacan los coeficientes de la figura~\ref{fig:escalonLazoab}:
+\end{minipage}
+\vspace{-\baselineskip} % ajusta si ves aire abajo
+\end{strip}
+
+\insertarfigurawide{./img/EscalonLazoAb.png}{Respuesta al escalón del sistema en lazo abierto.}{fig:escalonLazoab}{1}
+
+\paragraph{Resultados numéricos.}  
+A partir de la respuesta de la figura~\ref{fig:escalonLazoab} se obtuvieron:
 \begin{itemize}
-	\item \textbf{Rise time $t_r \approx 0.0332 s$ (33.2ms)}
-	\item \textbf{Settling time $t_s(2\%) \approx 0.0603 s$ (60.3ms)}
-	\item \textbf{Estimación $\omega_n \approx \frac{1.8}{t_r} s$ (54.17rad/s)}
+	\item \textbf{Tiempo de subida:} $t_r \approx 0.0332$ s (33.2 ms)
+	\item \textbf{Tiempo de establecimiento (2\%):} $t_s \approx 0.0603$ s (60.3 ms)
+	\item \textbf{Frecuencia natural estimada:} $\omega_n \approx 54.2$ rad/s
 \end{itemize}
+
 
 
 

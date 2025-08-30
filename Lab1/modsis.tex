@@ -15,10 +15,16 @@ Para ello, debemos tener en cuenta lo siguiente:
 \subsection{Analizar el efecto del control}
 
 Se implementó un \textit{script} en \textsc{Matlab} que permite probar varias combinaciones de parámetros y registrar las métricas de cada intento.
-\onecolumn % pasa a una columna
-\paragraph{MatLab}\hfill \break
-\begin{lstlisting}[language=Matlab, style = matlabstyle,caption={Función para diseño PID por prueba y error}, label={lst:disenoPID}]
-	function results = diseno_pid(G, filename)
+
+
+\begin{strip}
+
+	\vspace{-\baselineskip} % ajusta si ves demasiado aire arriba
+	\noindent
+	\begin{minipage}{0.98\textwidth}
+		
+	\begin{lstlisting}[language=Matlab, style=matlabstyle]
+		function results = diseno_pid(G, filename)
 		% diseno_pid - Bucle interactivo para sintonia PID y selección del mejor ensayo
 		%
 		% Uso:
@@ -37,56 +43,108 @@ Se implementó un \textit{script} en \textsc{Matlab} que permite probar varias c
 		if isfield(S,'results'), results = S.results; end
 		end
 		k_iter = numel(results) + 1;
-		
+	\end{lstlisting}
+	
+\end{minipage}
+\vspace{-\baselineskip} % ajusta si ves aire abajo
+\end{strip}
+
+\begin{strip}
+\vspace{-\baselineskip} % ajusta si ves demasiado aire arriba
+\noindent
+\begin{minipage}{0.98\textwidth}
+
+
+	\begin{lstlisting}[language=Matlab, style=matlabstyle, caption={Función para diseño PID por prueba y error.}, label={lst:disenoPID}]
 		while true
-			fprintf('\n--- Parametros PID ---\n');
-			Kp = input('Kp: ');
-			Td = input('Td: ');
-			Ti = input('Ti: ');
-			
-			numC = Kp*[Ti*Td, Ti, 1];
-			denC = [Ti, 0];
-			C = tf(numC, denC);
-			cl = feedback(C*G, 1);
-			
-			info = stepinfo(cl);
-			OS = info.Overshoot;
-			tr = info.RiseTime;
-			ts = info.SettlingTime;
-			
-			% guardar en struct
-			results(k_iter).Kp = Kp;
-			results(k_iter).Ti = Ti;
-			results(k_iter).Td = Td;
-			results(k_iter).Overshoot = OS;
-			results(k_iter).RiseTime = tr;
-			results(k_iter).SettlingTime = ts;
-			save(filename,'results');
-			k_iter = k_iter + 1;
-			
-			resp = input('Continuar? [s/n]: ','s');
-			if isempty(resp) || any(lower(resp(1)) == ['n','q'])
-				disp('Finalizando loop.');
-				break;
-			end
+		fprintf('\n--- Parametros PID ---\n');
+		Kp = input('Kp: ');
+		Td = input('Td: ');
+		Ti = input('Ti: ');
+		numC = Kp*[Ti*Td, Ti, 1];
+		denC = [Ti, 0];
+		C = tf(numC, denC);
+		cl = feedback(C*G, 1);
+		
+		info = stepinfo(cl);
+		OS = info.Overshoot;
+		tr = info.RiseTime;
+		ts = info.SettlingTime;
+		
+		% guardar en struct
+		results(k_iter).Kp = Kp;
+		results(k_iter).Ti = Ti;
+		results(k_iter).Td = Td;
+		results(k_iter).Overshoot = OS;
+		results(k_iter).RiseTime = tr;
+		results(k_iter).SettlingTime = ts;
+		save(filename,'results');
+		k_iter = k_iter + 1;
+		
+		resp = input('Continuar? [s/n]: ','s');
+		if isempty(resp) || any(lower(resp(1)) == ['n','q'])
+		disp('Finalizando loop.');
+		break;
 		end
-	end
-\end{lstlisting}
+		end
+		end
+	\end{lstlisting}
+\end{minipage}
+\vspace{-\baselineskip} % ajusta si ves aire abajo
+
+\end{strip}
+
+
 
 \subsection{Resultados obtenidos}
 
-Gracias a la función implementada, podemos comparar el rendimiento de diferentes combinaciones de parámetros PID. 
-La Tabla~\ref{tab:resultadosPID} resume los resultados extraídos del archivo \texttt{tabla.mat}.
 
+Gracias a la función implementada, podemos comparar el rendimiento de diferentes combinaciones de parámetros PID. 
+
+La Tabla~\ref{tab:resultadosPID} resume los resultados extraídos del archivo \texttt{pid.mat}.
+
+
+
+Tras comparar el desempeño de múltiples tuplas \((K_p,T_i,T_d)\), optamos por la siguiente configuración por su balance entre velocidad de respuesta, sobrepaso y tiempo de establecimiento:
+\[
+K_p = 0.5,\qquad T_i = 0.005,\qquad T_d = 0.015.
+\]
+Con estos valores, la planta exhibe la dinámica mostrada en la Tabla~\ref{tab:pid_resultados}: un sobrepaso moderado y un asentamiento rápido sin comprometer la estabilidad.
+\begin{table}[!t] % en IEEEtran evitá [H]; en article podés usar [H]
+	\centering
+	\small
+	\setlength{\tabcolsep}{4pt} % menos espacio horizontal en celdas
+	\caption{Resultados de la sintonía por prueba y error seleccionada.}
+	\label{tab:pid_resultados}
+	\resizebox{\columnwidth}{!}{%
+		\begin{tabular}{cccccc}
+			\hline
+			$K_p$ & $T_i$ & $T_d$ & Overshoot [\%] & Rise Time [s] & Settling Time [s] \\
+			\hline
+			0.50 & 0.010 & 0.015 & 3.54 & 0.051 & 0.119 \\
+			\hline
+		\end{tabular}%
+	}
+
+\end{table}
+
+
+
+		
+
+	
 % --- INCLUIR LA TABLA GENERADA DESDE EL .MAT ---
 %\input{tabla_pid} % asumiendo que moviste tabla_pid.tex junto a tu main o ajustaste la ruta
-
+\newpage
+\onecolumn
 \begin{table}[!t]
 	\centering
 	\small
 	\caption{Resultados obtenidos.}
 	\label{tab:resultadosPID}
-	\resizebox{0.9\columnwidth}{!}{\begin{tabular}{|S|S|S|S|S|S|}
+	\resizebox{0.9\columnwidth}{!}{
+		
+		\begin{tabular}{|S|S|S|S|S|S|}
 		\hline
 		\textbf{Kp} & \textbf{Ti} & \textbf{Td} & \textbf{Overshoot} & \textbf{RiseTime}    & \textbf{SettlingTime} \\ \hline
 		0.5         & 0.015       & 0.005       & 0                  & 0.067778603914885    & 0.107873036748685     \\ \hline
@@ -166,32 +224,6 @@ La Tabla~\ref{tab:resultadosPID} resume los resultados extraídos del archivo \t
 	\end{tabular}}
 \end{table}
 
-
-\twocolumn
-
-Tras comparar el desempeño de múltiples tuplas \((K_p,T_i,T_d)\), optamos por la siguiente configuración por su balance entre velocidad de respuesta, sobrepaso y tiempo de establecimiento:
-\[
-K_p = 0.5,\qquad T_i = 0.005,\qquad T_d = 0.015.
-\]
-Con estos valores, la planta exhibe la dinámica mostrada en la Tabla~\ref{tab:pid_resultados}: un sobrepaso moderado y un asentamiento rápido sin comprometer la estabilidad.
-
-
-\begin{table}[!t] % en IEEEtran evitá [H]; en article podés usar [H]
-	\centering
-	\small
-	\setlength{\tabcolsep}{4pt} % menos espacio horizontal en celdas
-	\caption{Resultados de la sintonía por prueba y error seleccionada.}
-	\label{tab:pid_resultados}
-	\resizebox{\columnwidth}{!}{%
-		\begin{tabular}{cccccc}
-			\hline
-			$K_p$ & $T_i$ & $T_d$ & Overshoot [\%] & Rise Time [s] & Settling Time [s] \\
-			\hline
-			0.50 & 0.010 & 0.015 & 3.54 & 0.051 & 0.119 \\
-			\hline
-		\end{tabular}%
-	}
-\end{table}
 
 
 
