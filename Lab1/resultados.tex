@@ -1,13 +1,44 @@
-\twocolumn
+\onecolumn
 \section{Resultados}
+
+
+%\insertarfigura{./img/fs10.png}{Respuesta al escalón con $f_s=10 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada), utilizando el primer compensador diseñado.}{fig:fs10_c}{1}
+
+%\insertarfigura{./img/fs30.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada), utilizando el primer compensador diseñado.}{fig:fs30_c}{1}
+
+%\insertarfigura{./img/ruido_10pct.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada) saturable, utilizando el primer compensador diseñado, añadiendo ruido a la entrada (curva gris clara) con \(\sigma = 10\%\).}{fig:ruido_10pct_c}{1}
+
+%\insertarfigura{./img/windup.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada) saturable, utilizando el primer compensador diseñado, con un escalón de 5V.}{fig:windup_c}{1}
+
+
+%\insertarfigura{./img/Astrom1.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada) saturable, utilizando el primer compensador diseñado, añadiendo ruido a la entrada (curva gris clara) con \(\sigma = 10\%\), utilizando las modificaciones propuestas en el capitulo 6 del Astr\"om.}{fig:astrom1_c}{0.8}
+
+%\insertarfigura{./img/Astrom2.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada) saturable, utilizando el primer compensador diseñado, con un escalón de 5V, utilizando las modificaciones propuestas en el capitulo 6 del Astr\"om.}{fig:astrom2_c}{1}
+
+%\insertarfigura{./img/textbook100.jpg}{Implementación textbook a \SI{100}{\hertz}.}{fig:imp100_conclusion}{1}
+%\insertarfigura{./img/textbook300.jpg}{Implementación textbook a \SI{300}{\hertz}.}{fig:imp300_conclusion}{1}
+%\insertarfigura{./img/sinAstrom.jpg}{Implementación sin manejo de la saturación.}{fig:satsina_concl}{1}
+%\insertarfigura{./img/sinsat300.jpg}{Implementación sin saturar a \SI{300}{\hertz}, con Astr\"om.}{fig:sinsat300_concl}{1}
+%\insertarfigura{./img/sat300.jpg}{Implementación saturando a \SI{300}{\hertz}, con Astr\"om.}{fig:sat300_concl}{1}
+
+\compararfigsC{./img/fs10.png}{Respuesta al escalón con $f_s=10 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada), utilizando el primer compensador diseñado.}{fig:fs10_c}{./img/textbook100.jpg}{Implementación textbook a \SI{100}{\hertz}.}{fig:imp100_conclusion}
+{Comparación Simulación en Matlab e Implementación en PSoC.}{fig:comparacion1}
+
+\compararfigsC{./img/fs30.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada), utilizando el primer compensador diseñado.}{fig:fs30_c}{./img/textbook300.jpg}{Implementación textbook a \SI{300}{\hertz}.}{fig:imp300_conclusion}
+{Comparación Simulación en Matlab e Implementación en PSoC.}{fig:comp2}
+
+\compararfigsC{./img/ruido_10pct.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada) saturable, utilizando el primer compensador diseñado, añadiendo ruido a la entrada (curva gris clara) con \(\sigma = 10\%\).}{fig:ruido_10pct_c}{./img/sinAstrom.jpg}{Implementación sin manejo de la saturación.}{fig:satsina_concl}{Comparación Simulación en Matlab e Implementación en PSoC.}{fig:comp3}
+
+\compararfigsC{./img/windup.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada) saturable, utilizando el primer compensador diseñado, con un escalón de 5V.}{fig:windup_c}{./img/sinsat300.jpg}{Implementación sin saturar a \SI{300}{\hertz}, con Astr\"om.}{fig:sinsat300_concl}{Comparación Simulación en Matlab e Implementación en PSoC.}{fig:comp4}
+
+\compararfigsC{./img/Astrom2.png}{Respuesta al escalón con $f_s=30 f_{\mathrm{bw}}$ (curva azul), su versión continua (curva azul puntuada) y el esfuerzo generado por el compensador (curva naranja puntuada) saturable, utilizando el primer compensador diseñado, con un escalón de 5V, utilizando las modificaciones propuestas en el capitulo 6 del Astr\"om.}{fig:astrom2_c}{./img/sat300.jpg}{Implementación saturando a \SI{300}{\hertz}, con Astr\"om.}{fig:sat300_concl}
+{Comparación Simulación en Matlab e Implementación en PSoC.}{fig:comp5}
+
+%\compararfigsC{img1}{Caso 1}{fig:c1}{img2}{Caso 2}{fig:c2}{Comparación lado a lado}{fig:comp}
+
+\clearpage
+\twocolumn
 \subsection{Analizar métodos de ajuste}
-
-\insertarfigura{./img/textbook100.jpg}{Implementación textbook a \SI{100}{\hertz}.}{fig:imp100_conclusion}{1}
-\insertarfigura{./img/textbook300.jpg}{Implementación textbook a \SI{300}{\hertz}.}{fig:imp300_conclusion}{1}
-\insertarfigura{./img/sinAstrom.jpg}{Implementación sin manejo de la saturación.}{fig:satsina_concl}{1}
-\insertarfigura{./img/sinsat300.jpg}{Implementación sin saturar a \SI{300}{\hertz}, con Astr\"om.}{fig:sinsat300_concl}{1}
-\insertarfigura{./img/sat300.jpg}{Implementación saturando a \SI{300}{\hertz}, con Astr\"om.}{fig:sat300_concl}{1}
-
 El primer método utilizado fue el ajuste por prueba y error, donde se partió del compensador continuo y posteriormente se discretizó variando la frecuencia de muestreo. En particular, se consideraron muestreos de \(10\) y \(30\) veces el ancho de banda de la planta. Como se aprecia en la Figura~\ref{fig:imp100_conclusion}, a \SI{100}{\hertz} el sistema sigue adecuadamente a la referencia, aunque con ciertas limitaciones en cuanto a la similitud con lo planteado en los cálculos. Cuando se aumenta la frecuencia de muestreo a \SI{300}{\hertz}, mostrado en la Figura~\ref{fig:imp300_conclusion}, la respuesta discreta se aproxima más a la dinámica del sistema continuo, aunque se incrementa la exigencia computacional.
 
 En cuanto al método de Ziegler--Nichols por respuesta al escalón, si bien no se implementó experimentalmente en este trabajo, se reconoce como una estrategia que permite calcular de manera rápida una tupla inicial de parámetros del PID que garantice estabilidad. Dicho punto de partida puede luego refinarse mediante ajustes adicionales, facilitando así la tarea de sintonización en contextos prácticos.
@@ -15,14 +46,16 @@ En cuanto al método de Ziegler--Nichols por respuesta al escalón, si bien no s
 Finalmente, las modificaciones propuestas por Astr\"om mostraron una mejora cualitativa clara en el desempeño del compensador. En la Figura~\ref{fig:satsina_concl} se observa el comportamiento del sistema sin manejo de saturación, donde los efectos de la no linealidad afectan el lazo de control. En contraste, al aplicar el control con las modificaciones de Astr\"om, la Figura~\ref{fig:sinsat300_concl} muestra que el sistema soporta mejor los efectos del ruido en su referencia y mantiene una respuesta similar a la de su contraparte más sencilla. La Figura~\ref{fig:sat300_concl} refuerza este resultado al evidenciar que el compensador modificado logra un esfuerzo de control más realista y robusto frente a las limitaciones del actuador, evitando comportamientos no deseados.
 
 
+
+
 \subsection{Conclusiones}
 
 Del análisis realizado pueden extraerse las siguientes conclusiones:
 
-El ajuste por prueba y error, discretizando un compensador continuo con distintas frecuencias de muestreo, resultó efectivo para obtener respuestas estables. Se comprobó que al incrementar la frecuencia de muestreo, la respuesta discreta se aproxima más a la diseñada en continuo, como se aprecia en las Figuras~\ref{fig:imp100_conclusion} y \ref{fig:imp300_conclusion}. No obstante, este procedimiento implica mayores requerimientos computacionales y desaprovecha parte de las ventajas del diseño directo en el plano-$Z$.
+El ajuste por prueba y error, discretizando un compensador continuo con distintas frecuencias de muestreo, resultó efectivo para obtener respuestas estables. Se comprobó que al incrementar la frecuencia de muestreo, la respuesta discreta se aproxima más a la diseñada en continuo, como se aprecia en las Figuras~\ref{fig:imp100_conclusion} y \ref{fig:imp300_conclusion}. No obstante, este procedimiento implica mayores requerimientos computacionales y desaprovecha parte de las ventajas del diseño directo en el plano-$Z$. En este sentido, las frecuencias de 100 y 300~Hz empleadas fueron suficientes para representar adecuadamente la dinámica de la planta, dado que su polo más lento se ubica en 8,82~Hz. Aunque puedan parecer valores bajos, resultaron adecuados para capturar la información esencial del sistema sin pérdida significativa.
 
-El método de Ziegler--Nichols, aunque no se implementó en esta práctica, se reconoce como un recurso útil para calcular rápidamente parámetros iniciales del PID. Dichos parámetros constituyen un punto de partida razonable que puede refinarse con técnicas de prueba y error, dependiendo de la planta y los objetivos de diseño, usando entoces una combinación de ambos métodos.
+El método de Ziegler--Nichols, aunque no se implementó en esta práctica, se reconoce como un recurso útil para calcular rápidamente parámetros iniciales del PID. Dichos parámetros constituyen un punto de partida razonable que puede refinarse con técnicas de prueba y error, dependiendo de la planta y los objetivos de diseño, usando entonces una combinación de ambos métodos.
 
-Las mejoras de Astr\"om aportaron ventajas significativas con cambios mínimos: la inclusión de un polo en el derivativo redujo la sensibilidad al ruido, mientras que la incorporación de mecanismos de anti-windup y saturación permitió mejorar el desempeño frente a no linealidades. Las Figuras \ref{fig:sinsat300_concl} y \ref{fig:sat300_concl} muestran que el compensador modificado mantiene la estabilidad, reduce la acumulación indeseada en el integrador y entrega una señal de control más acorde a las limitaciones físicas del actuador.
+Las mejoras de Astr\"om aportaron ventajas significativas con cambios mínimos: la inclusión de un polo en el término derivativo redujo la sensibilidad al ruido, mientras que la incorporación de mecanismos de anti-windup y saturación permitió mejorar el desempeño frente a no linealidades. Las Figuras \ref{fig:sinsat300_concl} y \ref{fig:sat300_concl} muestran que el compensador modificado mantiene la estabilidad, reduce la acumulación indeseada en el integrador y entrega una señal de control más acorde a las limitaciones físicas del actuador.
 
-Por último, se destaca que, aunque el compensador diseñado mejoró el tiempo de subida respecto a la planta original, no se observó el overshoot predicho teóricamente. Esto puede atribuirse a la diferencia entre los valores de los componentes de la planta y los realmente utilizados, así como a las limitaciones del modelo matemático empleado. En consecuencia, es normal que la respuesta práctica requiera un ajuste fino adicional para alcanzar el comportamiento deseado.
+Por último, se destaca que, aunque el compensador diseñado mejoró el tiempo de subida respecto a la planta original, no se observó el overshoot predicho teóricamente. Esto puede atribuirse a la diferencia entre los valores de los componentes de la planta y los realmente utilizados, así como a las limitaciones del modelo matemático empleado. En consecuencia, es normal que la respuesta práctica requiera un ajuste fino adicional para alcanzar el comportamiento deseado, cómo por ejemplo aumentando el término proporcional para un sobrepasamiento mayor.
