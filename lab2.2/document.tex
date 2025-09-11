@@ -95,29 +95,8 @@
 	\input{intro.tex}
 	
 	\input{desarrollo.tex}
-	\subsection{Resultados}
-	\begin{enumerate}[label=5.\arabic*.]
-		\item Gráficas del sistema con los compensadores.
-		\item Comparar Matlab vs.\ resultados experimentales.
-	\end{enumerate}
 	
-	% ================== APÉNDICE OPCIONAL ==================
-	\appendices
-	\section{Snippets Matlab (borrador)}
-	\begin{verbatim}
-		G = tf(num, den);
-		Ts = 0.001; % placeholder
-		Gz = c2d(G, Ts, 'zoh');
-		step(Gz); grid on;
-	\end{verbatim}
-	
-	\section{Notas PSoC (borrador)}
-	\begin{verbatim}
-		// ISR @ Ts:
-		// 1) Leer ADC -> yk
-		// 2) Calcular error ek = rk - yk
-		// 3) Calcular uk con ecuaciones en diferencias
-		// 4) Escribir DAC -> uk
-	\end{verbatim}
+	\input{resultados.tex}
+	\input{apendice.tex}
 	
 \end{document}
