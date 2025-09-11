@@ -10,7 +10,7 @@
 	
 	Para discretizar, partimos del método de la \emph{transformación de la respuesta al impulso}. La relación general es:
 	\begin{equation}
-		G(z)=(1 - z^{-1})\,\mathcal{Z}\left\{ \mathcal{L}^{-1}\left\{ \frac{G(s)}{s} \right\} \right\}
+		G(z)=(1 - z^{-1})\,\mathcal{Z}\left[\mathcal{L}^{-1}\left(\frac{G(s)}{s}\right)^*\right]
 	\end{equation}
 	Es decir, primero se obtiene la respuesta al escalón unitario en el tiempo continuo, luego se transforma con $\mathcal{Z}$ y finalmente se multiplica por $(1-z^{-1})$ para obtener la función de transferencia discreta.
 	
