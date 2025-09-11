@@ -1,29 +1,99 @@
 % ================== BORRADOR PUERCO EN FORMATO IEEE ==================
 \documentclass[conference]{IEEEtran}
 
-% ======= Preambulo mínimo pero útil para escribir rápido =======
+% ======= Idioma y codificación =======
 \usepackage[spanish, es-nodecimaldot]{babel}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+
+% ======= Matemática y tipografía =======
 \usepackage{amsmath, amssymb, amsfonts}
-\usepackage{siunitx}
-\usepackage{balance}
+\usepackage{microtype}  % ayuda a evitar overfull hbox
+
+% ======= Números y unidades =======
 \usepackage{siunitx}
 \sisetup{
-	output-decimal-marker = {,}, % coma decimal en vez de punto
-	group-separator = {.},       % separador de miles con punto
-	group-minimum-digits = 4,    % agrupa desde 4 dígitos
-	per-mode = symbol            % para usar "/" en unidades
+	output-decimal-marker = {,},  % coma decimal
+	group-separator = {.},        % separador de miles con punto
+	group-minimum-digits = 4,
+	per-mode = symbol,            %  m/s en vez de \per
+	round-mode = places,
+	round-precision = 3,
+	table-number-alignment = center
 }
 
+% ======= Gráficos y floats =======
 \usepackage{graphicx}
-\usepackage{caption}
-\usepackage{subcaption}
+\usepackage{float}      % para [H]
+\usepackage{subcaption} % subfiguras
 \usepackage{booktabs}
-\usepackage{hyperref}
+\usepackage{cuted}      % para figure* / strip si hace falta
+\usepackage{balance}    % balancear columnas al final
+
+% ======= Listas =======
 \usepackage{enumitem}
 \setlist{leftmargin=*, itemsep=2pt, topsep=4pt}
+
+% ======= Colores (para listings) =======
 \usepackage{xcolor}
+
+% ======= LISTINGS (UTF-8 real) =======
+\usepackage{listings}
+\usepackage{listingsutf8}
+\lstset{
+	inputencoding=utf8,
+	extendedchars=true,
+	basicstyle=\ttfamily\small,
+	breaklines=true, columns=fullflexible, keepspaces=true,
+	frame=single, numbers=left, numberstyle=\tiny, numbersep=6pt,
+	xleftmargin=1em,
+	captionpos=b,
+	% Mapeo de caracteres españoles y símbolo º
+	literate=
+	{á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'\i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+	{Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+	{ñ}{{\~n}}1 {Ñ}{{\~N}}1
+	{ü}{{\"u}}1 {Ü}{{\"U}}1
+	{¿}{{\textquestiondown}}1 {¡}{{\textexclamdown}}1
+	{º}{{$^\circ$}}1
+}
+
+% Lenguaje y estilo para MATLAB
+\lstdefinelanguage{Matlab}{
+	morekeywords={break,case,catch,continue,else,elseif,end,for,function,global,if,otherwise,persistent,return,switch,try,while},
+	sensitive=true,
+	morecomment=[l]\%,
+	morestring=[m]'
+}
+\lstdefinestyle{matlabstyle}{
+	language=Matlab,
+	basicstyle=\ttfamily\small,
+	keywordstyle=\bfseries\color{blue!70!black},
+	commentstyle=\itshape\color{green!40!black},
+	stringstyle=\color{red!60!black},
+	numbers=left, numberstyle=\tiny, numbersep=6pt,
+	frame=single, framerule=0.4pt,
+	columns=fullflexible, keepspaces=true,
+	showstringspaces=false,
+	breaklines=true,
+	tabsize=4,
+	captionpos=b,
+	linewidth=\columnwidth
+}
+
+% (Opcional) estilo para C/PSoC si lo necesitás
+\lstdefinestyle{cstyle}{
+	language=C,
+	inputencoding=utf8,
+	basicstyle=\ttfamily\small,
+	keywordstyle=\color{blue}\bfseries,
+	stringstyle=\color{red!60!black},
+	commentstyle=\color{green!40!black}\itshape,
+	numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=8pt,
+	showstringspaces=false, breaklines=true, columns=fullflexible, keepspaces=true,
+	frame=single, rulecolor=\color{black!20},
+	linewidth=\columnwidth, xleftmargin=1em
+}
 
 % ======= Macros rápidas =======
 \newcommand{\zetaD}{\zeta}
@@ -33,22 +103,18 @@
 \newcommand{\Gz}{G(z)}
 \newcommand{\Gs}{G(s)}
 
-\usepackage{float}
-
 % Macro para insertar figuras centradas con ancho ajustable
-% Ejemplo de uso \insertarfigura{ruta}{leyenda}{etiqueta}{escala entre 0 y 1}
-\newcommand{\insertarfigura}[4]{
+% Uso: \insertarfigura{ruta}{leyenda}{etiqueta}{escala 0..1}
+\newcommand{\insertarfigura}[4]{%
 	\begin{figure}[H]
-		\centerline{\includegraphics[width=#4\linewidth]{#1}}
+		\centering
+		\includegraphics[width=#4\linewidth]{#1}
 		\caption{#2}
 		\label{#3}
 	\end{figure}
-	% Referencia cruzada si se desea en el texto: véase la Fig.~\ref{#4}
 }
-% Macro: \insertarfigurawide{ruta}{caption}{label}{scale}
-\usepackage{cuted} % en el preámbulo
 
-% 
+% Macro: \insertarfigurawide{ruta}{caption}{label}{scale}
 \newcommand{\insertarfigurawide}[4]{%
 	\begin{figure*}[ht]
 		\centering
@@ -58,7 +124,8 @@
 	\end{figure*}
 }
 
-\usepackage{subcaption} % en el preámbulo
+% ======= Hyperref al final del preámbulo =======
+\usepackage[unicode,hidelinks]{hyperref}
 
 % ======= Metadatos =======
 \title{Práctica de Laboratorio 2: Diseño de controladores por el método de lugar de raíces.}
@@ -75,7 +142,7 @@
 		Universidad Católica Nuestra Señora de la Asunción \\
 		Asunción, Paraguay \\
 		Email: tania.romero@universidadcatolica.edu.py}
-		\and
+	\and
 	\IEEEauthorblockN{\hspace*{3.5em}Docente: Lic. Montserrat González}
 	\IEEEauthorblockA{
 		\hspace*{3.5em}Facultad de Ingeniería \\
@@ -92,11 +159,13 @@
 \begin{document}
 	\maketitle
 	
+	% ======= Contenido =======
 	\input{intro.tex}
-	
 	\input{desarrollo.tex}
-	
 	\input{resultados.tex}
 	\input{apendice.tex}
+	
+	% Balancear columnas al final (si queda una página corta)
+	\balance
 	
 \end{document}

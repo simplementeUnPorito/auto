@@ -1,13 +1,1109 @@
 % ================== APÉNDICE OPCIONAL ==================
+\onecolumn
 \appendices
-\section{Snippets Matlab (borrador)}
-\begin{verbatim}
-	G = tf(num, den);
-	Ts = 0.001; % placeholder
-	Gz = c2d(G, Ts, 'zoh');
-	step(Gz); grid on;
-\end{verbatim}
+\section{Códigos de Matlab}
 
+\begin{lstlisting}[style=matlabstyle,caption={Primera hoja de cálculos utilizada.},label={matlab:calculo1}]
+	close all
+	clear all
+	
+	addpath('..\Lab1\')
+	
+	%% Definicion de parametros
+	R_1 = 15e3;
+	R_3 = 15e3;
+	C_2 = 100e-9;
+	
+	R_2 = 82e3;
+	R_4 = 82e3;
+	C_1 = 0.22e-6;
+	
+	%% Generar funcion de transferencia d
+	numStage = [-R_3/R_1 -R_4/R_2];
+	denStage = { [C_2*R_3 1], [C_1*R_4 1] };
+	
+	% Usamos celdas para guardar los tf de cada stage
+	Gstage = cell(1,2);
+	G = 1;
+	for i = 1:2
+	Gstage{i} = tf(numStage(i), denStage{i});
+	G = G*Gstage{i};
+	end
+	
+	%% Analizamos en el tiempo
+	[tr, ts, wn] = plot_step_info(G);
+	disp('Planta continua G(s):')
+	G
+	zpk(G)
+	
+	
+	
+	%% Paso 1: Definir periodo de muestreo
+	% Se busca una mejora de 4 en el tiempo de rising , o sea tr = 10 ms
+	N = 4; 
+	T = tr/(8*N);
+	%Gcl = feedback(G,1);
+	%figure;
+	%step(Gcl)
+	%T = stepinfo(Gcl).SettlingTime/8;
+	
+	%% Paso 2: Digitalizar con ZOH
+	Gd = c2d(G, T, 'zoh');
+	disp('Planta digital G(z):')
+	Gd
+	zpk(Gd)
+	figure;
+	pzmap(Gd);
+	title('Lugar de raíces de G(z).')
+	
+	zgrid;
+	z = tf([1 0],1,T);
+	
+	%% Paso 3: Análisis en tiempo discreto lazo abierto
+	figure;
+	
+	% Obtenemos salida y tiempo de la función step
+	[y, t] = step(Gd);
+	
+	% Graficamos con stairs (propio de señales discretas)
+	stairs(t*1000, y, 'LineWidth',1.4);
+	
+	title('Respuesta al escalón de la planta digitalizad')
+	xlabel('Tiempo [ms]');
+	ylabel('Salida');
+	grid on;
+	ax = gca;
+	ax.XMinorTick = 'on';  % activamos minor ticks
+	ax.YMinorTick = 'on';
+	grid minor;
+	
+	%% Paso 4: Definimimos los valores de la simulación
+	umin = 0;
+	umax =  4.08;
+	refmin = 1.5;
+	refmax = 2.5;
+	n_per_seg = 500;
+	%% Paso 5: Lugar de raíces para zita = 0.7, compensador P
+	%figure
+	
+	%rlocus(Gd)
+	%zgrid     % agrega la grilla en el plano-z
+	z0=0.436;
+	p0=0.769221;%0.7705;
+	C_1 = (z-z0)/(z-p0);
+	figure;
+	Gc1 = Gd*C_1;
+	rlocus(Gc1);
+	title('Lugar de raíces de G(z) compensado con un lag-filter de 1º orden, anulando el polo más rápido de la planta.')
+	
+	zgrid     % agrega la grilla en el plano-z
+	%pause;
+	%[K, ~] = rlocfind(Gc1);   % hacés click donde querés los polos
+	%K = 0.73139;
+	%K = 0.82543;
+	K = 0.743;
+	Gc1f = feedback(K*Gc1,1);
+	%figure;
+	%step(Gc1f)
+	info = stepinfo(Gc1f);
+	info
+	
+	info_ext = plot_step_annot(Gc1f, 'la planta compensada con un lag-filter de 1º orden, anulando el polo más rápido de la planta.');
+	%step(Gc3f);
+	info = stepinfo(Gc1f);
+	info
+	info_ext
+	
+	[td, refd, yd, ud, ed, coefs] = sim_compensador_first_order( ...
+	Gd, z0, p0, K, T, umin, umax, refmin, refmax, n_per_seg);
+	
+	Nini = 100;              % descartar al inicio
+	Nfin = 100;              % descartar al final
+	idx0 = Nini + 1;         % índice inicial válido
+	idx1 = length(td) - Nfin; % índice final válido
+	
+	td   = td(idx0:idx1)-td(idx0);
+	refd = refd(idx0:idx1);
+	yd   = yd(idx0:idx1);
+	ud   = ud(idx0:idx1);
+	ed   = ed(idx0:idx1);
+	
+	% Si querés que el tiempo arranque en 0
+	
+	
+	
+	
+	
+	figure;
+	
+	% ---------- Subplot 1 ----------
+	axAbs = subplot(2,1,1);  % eje izquierdo (absoluto)
+	hold(axAbs,'on'); grid(axAbs,'on');
+	
+	% y[k] en rojo (abs)
+	hY = stairs(axAbs, td, yd, 'r-', 'LineWidth', 1.4);
+	
+	% Armamos eje derecho transparente
+	axPct = axes('Position', get(axAbs,'Position'), ...
+	'Color','none', 'YAxisLocation','right', ...
+	'XLim', get(axAbs,'XLim'), 'XTick',[], 'Box','off');
+	hold(axPct,'on');
+	
+	% r[k] en negro, graficado en %
+	ref_pct = 100*(refd - refmin)/(refmax - refmin);
+	hR = stairs(axPct, td, refd, 'k--', 'LineWidth', 1.2);
+	
+	% ======= Cálculo de límites con margen =======
+	yd_pct  = 100*(yd - refmin)/(refmax - refmin);
+	pctAll  = [yd_pct; ref_pct];
+	
+	% Valores extremos en % con margen del 5 %
+	rawMin = min(pctAll);
+	rawMax = max(pctAll);
+	span   = rawMax - rawMin;
+	pctMin = rawMin - 0.05*span;
+	pctMax = rawMax + 0.05*span;
+	
+	% Redondeamos a múltiplos de 20 para ticks
+	stepPct = 20;
+	tickMin = stepPct*floor(pctMin/stepPct);
+	tickMax = stepPct*ceil (pctMax/stepPct);
+	pctTicks = tickMin:stepPct:tickMax;
+	
+	% Convertimos a absolutos
+	valTicks = refmin + (pctTicks/100)*(refmax - refmin);
+	
+	% Aplicamos a ambos ejes
+	set(axAbs,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks);
+	set(axPct,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks,...
+	'YTickLabel',compose('%.0f %%',pctTicks));
+	
+	% Etiquetas
+	xlabel(axAbs,'Tiempo [s]');
+	ylabel(axAbs,'Respuesta [valor absoluto]');
+	ylabel(axPct,'Escala relativa a ref [%]');
+	title(axAbs,'Respuesta discreta con compensador 1º orden, anulando el polo más rápido de la planta.');
+	legend(axAbs, [hY, hR], {'y[k]', 'r[k]'}, 'Location', 'best');
+	
+	% ---------- Subplot 2: esfuerzo de control ----------
+	axU = subplot(2,1,2);
+	stairs(axU, td, ud, 'LineWidth',1.2); grid(axU,'on');
+	yline(axU, umax,'r:'); yline(axU, umin,'r:');
+	xlabel(axU,'Tiempo [s]'); ylabel(axU,'u[k]');
+	title(axU,'Esfuerzo de control con saturación');
+	
+	% --- Margen de 5% en eje Y ---
+	uMin = min(ud);
+	uMax = max(ud);
+	span = uMax - uMin;
+	ylim(axU, [uMin - 0.05*span, uMax + 0.05*span]);
+	
+	
+	grid(axAbs,'on');    % grilla principal
+	grid(axAbs,'minor'); % grilla secundaria
+	
+	grid(axPct,'on');
+	grid(axPct,'minor');
+	
+	grid(axU,'on');
+	grid(axU,'minor');
+	
+	%% Paso 6: Lugar de raices para zita = 0.7 y y ESS = 0, compensador PI
+	z0 = 0.857419558001;
+	p0 = 1;
+	C_2 = (z-z0)/(z-p0); %z=0.8433 %8433
+	Gc2 =Gd*C_2;
+	figure;
+	rlocus(Gc2);
+	title('Lugar de raíces de G(z) compensado con un lag-filter de 1º orden , fijando un polo en z = 1.')
+	
+	zgrid
+	%[K, ~] = rlocfind(Gc2);   % hacés click donde querés los polos
+	%K = 3.2779;
+	K2 = 3.09;
+	%figure;
+	Gc2f= feedback(K2*Gc2,1);
+	%step(Gc2f);
+	info = stepinfo(Gc2f);
+	info
+	
+	info_ext = plot_step_annot(Gc2f, 'la planta compensada con un lag-filter de 1º orden , fijando un polo en z = 1.');
+	%step(Gc3f);
+	info = stepinfo(Gc2f);
+	info
+	info_ext
+	
+	
+	[td, refd, yd, ud, ed, coefs] = sim_compensador_first_order( ...
+	Gd, z0, p0, K, T, umin, umax, refmin, refmax, n_per_seg);
+	
+	
+	Nini = 100;              % descartar al inicio
+	Nfin = 100;              % descartar al final
+	idx0 = Nini + 1;         % índice inicial válido
+	idx1 = length(td) - Nfin; % índice final válido
+	
+	td   = td(idx0:idx1)-td(idx0);
+	refd = refd(idx0:idx1);
+	yd   = yd(idx0:idx1);
+	ud   = ud(idx0:idx1);
+	ed   = ed(idx0:idx1);
+	
+	
+	
+	
+	figure;
+	
+	% ---------- Subplot 1 ----------
+	axAbs = subplot(2,1,1);  % eje izquierdo (absoluto)
+	hold(axAbs,'on'); grid(axAbs,'on');
+	
+	% y[k] en rojo (abs)
+	hY = stairs(axAbs, td, yd, 'r-', 'LineWidth', 1.4);
+	
+	% Armamos eje derecho transparente
+	axPct = axes('Position', get(axAbs,'Position'), ...
+	'Color','none', 'YAxisLocation','right', ...
+	'XLim', get(axAbs,'XLim'), 'XTick',[], 'Box','off');
+	hold(axPct,'on');
+	
+	% r[k] en negro, graficado en %
+	ref_pct = 100*(refd - refmin)/(refmax - refmin);
+	hR = stairs(axPct, td, refd, 'k--', 'LineWidth', 1.2);
+	
+	% ======= Cálculo de límites con margen =======
+	yd_pct  = 100*(yd - refmin)/(refmax - refmin);
+	pctAll  = [yd_pct; ref_pct];
+	
+	% Valores extremos en % con margen del 5 %
+	rawMin = min(pctAll);
+	rawMax = max(pctAll);
+	span   = rawMax - rawMin;
+	pctMin = rawMin - 0.05*span;
+	pctMax = rawMax + 0.05*span;
+	
+	% Redondeamos a múltiplos de 20 para ticks
+	stepPct = 20;
+	tickMin = stepPct*floor(pctMin/stepPct);
+	tickMax = stepPct*ceil (pctMax/stepPct);
+	pctTicks = tickMin:stepPct:tickMax;
+	
+	% Convertimos a absolutos
+	valTicks = refmin + (pctTicks/100)*(refmax - refmin);
+	
+	% Aplicamos a ambos ejes
+	set(axAbs,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks);
+	set(axPct,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks,...
+	'YTickLabel',compose('%.0f %%',pctTicks));
+	
+	% Etiquetas
+	xlabel(axAbs,'Tiempo [s]');
+	ylabel(axAbs,'Respuesta [valor absoluto]');
+	ylabel(axPct,'Escala relativa a ref [%]');
+	title(axAbs,'Respuesta discreta con compensador 1º orden, fijando un polo en z = 1.');
+	legend(axAbs, [hY, hR], {'y[k]', 'r[k]'}, 'Location', 'best');
+	
+	% ---------- Subplot 2: esfuerzo de control ----------
+	axU = subplot(2,1,2);
+	stairs(axU, td, ud, 'LineWidth',1.2); grid(axU,'on');
+	yline(axU, umax,'r:'); yline(axU, umin,'r:');
+	xlabel(axU,'Tiempo [s]'); ylabel(axU,'u[k]');
+	title(axU,'Esfuerzo de control con saturación');
+	
+	% --- Margen de 5% en eje Y ---
+	uMin = min(ud);
+	uMax = max(ud);
+	span = uMax - uMin;
+	ylim(axU, [uMin - 0.05*span, uMax + 0.05*span]);
+	
+	grid(axAbs,'on');    % grilla principal
+	grid(axAbs,'minor'); % grilla secundaria
+	
+	grid(axPct,'on');
+	grid(axPct,'minor');
+	
+	grid(axU,'on');
+	grid(axU,'minor');
+	
+	
+	
+	%% Paso 7: Lugar de raices para zita = 0.7 y y ESS = 0, compensador PI de segundo orden
+	z0_0 = 0.9333;
+	p0_0 = 1;
+	z0_1 = 0.436;
+	p0_1 = 0.71135;
+	C_3 = ((z-z0_0)*(z-z0_1))/((z-p0_0)*(z-p0_1));
+	Gc3 =Gd*C_3; %z=0.8433 %8433
+	figure;
+	rlocus(Gc3)
+	title('Lugar de raíces de G(z) compensado con un lag-filter de 2º orden, fijando un polo en z = 1 y anulando ambos polos de la planta.');
+	
+	zgrid
+	%pause;
+	%[K, ~] = rlocfind(Gc3);   % hacés click donde querés los polos
+	K = 1.14;
+	%figure;
+	Gc3f= feedback(K*Gc3,1);
+	
+	info_ext = plot_step_annot(Gc3f, 'la planta compensada con un lag-filter de 2º orden, fijando un polo en z = 1 y anulando ambos polos de la planta.');
+	%step(Gc3f);
+	info = stepinfo(Gc3f);
+	info
+	info_ext
+	
+	
+	% --- Llamada a tu simulador (misma interfaz que tu first_order) ---
+	[td, refd, yd, ud, ed, coefs] = sim_compensador_second_order( ...
+	Gd, z0_0, z0_1, p0_0, p0_1, K, T, umin, umax, refmin, refmax, n_per_seg);
+	
+	
+	Nini = 100;              % descartar al inicio
+	Nfin = 100;              % descartar al final
+	idx0 = Nini + 1;         % índice inicial válido
+	idx1 = length(td) - Nfin; % índice final válido
+	
+	td   = td(idx0:idx1)-td(idx0);
+	refd = refd(idx0:idx1);
+	yd   = yd(idx0:idx1);
+	ud   = ud(idx0:idx1);
+	ed   = ed(idx0:idx1);
+	
+	
+	
+	
+	figure;
+	
+	% ---------- Subplot 1 ----------
+	axAbs = subplot(2,1,1);  % eje izquierdo (absoluto)
+	hold(axAbs,'on'); grid(axAbs,'on');
+	
+	% y[k] en rojo (abs)
+	hY = stairs(axAbs, td, yd, 'r-', 'LineWidth', 1.4);
+	
+	% Armamos eje derecho transparente
+	axPct = axes('Position', get(axAbs,'Position'), ...
+	'Color','none', 'YAxisLocation','right', ...
+	'XLim', get(axAbs,'XLim'), 'XTick',[], 'Box','off');
+	hold(axPct,'on');
+	
+	% r[k] en negro, graficado en %
+	ref_pct = 100*(refd - refmin)/(refmax - refmin);
+	hR = stairs(axPct, td, refd, 'k--', 'LineWidth', 1.2);
+	
+	% ======= Cálculo de límites con margen =======
+	yd_pct  = 100*(yd - refmin)/(refmax - refmin);
+	pctAll  = [yd_pct; ref_pct];
+	
+	% Valores extremos en % con margen del 5 %
+	rawMin = min(pctAll);
+	rawMax = max(pctAll);
+	span   = rawMax - rawMin;
+	pctMin = rawMin - 0.05*span;
+	pctMax = rawMax + 0.05*span;
+	
+	% Redondeamos a múltiplos de 20 para ticks
+	stepPct = 20;
+	tickMin = stepPct*floor(pctMin/stepPct);
+	tickMax = stepPct*ceil (pctMax/stepPct);
+	pctTicks = tickMin:stepPct:tickMax;
+	
+	% Convertimos a absolutos
+	valTicks = refmin + (pctTicks/100)*(refmax - refmin);
+	
+	% Aplicamos a ambos ejes
+	set(axAbs,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks);
+	set(axPct,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks,...
+	'YTickLabel',compose('%.0f %%',pctTicks));
+	
+	% Etiquetas
+	xlabel(axAbs,'Tiempo [s]');
+	ylabel(axAbs,'Respuesta [valor absoluto]');
+	ylabel(axPct,'Escala relativa a ref [%]');
+	title(axAbs,'Respuesta discreta con compensador 2º orden, fijando un polo en z = 1 y anulando ambos polos de la planta');
+	legend(axAbs, [hY, hR], {'y[k]', 'r[k]'}, 'Location', 'best');
+	
+	% ---------- Subplot 2: esfuerzo de control ----------
+	axU = subplot(2,1,2);
+	stairs(axU, td, ud, 'LineWidth',1.2); grid(axU,'on');
+	yline(axU, umax,'r:'); yline(axU, umin,'r:');
+	xlabel(axU,'Tiempo [s]'); ylabel(axU,'u[k]');
+	title(axU,'Esfuerzo de control con saturación');
+	
+	% --- Margen de 5% en eje Y ---
+	uMin = min(ud);
+	uMax = max(ud);
+	span = uMax - uMin;
+	ylim(axU, [uMin - 0.05*span, uMax + 0.05*span]);
+	
+	
+	
+	
+	
+	
+	
+	grid(axAbs,'on');    % grilla principal
+	grid(axAbs,'minor'); % grilla secundaria
+	
+	grid(axPct,'on');
+	grid(axPct,'minor');
+	
+	grid(axU,'on');
+	grid(axU,'minor');
+	
+	
+	%% impresion antigua
+	% % --- Gráficas estilo informe ---
+	% figure; 
+	% subplot(2,1,1);
+	% stairs(td, refd, 'k--','LineWidth',1.0); hold on;
+	% stairs(td, yd,   'LineWidth',1.4);
+	% grid on; xlabel('Tiempo [s]'); ylabel('Respuesta de la planta/Referencia');
+	% title('Respuesta discreta con compensador 2º orden'); legend('r[k]','y[k]','Location','best');
+	% 
+	% subplot(2,1,2);
+	% stairs(td, ud, 'LineWidth',1.2);
+	% yline(umax,'r:'); yline(umin,'r:');
+	% grid on; xlabel('Tiempo [s]'); ylabel('u[k]');
+	% title('Esfuerzo de control con saturación');
+\end{lstlisting}
+
+\begin{lstlisting}[style=matlabstyle,caption={Funciones desarrolladas para la práctica.},label={matlab:func}]
+	function info_ext = plot_step_annot(sys, nameStr, Ts_override)
+	% STEP discreto con STAIRS; anota 10-90% (en s y en T), OS, zeta y omega_n.
+	% Grafica en milisegundos y marca el OS en el pico.
+	
+	if nargin < 2 || isempty(nameStr), nameStr = inputname(1); end
+	if isempty(nameStr), nameStr = 'sys'; end
+	
+	% ----- Respuesta y métricas básicas -----
+	[y, t] = step(sys); y = y(:); t = t(:);
+	t_ms = t * 1000;   % graficamos en milisegundos
+	
+	% Estimar yss por promedio en cola
+	Ntail = max(10, round(0.05*length(y)));
+	yss = mean(y(end-Ntail+1:end));
+	
+	% Límites 10-90
+	if abs(yss) < 1e-12
+	t10 = NaN; t90 = NaN; tr_10_90 = NaN; y10 = 0; y90 = 0;
+	else
+	y10 = 0.10*yss; y90 = 0.90*yss;
+	sgn = sign(yss);
+	idx10 = find(sgn*y >= sgn*y10, 1, 'first');
+	idx90 = find(sgn*y >= sgn*y90, 1, 'first');
+	t10 = tern(~isempty(idx10), t(idx10), NaN);
+	t90 = tern(~isempty(idx90), t(idx90), NaN);
+	tr_10_90 = tern(~isnan(t10)&&~isnan(t90)&&t90>=t10, t90 - t10, NaN);
+	end
+	t10_ms = t10 * 1000; t90_ms = t90 * 1000;
+	
+	% Pico y %OS (para zeta y omega_n)
+	[ypeak_raw, idxpk] = max(sign(yss).*y);
+	ypeak = sign(yss)*ypeak_raw;
+	tpeak = t(idxpk); tpeak_ms = tpeak * 1000;
+	OS_percent = tern(yss ~= 0, max(0, (ypeak - yss)/abs(yss)*100), NaN);
+	
+	% zeta desde %OS:  OS% = 100*exp(-zeta*pi/sqrt(1-zeta^2))
+	if isnan(OS_percent) || OS_percent <= 0
+	zeta_est = NaN;
+	else
+	logterm = log(OS_percent/100);
+	zeta_est = -logterm / sqrt(pi^2 + logterm^2);
+	end
+	
+	% ----- Ts y rise en T -----
+	Ts = NaN;
+	try
+	if isprop(sys,'Ts') && ~isempty(sys.Ts) && sys.Ts > 0, Ts = sys.Ts; end
+	catch, end
+	if nargin >= 3 && ~isempty(Ts_override) && Ts_override > 0, Ts = Ts_override; end
+	tr_10_90_T = tern(~isnan(Ts) && ~isnan(tr_10_90), tr_10_90/Ts, NaN);
+	
+	% ----- Estimacion de omega_n -----
+	omega_n = NaN;
+	if ~isnan(zeta_est) && zeta_est < 1 && OS_percent > 0 && tpeak > 0
+	omega_n = pi / ( tpeak * sqrt(1 - zeta_est^2) );
+	end
+	if isnan(omega_n)
+	S = stepinfo(y, t);   % Ts(2%) ~ 4/(zeta*omega_n)
+	if isfield(S,'SettlingTime') && ~isempty(S.SettlingTime) && S.SettlingTime > 0 && ~isnan(zeta_est) && zeta_est > 0
+	omega_n = 4 / ( zeta_est * S.SettlingTime );
+	end
+	end
+	if isnan(omega_n) && ~isnan(tr_10_90) && tr_10_90 > 0
+	k_rise = 1.4;  % aprox para 10-90% en 2do orden subamortiguado
+	omega_n = k_rise / tr_10_90;
+	end
+	
+	% ----- Grafico -----
+	figure;
+	stairs(t_ms, y, 'LineWidth', 1.5); grid on;grid minor; hold on;
+	xlabel('Tiempo [ms]'); ylabel('Salida');
+	title(sprintf('Respuesta al escalon de %s', nameStr));
+	
+	% Líneas guía 10% y 90% y marcadores (en ms)
+	if ~isnan(tr_10_90)
+	yline(y10, '--', '10% yss', 'LabelHorizontalAlignment','left');
+	yline(y90, '--', '90% yss', 'LabelHorizontalAlignment','left');
+	xline(t10_ms, ':', 't10%');
+	xline(t90_ms, ':', 't90%');
+	plot([t10_ms t90_ms], [y10 y90], 'o', 'MarkerSize', 6, 'LineWidth', 1.2);
+	end
+	% Línea de yss
+	yline(yss, '-', sprintf('yss=%.3g', yss), 'LabelHorizontalAlignment','left');
+	
+	% ----- Marca del OS en el pico -----
+	if ~isnan(OS_percent) && OS_percent > 0
+	% línea vertical desde yss a ypeak en tpeak
+	plot([tpeak_ms tpeak_ms], [yss ypeak], '-', 'LineWidth', 1.2);
+	% texto al costado derecho de la línea
+	dx = 0.02 * (t_ms(end) - t_ms(1));
+	text(tpeak_ms + dx, yss + 0.5*(ypeak - yss), ...
+	sprintf('OS=%.3g%%', OS_percent), ...
+	'Interpreter','none', 'Margin',2);
+	% marcar el pico
+	plot(tpeak_ms, ypeak, 's', 'MarkerSize', 6, 'LineWidth', 1.2);
+	end
+	
+	% ----- Cuadro de metricas (abajo-derecha; chico) -----
+	w = 0.15; h = 0.09; rmargin = 0.1; x = 1 - rmargin - w; y0 = 0.30;
+	txtLines = {
+		sprintf('t_r(10%%-90%%) = %.4g ms  (~%.4g Ts)', safeNum(tr_10_90*1000), safeNum(tr_10_90_T))
+		sprintf('OS = %.4g%%',          safeNum(OS_percent))
+		sprintf('zeta = %.4g',          safeNum(zeta_est))
+		sprintf('omega_n = %.4g rad/s', safeNum(omega_n))
+	};
+	annotation('textbox', [x y0 w h], ...
+	'String', txtLines, 'Interpreter','none', ...
+	'FontName','Consolas', 'FontSize',9, ...
+	'EdgeColor',[0.5 0.5 0.5], 'FaceAlpha',0.88, 'BackgroundColor','w');
+	
+	hold off;
+	
+	% ----- Salida -----
+	info_ext = struct( ...
+	'yss', yss, ...
+	't10', t10, ...
+	't90', t90, ...
+	'tr_10_90', tr_10_90, ...
+	'tr_10_90_T', tr_10_90_T, ...
+	'OS_percent', OS_percent, ...
+	'zeta_est', zeta_est, ...
+	'omega_n', omega_n, ...
+	'Ts', Ts);
+	end
+	
+	% --------- helpers ---------
+	function y = tern(cond, a, b)
+	if cond, y = a; else, y = b; end
+	end
+	
+	function v = safeNum(x)
+	if isnan(x) || isinf(x), v = NaN; else, v = x; end
+	end
+	function [td, refd, yd, ud, ed, coefs] = sim_compensador_first_order( ...
+	Gd, z0, p0, Kc, T, umin, umax, refmin, refmax, n_per_seg)
+	
+	% ===== Igual que tu PID: y(k+1)=b0*u(k)+b1*u(k-1)-a1*y(k)-a2*y(k-1) =====
+	% Controlador (posición): u(k) = p0*u(k-1) + Kc*ed(k) - Kc*z0*ed(k-1)
+	% ed(k) = refd(k) - yd(k)
+	
+	if nargin < 10 || isempty(n_per_seg), n_per_seg = 600; end
+	if ~isa(Gd,'tf'), error('Gd debe ser tf discreto.'); end
+	
+	% --- Coefs planta exactamente como en tu ejemplo ---
+	[numD, denD] = tfdata(Gd, 'v');
+	b0 = numD(2);
+	b1 = numD(3);
+	a1 = denD(2);
+	a2 = denD(3);
+	coefs = struct('b0',b0,'b1',b1,'a1',a1,'a2',a2);
+	
+	% --- Tiempo y referencia (refmin -> refmax -> refmin) ---
+	N  = 3*n_per_seg;
+	td = (0:N-1)' * T;
+	refd = [refmin*ones(n_per_seg,1);
+	refmax*ones(n_per_seg,1);
+	refmin*ones(n_per_seg,1)];
+	
+	% --- Inicialización idéntica a tu estilo ---
+	yd = zeros(N,1);
+	ed = zeros(N,1);
+	ud = zeros(N,1);
+	
+	% --- Loop (misma estructura y orden que tu PID) ---
+	for k = 3:N-1
+	ed(k) = refd(k) - yd(k);
+	
+	% Compensador: u(k) = p0*u(k-1) + Kc*ed(k) - Kc*z0*ed(k-1)
+	u_k = p0*ud(k-1) + Kc*ed(k) - Kc*z0*ed(k-1);
+	
+	
+	if u_k>umax
+	ud(k) = umax;
+	elseif u_k<umin
+	ud(k) = umin;
+	else 
+	ud(k) = u_k;
+	end
+	
+	
+	% Planta discreta (dividido por a0 implícito como en tu ejemplo)
+	yd(k+1) = b0*ud(k) + b1*ud(k-1) - a1*yd(k) - a2*yd(k-1);
+	end
+	end
+	
+	function [td, refd, yd, ud, ed, coefs] = sim_compensador_second_order( ...
+	Gd, z0_0, z0_1, p0_0, p0_1, Kc, T, umin, umax, refmin, refmax, n_per_seg)
+	
+	% ===== Planta: y(k+1)=b0*u(k)+b1*u(k-1)+b2*u(k-2)-a1*y(k)-a2*y(k-1) =====
+	% Compensador (posición, 2º orden):
+	% u(k) = (p0_0+p0_1)*u(k-1) - (p0_0*p0_1)*u(k-2) ...
+	%      + Kc*[ e(k) - (z0_0+z0_1)*e(k-1) + (z0_0*z0_1)*e(k-2) ]
+	% e(k) = refd(k) - yd(k)
+	
+	if nargin < 12 || isempty(n_per_seg), n_per_seg = 600; end
+	if ~isa(Gd,'tf'), error('Gd debe ser tf discreto.'); end
+	
+	% --- Coefs planta (normalizados a a0=1) ---
+	[numD, denD] = tfdata(Gd, 'v');
+	numD = numD(:).'; denD = denD(:).';
+	if abs(denD(1) - 1) > 1e-12
+	numD = numD/denD(1);
+	denD = denD/denD(1);
+	end
+	
+	% Asegurar longitud mínima del denominador [1 a1 a2]
+	if numel(denD) < 3, denD(end+1:3) = 0; end
+	a1 = denD(2);
+	a2 = denD(3);
+	
+	% b0,b1,b2 sin romper si faltan términos en el numerador
+	b0 = 0; b1 = 0; b2 = 0;
+	if numel(numD) >= 2, b0 = numD(2); end
+	if numel(numD) >= 3, b1 = numD(3); end
+	if numel(numD) >= 4, b2 = numD(4); end
+	% Nota: esto respeta tu estilo previo (b0=numD(2), b1=numD(3), ...)
+	
+	coefs = struct('b0',b0,'b1',b1,'b2',b2,'a1',a1,'a2',a2, ...
+	'z0_0',z0_0,'z0_1',z0_1,'p0_0',p0_0,'p0_1',p0_1,'Kc',Kc);
+	
+	% --- Tiempo y referencia (refmin -> refmax -> refmin) ---
+	N  = 3*n_per_seg;
+	td = (0:N-1)' * T;
+	refd = [refmin*ones(n_per_seg,1);
+	refmax*ones(n_per_seg,1);
+	refmin*ones(n_per_seg,1)];
+	
+	% --- Inicialización ---
+	yd = zeros(N,1);
+	ed = zeros(N,1);
+	ud = zeros(N,1);
+	
+	% --- Precalculos del compensador ---
+	P1 = (p0_0 + p0_1);
+	P2 = (p0_0 * p0_1);
+	Z1 = (z0_0 + z0_1);
+	Z2 = (z0_0 * z0_1);
+	
+	% --- Loop ---
+	for k = 3:N-1
+	ed(k) = refd(k) - yd(k);
+	
+	% Compensador 2º orden
+	u_k = P1*ud(k-1) - P2*ud(k-2) + Kc*( ed(k) - Z1*ed(k-1) + Z2*ed(k-2) );
+	
+	% Saturación
+	if u_k > umax
+	ud(k) = umax;
+	elseif u_k < umin
+	ud(k) = umin;
+	else
+	ud(k) = u_k;
+	end
+	
+	% Planta discreta
+	yd(k+1) = b0*ud(k) + b1*ud(k-1) + b2*ud(k-2) - a1*yd(k) - a2*yd(k-1);
+	end
+	end
+	
+\end{lstlisting}
+
+\begin{lstlisting}[style=matlabstyle,
+	caption={Modelo mejorado de la planta mediante los datos recolectados del osciloscopio},
+	label={matlab:modelo}
+	]
+
+	close all
+	clear all
+	
+	% Cargar CSV
+	data = readmatrix('opltab.csv');
+	
+	% Ignorar cabeceras, quedarte solo con datos numéricos
+	u = data(3:end, 5); % columna E = salida
+	y = data(3:end, 11); % columna K = entrada
+	Ts = 0.000099999997474; % tiempo de muestreo de B3
+	
+	% Crear objeto de identificación
+	data_id = iddata(y, u, Ts);
+	
+	% Estimar una función de transferencia discreta (ejemplo: 2 polos, 1 cero)
+	sys0 = tfest(data_id, 2, 0);
+	
+	% % Ver resultado
+	%  step(sys);
+	% % Crear datos de identificación
+	% data_id = iddata(y, u, Ts);
+	% 
+	% % Probar con distintos órdenes
+	% sys1 = tfest(data_id, 1, 0); % 1 polo
+	% sys2 = tfest(data_id, 2, 1); % 2 polos, 1 cero
+	% 
+	% % Comparar
+	figure;
+	compare(data_id,sys0);
+	
+	G = tf(sys0);
+	T = 1.25e-3;
+	Gd = c2d(G, T, 'zoh');
+	disp('Planta digital G(z):')
+	zpk(Gd)
+	controlSystemDesigner(Gd)
+	
+	save('planta.mat', 'G');
+\end{lstlisting}
+
+
+\begin{lstlisting}[style=matlabstyle,caption={Segunda hoja de cálculos utilizada.},label={matlab:calculo2}]
+	close all
+	clear all
+	
+	addpath('..\Lab1\')
+	
+	
+	load('planta.mat');
+	%% Analizamos en el tiempo
+	[tr, ts, wn] = plot_step_info(G);
+	disp('Planta continua G(s):')
+	G
+	zpk(G)
+	
+	%% Paso 1: Definir periodo de muestreo
+	% Se busca una mejora de 4 en el tiempo de rising , o sea tr = 10 ms
+	
+	T = 1.25e-3;
+	%Gcl = feedback(G,1);
+	%figure;
+	%step(Gcl)
+	%T = stepinfo(Gcl).SettlingTime/8;
+	
+	%% Paso 2: Digitalizar con ZOH
+	Gd = c2d(G, T, 'zoh');
+	disp('Planta digital G(z):')
+	Gd
+	zpk(Gd)
+	figure;
+	pzmap(Gd);
+	title('Lugar de raíces de G(z).')
+	
+	zgrid;
+	z = tf([1 0],1,T);
+	
+	%% Paso 3: Análisis en tiempo discreto lazo abierto
+	figure;
+	
+	% Obtenemos salida y tiempo de la función step
+	[y, t] = step(Gd);
+	
+	% Graficamos con stairs (propio de señales discretas)
+	stairs(t*1000, y, 'LineWidth',1.4);
+	
+	title('Respuesta al escalón de la planta digitalizad')
+	xlabel('Tiempo [ms]');
+	ylabel('Salida');
+	grid on;
+	ax = gca;
+	ax.XMinorTick = 'on';  % activamos minor ticks
+	ax.YMinorTick = 'on';
+	grid minor;
+	
+	%% Paso 4: Definimimos los valores de la simulación
+	umin = 0;
+	umax =  4.08;
+	refmin = 1.5;
+	refmax = 2.5;
+	n_per_seg = 500;
+	%% Paso 5: Lugar de raíces para zita = 0.7, compensador P
+	%figure
+	
+	%rlocus(Gd)
+	%zgrid     % agrega la grilla en el plano-z
+	z0 = 0.380927627742363;
+	p0 = 0.836970379456654;
+	K = 0.226961597782889;
+	C_1 = (z-z0)/(z-p0);
+	figure;
+	Gc1 = Gd*C_1;
+	rlocus(Gc1);
+	title('Lugar de raíces de G(z) compensado con un lag-filter de 1º orden, anulando el polo más rápido de la planta.')
+	
+	zgrid     % agrega la grilla en el plano-z
+	%pause;
+	%[K, ~] = rlocfind(Gc1);   % hacés click donde querés los polos
+	%K = 0.73139;
+	%K = 0.82543;
+	%K = 1.796463473892606;
+	Gc1f = feedback(K*Gc1,1);
+	%figure;
+	%step(Gc1f)
+	info = stepinfo(Gc1f);
+	info
+	
+	info_ext = plot_step_annot(Gc1f, 'la planta compensada con un lag-filter de 1º orden, anulando el polo más rápido de la planta.');
+	%step(Gc3f);
+	info = stepinfo(Gc1f);
+	info
+	info_ext
+	
+	[td, refd, yd, ud, ed, coefs] = sim_compensador_first_order( ...
+	Gd, z0, p0, K, T, umin, umax, refmin, refmax, n_per_seg);
+	
+	Nini = 100;              % descartar al inicio
+	Nfin = 100;              % descartar al final
+	idx0 = Nini + 1;         % índice inicial válido
+	idx1 = length(td) - Nfin; % índice final válido
+	
+	td   = td(idx0:idx1)-td(idx0);
+	refd = refd(idx0:idx1);
+	yd   = yd(idx0:idx1);
+	ud   = ud(idx0:idx1);
+	ed   = ed(idx0:idx1);
+	
+	% Si querés que el tiempo arranque en 0
+	
+	
+	
+	
+	
+	figure;
+	
+	% ---------- Subplot 1 ----------
+	axAbs = subplot(2,1,1);  % eje izquierdo (absoluto)
+	hold(axAbs,'on'); grid(axAbs,'on');
+	
+	% y[k] en rojo (abs)
+	hY = stairs(axAbs, td, yd, 'r-', 'LineWidth', 1.4);
+	
+	% Armamos eje derecho transparente
+	axPct = axes('Position', get(axAbs,'Position'), ...
+	'Color','none', 'YAxisLocation','right', ...
+	'XLim', get(axAbs,'XLim'), 'XTick',[], 'Box','off');
+	hold(axPct,'on');
+	
+	% r[k] en negro, graficado en %
+	ref_pct = 100*(refd - refmin)/(refmax - refmin);
+	hR = stairs(axPct, td, refd, 'k--', 'LineWidth', 1.2);
+	
+	% ======= Cálculo de límites con margen =======
+	yd_pct  = 100*(yd - refmin)/(refmax - refmin);
+	pctAll  = [yd_pct; ref_pct];
+	
+	% Valores extremos en % con margen del 5 %
+	rawMin = min(pctAll);
+	rawMax = max(pctAll);
+	span   = rawMax - rawMin;
+	pctMin = rawMin - 0.05*span;
+	pctMax = rawMax + 0.05*span;
+	
+	% Redondeamos a múltiplos de 20 para ticks
+	stepPct = 20;
+	tickMin = stepPct*floor(pctMin/stepPct);
+	tickMax = stepPct*ceil (pctMax/stepPct);
+	pctTicks = tickMin:stepPct:tickMax;
+	
+	% Convertimos a absolutos
+	valTicks = refmin + (pctTicks/100)*(refmax - refmin);
+	
+	% Aplicamos a ambos ejes
+	set(axAbs,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks);
+	set(axPct,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks,...
+	'YTickLabel',compose('%.0f %%',pctTicks));
+	
+	% Etiquetas
+	xlabel(axAbs,'Tiempo [s]');
+	ylabel(axAbs,'Respuesta [valor absoluto]');
+	ylabel(axPct,'Escala relativa a ref [%]');
+	title(axAbs,'Respuesta discreta con compensador 1º orden, anulando el polo más rápido de la planta.');
+	legend(axAbs, [hY, hR], {'y[k]', 'r[k]'}, 'Location', 'best');
+	
+	% ---------- Subplot 2: esfuerzo de control ----------
+	axU = subplot(2,1,2);
+	stairs(axU, td, ud, 'LineWidth',1.2); grid(axU,'on');
+	yline(axU, umax,'r:'); yline(axU, umin,'r:');
+	xlabel(axU,'Tiempo [s]'); ylabel(axU,'u[k]');
+	title(axU,'Esfuerzo de control con saturación');
+	
+	% --- Margen de 5% en eje Y ---
+	uMin = min(ud);
+	uMax = max(ud);
+	span = uMax - uMin;
+	ylim(axU, [uMin - 0.05*span, uMax + 0.05*span]);
+	
+	
+	grid(axAbs,'on');    % grilla principal
+	grid(axAbs,'minor'); % grilla secundaria
+	
+	grid(axPct,'on');
+	grid(axPct,'minor');
+	
+	grid(axU,'on');
+	grid(axU,'minor');
+	
+	
+	
+	%% Paso 7: Lugar de raices para zita = 0.7 y y ESS = 0, compensador PI de segundo orden
+	z0_0 = 0.380927627742363;
+	z0_1 = 0.821584532561100;
+	
+	
+	p0_0 = 0.753973536568200;
+	p0_1 = 1;
+	K = 0.287529112579611;
+	C_3 = ((z-z0_0)*(z-z0_1))/((z-p0_0)*(z-p0_1));
+	Gc3 =Gd*C_3; %z=0.8433 %8433
+	figure;
+	rlocus(Gc3)
+	title('Lugar de raíces de G(z) compensado con un lag-filter de 2º orden, fijando un polo en z = 1 y anulando ambos polos de la planta.');
+	
+	zgrid
+	%pause;
+	%[K, ~] = rlocfind(Gc3);   % hacés click donde querés los polos
+	%K = 1.14;
+	%figure;
+	Gc3f= feedback(K*Gc3,1);
+	
+	info_ext = plot_step_annot(Gc3f, 'la planta compensada con un lag-filter de 2º orden, fijando un polo en z = 1 y anulando ambos polos de la planta.');
+	%step(Gc3f);
+	info = stepinfo(Gc3f);
+	info
+	info_ext
+	
+	
+	% --- Llamada a tu simulador (misma interfaz que tu first_order) ---
+	[td, refd, yd, ud, ed, coefs] = sim_compensador_second_order( ...
+	Gd, z0_0, z0_1, p0_0, p0_1, K, T, umin, umax, refmin, refmax, n_per_seg);
+	
+	
+	Nini = 100;              % descartar al inicio
+	Nfin = 100;              % descartar al final
+	idx0 = Nini + 1;         % índice inicial válido
+	idx1 = length(td) - Nfin; % índice final válido
+	
+	td   = td(idx0:idx1)-td(idx0);
+	refd = refd(idx0:idx1);
+	yd   = yd(idx0:idx1);
+	ud   = ud(idx0:idx1);
+	ed   = ed(idx0:idx1);
+	
+	
+	
+	
+	figure;
+	
+	% ---------- Subplot 1 ----------
+	axAbs = subplot(2,1,1);  % eje izquierdo (absoluto)
+	hold(axAbs,'on'); grid(axAbs,'on');
+	
+	% y[k] en rojo (abs)
+	hY = stairs(axAbs, td, yd, 'r-', 'LineWidth', 1.4);
+	
+	% Armamos eje derecho transparente
+	axPct = axes('Position', get(axAbs,'Position'), ...
+	'Color','none', 'YAxisLocation','right', ...
+	'XLim', get(axAbs,'XLim'), 'XTick',[], 'Box','off');
+	hold(axPct,'on');
+	
+	% r[k] en negro, graficado en %
+	ref_pct = 100*(refd - refmin)/(refmax - refmin);
+	hR = stairs(axPct, td, refd, 'k--', 'LineWidth', 1.2);
+	
+	% ======= Cálculo de límites con margen =======
+	yd_pct  = 100*(yd - refmin)/(refmax - refmin);
+	pctAll  = [yd_pct; ref_pct];
+	
+	% Valores extremos en % con margen del 5 %
+	rawMin = min(pctAll);
+	rawMax = max(pctAll);
+	span   = rawMax - rawMin;
+	pctMin = rawMin - 0.05*span;
+	pctMax = rawMax + 0.05*span;
+	
+	% Redondeamos a múltiplos de 20 para ticks
+	stepPct = 20;
+	tickMin = stepPct*floor(pctMin/stepPct);
+	tickMax = stepPct*ceil (pctMax/stepPct);
+	pctTicks = tickMin:stepPct:tickMax;
+	
+	% Convertimos a absolutos
+	valTicks = refmin + (pctTicks/100)*(refmax - refmin);
+	
+	% Aplicamos a ambos ejes
+	set(axAbs,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks);
+	set(axPct,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks,...
+	'YTickLabel',compose('%.0f %%',pctTicks));
+	
+	% Etiquetas
+	xlabel(axAbs,'Tiempo [s]');
+	ylabel(axAbs,'Respuesta [valor absoluto]');
+	ylabel(axPct,'Escala relativa a ref [%]');
+	title(axAbs,'Respuesta discreta con compensador 2º orden, fijando un polo en z = 1 y anulando ambos polos de la planta');
+	legend(axAbs, [hY, hR], {'y[k]', 'r[k]'}, 'Location', 'best');
+	
+	% ---------- Subplot 2: esfuerzo de control ----------
+	axU = subplot(2,1,2);
+	stairs(axU, td, ud, 'LineWidth',1.2); grid(axU,'on');
+	yline(axU, umax,'r:'); yline(axU, umin,'r:');
+	xlabel(axU,'Tiempo [s]'); ylabel(axU,'u[k]');
+	title(axU,'Esfuerzo de control con saturación');
+	
+	% --- Margen de 5% en eje Y ---
+	uMin = min(ud);
+	uMax = max(ud);
+	span = uMax - uMin;
+	ylim(axU, [uMin - 0.05*span, uMax + 0.05*span]);
+	
+	
+	
+	
+	
+	
+	
+	grid(axAbs,'on');    % grilla principal
+	grid(axAbs,'minor'); % grilla secundaria
+	
+	grid(axPct,'on');
+	grid(axPct,'minor');
+	
+	grid(axU,'on');
+	grid(axU,'minor');
+	
+	
+	%% impresion antigua
+	% % --- Gráficas estilo informe ---
+	% figure; 
+	% subplot(2,1,1);
+	% stairs(td, refd, 'k--','LineWidth',1.0); hold on;
+	% stairs(td, yd,   'LineWidth',1.4);
+	% grid on; xlabel('Tiempo [s]'); ylabel('Respuesta de la planta/Referencia');
+	% title('Respuesta discreta con compensador 2º orden'); legend('r[k]','y[k]','Location','best');
+	% 
+	% subplot(2,1,2);
+	% stairs(td, ud, 'LineWidth',1.2);
+	% yline(umax,'r:'); yline(umin,'r:');
+	% grid on; xlabel('Tiempo [s]'); ylabel('u[k]');
+	% title('Esfuerzo de control con saturación');
+\end{lstlisting}
 \section{Notas PSoC (borrador)}
 \begin{verbatim}
 	// ISR @ Ts:
@@ -16,3 +1112,4 @@
 	// 3) Calcular uk con ecuaciones en diferencias
 	// 4) Escribir DAC -> uk
 \end{verbatim}
+
