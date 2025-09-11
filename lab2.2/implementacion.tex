@@ -2,8 +2,19 @@
 \begin{enumerate}[label=4.\arabic*.]
 	\item Implementar las ecuaciones en diferencias:
 	\begin{enumerate}[label*=4.\arabic*.]
-			\item Con el compensador de la sección 3.1.
+			\item Con el compensador de la sección 3.1.\\
+			Se realizó la implementación en \textit{PSoC Creator} empleando los parámetros obtenidos en Matlab para un amortiguamiento objetivo de $\zeta = 0.7$. La Figura~\ref{fig:CLOSCCOMP1} muestra el primer compensador y la respuesta medida en placa.
+			
+			\insertarfigura{./Img/CLOSCcomp1}{Primer compensador diseñado para $\zeta = 0.7$.}{fig:CLOSCCOMP1}{1}
+			
+			
+			
 			\item Con el compensador de la sección 3.2.
+			\insertarfigura{./Img/CLOSCcomp2_1}{Primer compensador diseñado para $\zeta = 0.7$ con $ESS = 0$ y un polo en el circulo unitario.}{fig:CLOSCCOMP2}{1}
+			
+			\insertarfigura{./Img/CLOSCcomp2_09}{Segundo compensador diseñado para $\zeta = 0.7$ con $ESS=0$ y un polo cercano al circulo unitario.}{fig:CLOSCCOMP209}{1}
+			
+			
 			\input{segundoIntento.tex}
 		\end{enumerate}
 \end{enumerate}

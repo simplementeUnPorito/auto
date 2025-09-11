@@ -103,6 +103,20 @@
 \newcommand{\Gz}{G(z)}
 \newcommand{\Gs}{G(s)}
 
+% ======= COMPARAR FIGURAS ========
+\newcommand{\compararfigsC}[8]{%
+	\begin{figure}[H] % <-- H en vez de !t
+		\centering
+		\subfloat[#2\label{#3}]{%
+			\includegraphics[width=0.49\columnwidth]{#1}}
+		\hspace{0.3em}
+		\subfloat[#5\label{#6}]{%
+			\includegraphics[width=0.49\columnwidth]{#4}}
+		\caption{#7}
+		\label{#8}
+	\end{figure}%
+}
+
 % Macro para insertar figuras centradas con ancho ajustable
 % Uso: \insertarfigura{ruta}{leyenda}{etiqueta}{escala 0..1}
 \newcommand{\insertarfigura}[4]{%
