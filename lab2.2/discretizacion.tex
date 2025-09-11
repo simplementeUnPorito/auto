@@ -11,6 +11,7 @@
 	Para discretizar, partimos del método de la \emph{transformación de la respuesta al impulso}. La relación general es:
 	\begin{equation}
 		G(z)=(1 - z^{-1})\,\mathcal{Z}\left[\mathcal{L}^{-1}\left(\frac{G(s)}{s}\right)^*\right]
+		\label{eq:DiscGz}
 	\end{equation}
 	Es decir, primero se obtiene la respuesta al escalón unitario en el tiempo continuo, luego se transforma con $\mathcal{Z}$ y finalmente se multiplica por $(1-z^{-1})$ para obtener la función de transferencia discreta.
 	
@@ -43,10 +44,7 @@
 	
 	\vspace{0.5em}
 	\textbf{Función de transferencia discreta:}  
-	Finalmente, al multiplicar por $(1-z^{-1})$, se obtiene la expresión general de la planta discretizada:
-	\begin{equation}
-		G(z) = \frac{z-1}{z} \,\mathcal{Z}\left[\mathcal{L}^{-1}\left(\frac{G(s)}{s}\right)^*\right]
-	\end{equation}
+	Finalmente, al multiplicar por $(1-z^{-1})$, se obtiene la expresión general de la planta discretizada, G(z), vista enteriormente en la ecuación \ref{eq:DiscGz}.
 	
 	\vspace{0.5em}
 	\textbf{Cálculo de coeficientes:}  

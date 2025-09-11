@@ -1,63 +1,45 @@
-Para el primer compensador, a partir del an\'alisis del \emph{ángulo faltante} $\phi$ para cumplir con la condici\'on de fase (Ec.~\eqref{eq:condicionFase}), la alternativa m\'as sencilla consiste en dise\~nar un filtro \emph{lag} en cascada de primer orden.  
+\subsection{Modificaci\'on de la Din\'amica}
 
-Una opci\'on es cancelar uno de los polos originales de la planta mediante la ubicaci\'on de un cero en la misma posici\'on, y colocar a continuaci\'on un nuevo polo de manera que el aporte de fase conjunto de estos dos compense el desfase requerido. De esta forma, el punto seleccionado pasar\'a a pertenecer al lugar de las ra\'ices.  
+Una vez digitalizada la planta, es posible identificar la ubicaci\'on de polos y ceros en el plano-$z$ (v\'ease la Fig.~\ref{img:rlocusOP}).  
 
-En este caso, se procede a cancelar el polo m\'as lento del sistema. Para ello, se analiza el tri\'angulo formado por el cero, el nuevo polo y el punto deseado en el plano-$z$.  
+\insertarfigura{./Img/lugarDeRaicesPlantaDigitalizada.png}
+{Lugar de las ra\'ices de la planta digitalizada con el tiempo de muestreo $T$ calculado.}
+{img:rlocusOP}{1}
 
-(Poner esquema ilustrativo del tri\'angulo formado por cero, polo y punto deseado)  
+De acuerdo con las especificaciones solicitadas, se debe determinar un punto en el plano-$z$ que satisfaga las condiciones de desempe\~no requeridas.  
 
-Ecuacionando, por la ley de senos se obtienen las siguientes relaciones:  
+Recordando que 
+\[
+z = e^{sT}, \quad \text{con } s = \sigma + j\omega_d,
+\]
+donde $\sigma = \zeta \cdot \omega_n$ y $\omega_d = \omega_n \sqrt{1-\zeta^2}$,
+se obtiene un punto candidato $p_{\text{target}}$, cuyas coordenadas en el plano-$z$ son
+\[
+x = 0.843273, \qquad y = 0.136677.
+\]
+
+Este punto representa la ubicaci\'on de los polos deseados que garantizar\'ian la aproximaci\'on de segundo orden y, por ende, las caracter\'isticas din\'amicas solicitadas.  
+
+Para verificar si el punto pertenece al lugar de las ra\'ices de la planta, se aplica la \emph{condici\'on de fase}, la cual establece que la suma de \'angulos debe satisfacer la Ec.~\eqref{eq:condicionFase}:
+
 \begin{equation}
-	\theta = \arcsin\!\left(\frac{y}{\sqrt{(x-z_c)^2+y^2}}\right)
-	\label{eq:theta_c1}
+	\begin{aligned}
+		\angle (p_{\text{target}}-z_0) 
+		&- \angle (p_{\text{target}}-p_0) \\
+		&- \angle (p_{\text{target}}-p_1) 
+		&=& \phi \\&&\approx& -136.42^\circ
+	\end{aligned}
+	\label{eq:condicionFase}
 \end{equation}
 
+De este an\'alisis se deduce que es necesario introducir un compensador que aporte un desfase adicional de $-43.042^\circ$ para que el punto deseado forme parte del lugar de ra\'ices y el sistema cumpla con las especificaciones de dise\~no (v\'ease la Fig.~\ref{img:rlocusTarget}).  
 
-\begin{equation}
-	\frac{p_c - z_c}{\sin(180^\circ+\phi)} 
-	= \frac{\sqrt{(x-z_c)^2+y^2}}{\sin(-\phi+\theta)}
-	\label{eq:pz_c1}
-\end{equation}
+(CAMBIAR IMAGEN)
+\insertarfigura{./Img/lugarDeRaicesPlantaDigitalizada.png}
+{Lugar de las ra\'ices de la planta digitalizada con el polo candidato.}
+{img:rlocusTarget}{1}
 
-Usando las Ec.~\eqref{eq:theta_c1} y \eqref{eq:pz_c1}, se concluye que:  
-\begin{equation}
-	p_c = 
-	\frac{\sin(180^\circ+\phi)\,\sqrt{(x-z_c)^2+y^2}}
-	{\sin\!\left(-\arcsin\!\left(\tfrac{y}{\sqrt{(x-z_c)^2+y^2}}\right)-\phi\right)}
-	+ z_c
-	\label{eq:p_c1}
-\end{equation}
-
-Con la Ec.~\eqref{eq:p_c1}, se obtiene un filtro \emph{lag} que asegura que el punto deseado pertenezca al lugar de las ra\'ices. Restar\'a determinar el valor de la ganancia $K$ que garantice que los polos en lazo cerrado se ubiquen efectivamente en dicha posici\'on.  
-
-Esto puede realizarse aplicando el \emph{criterio de magnitud}, expresado en la Ec.~\eqref{eq:criterioMagnitud}:  
-\begin{equation}
-	K = \frac{\prod_i \sqrt{(p_i-x)^2+y^2}}
-	{\prod_j \sqrt{(z_j-x)^2+y^2}}
-	\label{eq:criterioMagnitud}
-\end{equation}
-
-No obstante, tambi\'en es posible emplear directamente la funci\'on \texttt{rlocus} de \textsc{Matlab}, lo cual facilita el c\'alculo.  
-
-\insertarfigura{./Img/lugarDeRaicesCompensador1_completo.png}
-{Lugar de las ra\'ices de la planta digitalizada y compensada con un filtro lag de primer orden.}
-{ref:rlocusC1_v1}{1}
-
-\insertarfigura{./Img/lugarDeRaicesCompensador1_zoom.png}
-{Lugar de las ra\'ices de la planta digitalizada y compensada con un filtro lag de primer orden (detalle ampliado).}
-{ref:rlocusC1_zoom_v1}{1}
-
-Una vez identificado el compensador y la ganancia, se procede a cerrar el lazo y analizar la respuesta en el tiempo. La Fig.~\ref{ref:stepC1_v1} muestra la respuesta al escal\'on con el primer compensador dise\~nado.  
-
-\insertarfigura{./Img/stepCompensador1.png}
-{Respuesta al escal\'on del sistema en lazo cerrado con el primer compensador dise\~nado.}
-{ref:stepC1_v1}{1}
-
-Se observa que se cumplen las condiciones de desempe\~no solicitadas; sin embargo, aparece un error en estado estacionario considerable. Esto se debe a que el sistema en lazo abierto $K \cdot C(z) \cdot G_d(z)$ es de tipo 0, por lo cual no posee la capacidad de seguir correctamente a una entrada escal\'on.  
-
-Asimismo, se eval\'ua el esfuerzo de control aplicado (Fig.~\ref{ref:stepYEsfuerzoC1_v1}). Si bien resulta implementable, se aprecia que presenta una magnitud inicial elevada con picos pronunciados.  
-
-\insertarfigura{./Img/step_y_esfuerzoCompensador1.png}
-{Respuesta al escal\'on del sistema en lazo cerrado con el primer compensador dise\~nado, junto con el esfuerzo de control aplicado por el compensador.}
-{ref:stepYEsfuerzoC1_v1}{1}
-
+\begin{enumerate}[label=3.\arabic*.]
+	\item Diseñar compensador para $\zeta = 0.7$: \input{compensador1.tex}
+	\item Diseñar otro compensador para que $\ESS = 0$: \input{compensador2.tex}
+\end{enumerate}
