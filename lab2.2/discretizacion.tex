@@ -11,7 +11,26 @@
 	\end{equation}
 	
 	\begin{equation}
-		\frac{G(s)}{s} = \frac{K}{ab}\frac{1}{s}+\frac{K}{(b^2-ab)}\frac{1}{(s+b)}+\frac{K}{(a^2-ab)}\frac{1}{(s+a)}
+		\frac{G(s)}{s} =
+		\underset{\delta}{\frac{K}{ab}} \cdot \frac{1}{s}
+		+ \underset{\beta}{\frac{K}{\,b^2-ab\,}} \cdot \frac{1}{s+b}
+		+ \underset{\alpha}{\frac{K}{\,a^2-ab\,}} \cdot \frac{1}{s+a}
+	\end{equation}
+	
+	\begin{equation}
+		\mathcal{L}^{-1} \left\{\frac{G(s)}{s}\right\}=\left(\delta + \beta e^{-bTk}+\alpha e^{-aTk}\right) u(k)
+	\end{equation}
+	
+	\begin{equation}
+		\sum_{n=0}^{\infty}g(k) = \delta + \beta e^{-bTk}+\alpha e^{-aTk}
+	\end{equation}
+	
+	\begin{equation}
+		\mathcal{Z}\left[\frac{G(s)}{s}\right] = \delta \frac{z}{z-1}+\beta \frac{z}{z-e^{-bT}}+\alpha \frac{z}{z-e^{-aT}}
+	\end{equation}
+	
+	\begin{equation}
+		G(z) = \frac{z-1}{z} \mathcal{Z}\left[\mathcal{L}^{-1}\left(\frac{G(s)}{s}\right)\right]
 	\end{equation}
 	
 	\item Comparar el resultado con Matlab.
