@@ -1,0 +1,37 @@
+% ================== INDICADORES ==================
+\section{Indicadores}
+\begin{itemize}
+	\item Estabilidad en lazo cerrado: polos dentro del círculo unitario en $z$.
+	\item Tiempo de subida: con $\zeta = 0.7$ y 8 muestras en $t_r$.
+	\item Error en estado estacionario ($\ESS$): debe ser igual a cero.
+	\item Comparación Matlab vs.\ experimento.
+\end{itemize}
+% ================== INTRODUCCIÓN ==================
+\section{Introducción}
+
+En este laboratorio se aplica el método del lugar de raíces para el diseño de un controlador digital que modifique la dinámica de una planta previamente discretizada mediante retención de orden cero. A partir de las especificaciones de desempeño (tiempo de subida, factor de amortiguamiento y error en estado estacionario), se determinan los polos deseados en el plano-$z$ y se ajusta el compensador para que dichos polos pertenezcan al lugar de raíces del sistema. De este modo, se logra un diseño sistemático que permite cumplir con los requisitos de estabilidad y respuesta transitoria, comparando los resultados obtenidos en Matlab con la implementación práctica en PSoC.
+
+% ================== OBJETIVOS ==================
+\section{Objetivos}
+\begin{itemize}
+	\item Diseñar un controlador que modifique la dinámica de la planta para satisfacer condiciones específicas de la respuesta transitoria del sistema de control en lazo cerrado.
+	\item El sistema regulado debe ser estable.  
+	\item El error en estado estacionario ($\ESS$) debe ser igual a cero.  
+	\item Observar y analizar los efectos del controlador en el comportamiento del sistema.  
+	\item Considerar diferentes métodos para el ajuste de los parámetros del controlador y analizar los resultados.  
+	\item Diseñar el sistema de control en Matlab e implementar la ecuación en diferencias en PSoC.  
+	
+\end{itemize}
+
+
+% ================== MATERIALES ==================
+\section{Materiales}
+\begin{itemize}
+	\item PC con Matlab.
+	\item Planta analógica.
+	\item Sistema de adquisición en PSoC.
+\end{itemize}
+
+% ================== TEORÍA ==================
+\section{Teoría}
+Véase K.~Ogata, \textit{Sistemas de Control en Tiempo Discreto}, págs.~204--225.

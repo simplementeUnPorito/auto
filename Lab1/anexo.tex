@@ -1,0 +1,173 @@
+\onecolumn
+\section{Anexo}
+
+% ---------- Listing 1 ----------
+\begin{lstlisting}[style=matlabstyle,caption={Script en Matlab},label={lst:mat}]
+	%% Definicion de parametros
+	R_1 = 15e3;
+	R_3 = 15e3;
+	C_2 = 100e-9;
+	R_2 = 75e3;
+	R_4 = 75e3;
+	C_1 = 0.2e-6;
+	%% Generar funcion de transferencia d
+	numStage = [-R_3/R_1 -R_4/R_2];
+	denStage = { [C_2*R_3 1], [C_1*R_4 1] };
+	% Usamos celdas para guardar los tf de cada stage
+	Gstage = cell(1,2);
+	G = 1;
+	for i = 1:2
+	Gstage{i} = tf(numStage(i), denStage{i});
+	G = G*Gstage{i};
+	end
+	%% Analizamos en el tiempo
+	[tr, ts, wn] = plot_step_info(G);
+	
+	function [tr, ts, wn] = plot_step_info(G)
+	info = stepinfo(G);
+	tr = info.RiseTime;
+	ts = info.SettlingTime;
+	wn = 1.8 / tr;
+	t_end = 1.1 * ts;
+	if ~isfinite(t_end) || t_end <= 0
+	t_end = 5 * max(tr, 1e-3);
+	end
+	t = linspace(0, t_end, max(100, round(2*pi/wn))); % usa entero para N
+	[y, tout] = step(G, t);
+	figure; plot(tout, y, 'LineWidth', 1.4); grid on; hold on;
+	xlabel('Tiempo [s]'); ylabel('Salida');
+	title(sprintf('Escalon: tr=%.4gs, ts=%.4gs, omega_n=%.4g rad/s', tr, ts, wn));
+	xline(tr, '--', sprintf('  t_r=%.3g s', tr), 'LabelOrientation','horizontal');
+	xline(ts,  ':', sprintf('  t_s=%.3g s', ts), 'LabelOrientation','horizontal');
+	legend('G(t)', 'Location', 'best');
+	end
+\end{lstlisting}
+
+% ---------- Listing 2 ----------
+\begin{lstlisting}[language=Matlab, style=matlabstyle, caption={diseno\_pid.m}, label={lst:diseno_pid}]
+	function results = diseno_pid(G, filename)
+	% diseno_pid - Bucle interactivo para sintonia PID y seleccion del mejor ensayo
+	%
+	% Uso:
+	%   [Kp, Ti, Td] = diseno_pid(G, 'log_pid.mat', OSd, trd, tsd)
+	
+	if nargin < 2, filename = 'log_pid.mat'; end
+	if nargin < 3, OSd = []; end
+	if nargin < 4, trd = []; end
+	if nargin < 5, tsd = []; end
+	
+	results = struct([]);
+	if exist(filename,'file')
+	S = load(filename);
+	if isfield(S,'results'), results = S.results; end
+	end
+	k_iter = numel(results) + 1;
+	
+	while true
+	fprintf('\n--- Parametros PID ---\n');
+	Kp = input('Kp: ');
+	Td = input('Td: ');
+	Ti = input('Ti: ');
+	numC = Kp*[Ti*Td, Ti, 1];
+	denC = [Ti, 0];
+	C = tf(numC, denC);
+	cl = feedback(C*G, 1);
+	
+	info = stepinfo(cl);
+	OS = info.Overshoot;
+	tr = info.RiseTime;
+	ts = info.SettlingTime;
+	
+	% guardar en struct
+	results(k_iter).Kp = Kp;
+	results(k_iter).Ti = Ti;
+	results(k_iter).Td = Td;
+	results(k_iter).Overshoot = OS;
+	results(k_iter).RiseTime = tr;
+	results(k_iter).SettlingTime = ts;
+	save(filename,'results');
+	k_iter = k_iter + 1;
+	
+	resp = input('Continuar? [s/n]: ','s');
+	if isempty(resp) || any(lower(resp(1)) == ['n','q'])
+	disp('Finalizando loop.');
+	break;
+	end
+	end
+	end
+\end{lstlisting}
+
+\newpage
+\begin{table}[!t]
+	\centering
+	\small
+	\caption{Resultados obtenidos.}
+	\label{tab:resultadosPID}
+	\resizebox{0.9\textwidth}{!}{% usa \textwidth en una columna
+		\begin{tabular}{|S|S|S|S|S|S|}
+			\hline
+			\textbf{Kp} & \textbf{Ti} & \textbf{Td} & \textbf{Overshoot} & \textbf{RiseTime} & \textbf{SettlingTime} \\ \hline
+			% … (tu tabla completa, sin cambios) …
+			\hline
+		\end{tabular}
+	}
+\end{table}
+
+% ---------- Listing 3 ----------
+\begin{lstlisting}[language=Matlab,style=matlabstyle, caption={Simulacion PID incremental (Euler) vs continuo}, label={lst:pid_euler_ideal}]
+	% --- Control continuo (referencia) ---
+	numC = Kp*[Ti*Td, Ti, 1];
+	denC = [Ti, 0];
+	controlador = tf(numC, denC);
+	cloop_c = feedback(controlador*G, 1);
+	info  = stepinfo(cloop_c);
+	tend  = 3*info.SettlingTime;
+	wn    = 1.8/info.RiseTime;
+	Tstep = (2*pi/wn)/3000;   % paso muy fino para "continuo" ideal
+	t  = 0:Tstep:tend;
+	td = 0:T:tend;
+	
+	% Referencia
+	refc = stepSize*ones(size(t));
+	yc   = lsim(cloop_c, refc, t);
+	refd = interp1(t, refc, td, 'linear', 'extrap');
+	
+	% --- Planta discreta (ZOH) ---
+	Gd = c2d(G, T, 'zoh');
+	[numD, denD] = tfdata(Gd, 'v');
+	% Asumimos forma b0 + b1 z^-1 + b2 z^-2 / (1 + a1 z^-1 + a2 z^-2)
+	b0 = numD(2); b1 = numD(3);
+	a1 = denD(2); a2 = denD(3);
+	
+	% Inicializacion
+	yd = zeros(size(td));
+	ed = zeros(size(td));
+	ud = zeros(size(td));
+	
+	% --- PID incremental (Euler atras) ---
+	for k = 3:numel(td)-1
+	ed(k) = refd(k) - yd(k);
+	ud(k) = ud(k-1) + Kp*((1+T/Ti+Td/T)*ed(k) ...
+	-(1+2*Td/T)*ed(k-1) + (Td/T)*ed(k-2));
+	% Planta discreta (diferencia)
+	yd(k+1) = b0*ud(k) + b1*ud(k-1) - a1*yd(k) - a2*yd(k-1);
+	end
+	
+	% --- Graficos ---
+	yshift = circshift(yd, -2); % alinear por uso de e[k-2]
+	figure; grid on; hold on;
+	yyaxis left
+	plot(t*1000, refc, ':');               % referencia
+	plot(t*1000, yc,  '--','LineWidth',1.3);  % continuo
+	stairs(td*1000, yshift,'-','LineWidth',1.2); % discreto
+	ylabel('Salida');
+	yyaxis right
+	plot(td*1000, ud, 'r--','LineWidth',1.2);
+	ylabel('u_d[k]');
+	xlabel('Tiempo [ms]');
+	title(sprintf('PID Euler: Kp=%.3g, Ti=%.3g, Td=%.3g', Kp, Ti, Td));
+	legend('Referencia','Continuo','Discreto','u_d','Location','best');
+\end{lstlisting}
+
+% Si queres incluir el ZN por separado:
+\input{zn_step_method.tex}

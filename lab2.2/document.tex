@@ -1,0 +1,96 @@
+% ================== BORRADOR PUERCO EN FORMATO IEEE ==================
+\documentclass[conference]{IEEEtran}
+
+% ======= Preambulo mínimo pero útil para escribir rápido =======
+\usepackage[spanish, es-nodecimaldot]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{siunitx}
+
+\usepackage{siunitx}
+\sisetup{
+	output-decimal-marker = {,}, % coma decimal en vez de punto
+	group-separator = {.},       % separador de miles con punto
+	group-minimum-digits = 4,    % agrupa desde 4 dígitos
+	per-mode = symbol            % para usar "/" en unidades
+}
+
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\setlist{leftmargin=*, itemsep=2pt, topsep=4pt}
+\usepackage{xcolor}
+
+% ======= Macros rápidas =======
+\newcommand{\zetaD}{\zeta}
+\newcommand{\wn}{\omega_n}
+\newcommand{\Ts}{T_s}
+\newcommand{\ESS}{\mathrm{ESS}}
+\newcommand{\Gz}{G(z)}
+\newcommand{\Gs}{G(s)}
+
+% ======= Metadatos =======
+\title{Práctica de Laboratorio 2: Diseño de controladores por el método de lugar de raíces.}
+
+\author{
+	\IEEEauthorblockN{Elías Álvarez}
+	\IEEEauthorblockA{Carrera de Ing. Electrónica \\ 
+		Universidad Católica Nuestra Señora de la Asunción \\
+		Asunción, Paraguay \\
+		Email: elias.alvarez@universidadcatolica.edu.py}
+	\and
+	\IEEEauthorblockN{Tania Romero}
+	\IEEEauthorblockA{Carrera de Ing. Electrónica \\
+		Universidad Católica Nuestra Señora de la Asunción \\
+		Asunción, Paraguay \\
+		Email: tania.romero@universidadcatolica.edu.py}
+		\and
+	\IEEEauthorblockN{\hspace*{3.5em}Docente: Lic. Montserrat González}
+	\IEEEauthorblockA{
+		\hspace*{3.5em}Facultad de Ingeniería \\
+		\hspace*{3.5em}Universidad Católica Nuestra Señora de la Asunción \\
+		\hspace*{3.5em}Asunción, Paraguay}
+	\and
+	\IEEEauthorblockN{\hspace*{3.5em}Docente: PhD. Enrique Vargas}
+	\IEEEauthorblockA{%
+		\hspace*{3.5em}Facultad de Ingeniería \\  % ← empuja a la derecha
+		\hspace*{3.5em}Universidad Católica Nuestra Señora de la Asunción \\
+		\hspace*{3.5em}Asunción, Paraguay}
+}
+
+\begin{document}
+	\maketitle
+	
+	\input{intro.tex}
+	
+	\input{desarrollo.tex}
+	\subsection{Resultados}
+	\begin{enumerate}[label=5.\arabic*.]
+		\item Gráficas del sistema con los compensadores.
+		\item Comparar Matlab vs.\ resultados experimentales.
+	\end{enumerate}
+	
+	% ================== APÉNDICE OPCIONAL ==================
+	\appendices
+	\section{Snippets Matlab (borrador)}
+	\begin{verbatim}
+		G = tf(num, den);
+		Ts = 0.001; % placeholder
+		Gz = c2d(G, Ts, 'zoh');
+		step(Gz); grid on;
+	\end{verbatim}
+	
+	\section{Notas PSoC (borrador)}
+	\begin{verbatim}
+		// ISR @ Ts:
+		// 1) Leer ADC -> yk
+		// 2) Calcular error ek = rk - yk
+		// 3) Calcular uk con ecuaciones en diferencias
+		// 4) Escribir DAC -> uk
+	\end{verbatim}
+	
+\end{document}
