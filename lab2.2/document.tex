@@ -33,6 +33,33 @@
 \newcommand{\Gz}{G(z)}
 \newcommand{\Gs}{G(s)}
 
+\usepackage{float}
+
+% Macro para insertar figuras centradas con ancho ajustable
+% Ejemplo de uso \insertarfigura{ruta}{leyenda}{etiqueta}{escala entre 0 y 1}
+\newcommand{\insertarfigura}[4]{
+	\begin{figure}[H]
+		\centerline{\includegraphics[width=#4\linewidth]{#1}}
+		\caption{#2}
+		\label{#3}
+	\end{figure}
+	% Referencia cruzada si se desea en el texto: véase la Fig.~\ref{#4}
+}
+% Macro: \insertarfigurawide{ruta}{caption}{label}{scale}
+\usepackage{cuted} % en el preámbulo
+
+% 
+\newcommand{\insertarfigurawide}[4]{%
+	\begin{figure*}[ht]
+		\centering
+		\includegraphics[width=#4\textwidth]{#1}
+		\caption{#2}
+		\label{#3}
+	\end{figure*}
+}
+
+\usepackage{subcaption} % en el preámbulo
+
 % ======= Metadatos =======
 \title{Práctica de Laboratorio 2: Diseño de controladores por el método de lugar de raíces.}
 
