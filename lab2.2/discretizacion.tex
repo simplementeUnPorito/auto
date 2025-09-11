@@ -1,5 +1,15 @@
 \subsection{Discretización de la Planta}
 \begin{enumerate}[label=2.\arabic*.]
-	\item Elegir el tiempo de muestreo $\Ts$ para 8 muestras en el tiempo de subida ($\zeta = 0.7$).
+	\item Elegir el tiempo de muestreo $\Ts$ para 8 muestras en el tiempo de subida ($\zeta = 0.7$). \\
+	La planta es la siguiente:
+	\begin{equation}
+		G(s) = \frac{K}{(s+a)(s+b)}
+	\end{equation}
+	
+	\begin{equation}
+		(1-z^{-1})\mathcal{Z}{\mathcal{L}^{-1}{\frac{G(s)}{s}}}
+	\end{equation}
+	
+	
 	\item Comparar el resultado con Matlab.
 \end{enumerate}
