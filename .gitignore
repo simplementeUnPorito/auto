@@ -1,3 +1,24 @@
+# Archivos auxiliares de LaTeX
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.gz
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.nav
+*.snm
+*.vrb
+*.blg
+*.bbl
+
+# PDFs generados
+*.pdf
+
+
 *.acn
 *.acr
 *.alg
@@ -51,3 +72,19 @@
 *.bcf
 *.pyg
 build/
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.gz
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.nav
+*.snm
+*.vrb
+*.blg
+*.bbl
+*.pdf

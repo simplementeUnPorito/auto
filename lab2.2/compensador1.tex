@@ -1,0 +1,29 @@
+Una vez digitalizada la planta, es posible identificar la ubicaci\'on de polos y ceros en el plano-$z$.  
+
+\insertarfigura{./Img/lugarDeRaicesPlantaDigitalizada.png}
+{Lugar de las ra\'ices de la planta digitalizada con el tiempo de muestreo $T$ calculado.}
+{ref:rlocusOP}{1}
+
+De acuerdo con las especificaciones solicitadas, se debe determinar un punto en el plano-$z$ que satisfaga las condiciones de desempe\~no requeridas.  
+
+Recordando que 
+\[
+z = e^{sT}, \quad \text{con } s = \sigma + j\omega_d,
+\]
+donde $\sigma = \zeta \cdot \omega_n$ y $\omega_d = \omega_n \sqrt{1-\zeta^2},
+\]
+se obtiene un punto candidato cuyas coordenadas en el plano-$z$ son
+\[
+x = 0.843273, \qquad y = 0.136677.
+\]
+
+Este punto representa la ubicaci\'on de los polos deseados que garantizar\'ian la aproximaci\'on de segundo orden y, por ende, las caracter\'isticas din\'amicas solicitadas.  
+
+Sin embargo, para verificar si el punto pertenece al lugar de las ra\'ices de la planta, es necesario aplicar la \emph{condici\'on de fase}, la cual establece que la suma de \'angulos debe satisfacer:
+\[
+\angle (z-z_0) - \angle (z-p_0) - \bigl(180^\circ - \angle (z-p_1)\bigr) \approx -136.42^\circ.
+\]
+
+De este an\'alisis se deduce que es preciso introducir un compensador que aporte un desfase adicional de $-43.042^\circ$ para que el punto deseado forme parte del lugar de ra\'ices y el sistema cumpla con las especificaciones de dise\~no.  
+
+(Poner imagen de plano-$z$ con el punto candidato marcado)
