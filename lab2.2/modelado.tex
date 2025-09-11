@@ -11,9 +11,6 @@ Para el paralelo $R_f \parallel C_f$, se obtiene:
 	\label{eq:Zf}
 \end{equation}
 
-\insertarfigura{./img/circuito.png}{Circuito esquemático de la planta, que emula el comportamiento dinámico de un motor de CC.}{fig:circuitoini}{1}
-
-\insertarfigura{./img/CircRealim.png}{Configuración inversora con un polo simple en la realimentación.}{fig:impedanciaReal}{0.5}
 
 El sistema trabaja sobre una tensión de referencia en continua $V_{\text{cc}}/2 = 2.5$ V. En los cálculos posteriores se toma dicho valor como punto de referencia.
 
@@ -44,57 +41,6 @@ El siguiente código genera cada etapa de primer orden, calcula la función en l
 
 
 
-\begin{strip}
-	\vspace{-\baselineskip} % ajusta si ves demasiado aire arriba
-	\noindent
-	\begin{minipage}{0.98\textwidth}
-		\begin{lstlisting}[style=matlabstyle,caption={Script en Matlab},label={lst:mat}]
-			
-			%% Definicion de parametros
-			R_1 = 15e3;
-			R_3 = 15e3;
-			C_2 = 100e-9;
-			R_2 = 75e3;
-			R_4 = 75e3;
-			C_1 = 0.2e-6;
-			%% Generar funcion de transferencia d
-			numStage = [-R_3/R_1 -R_4/R_2];
-			denStage = { [C_2*R_3 1], [C_1*R_4 1] };
-			% Usamos celdas para guardar los tf de cada stage
-			Gstage = cell(1,2);
-			G = 1;
-			for i = 1:2
-			Gstage{i} = tf(numStage(i), denStage{i});
-			G = G*Gstage{i};
-			end
-			%% Analizamos en el tiempo
-			[tr, ts, wn] = plot_step_info(G);
-			
-			function [tr, ts, wn] = plot_step_info(G)
-			info = stepinfo(G);
-			tr = info.RiseTime;
-			ts = info.SettlingTime;
-			wn = 1.8 / tr;
-			t_end = 1.1 * ts;
-			if ~isfinite(t_end) || t_end <= 0, 
-			t_end = 5 * max(tr, 1e-3); 
-			end
-			t = linspace(0, t_end, 2*pi/wn);
-			[y, tout] = step(G, t);
-			figure; plot(tout, y, 'LineWidth', 1.4); grid on; hold on;
-			xlabel('Tiempo [s]'); ylabel('Salida');
-			title(sprintf('Escalón: tr=%.4gs, ts=%.4gs, \\omega_n=%.4g rad/s', tr, ts, wn));
-			xline(tr, '--', sprintf('  t_r=%.3g s', tr), 'LabelOrientation','horizontal');
-			xline(ts,  ':', sprintf('  t_s=%.3g s', ts), 'LabelOrientation','horizontal');
-			legend('G(t)', 'Location', 'best');
-			end
-			
-		\end{lstlisting}
-	\end{minipage}
-	\vspace{-\baselineskip} % ajusta si ves aire abajo
-\end{strip}
-
-\insertarfigurawide{./img/EscalonLazoAb.png}{Respuesta al escalón del sistema en lazo abierto.}{fig:escalonLazoab}{1}
 
 \paragraph{Resultados numéricos.}  
 A partir de la respuesta de la figura~\ref{fig:escalonLazoab} se obtuvieron:
