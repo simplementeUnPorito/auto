@@ -1,7 +1,45 @@
-\subsection{Modificación de la Dinámica}
+\subsection{Modificaci\'on de la Din\'amica}
+
+Una vez digitalizada la planta, es posible identificar la ubicaci\'on de polos y ceros en el plano-$z$ (v\'ease la Fig.~\ref{img:rlocusOP}).  
+
+\insertarfigura{./Img/lugarDeRaicesPlantaDigitalizada.png}
+{Lugar de las ra\'ices de la planta digitalizada con el tiempo de muestreo $T$ calculado.}
+{img:rlocusOP}{1}
+
+De acuerdo con las especificaciones solicitadas, se debe determinar un punto en el plano-$z$ que satisfaga las condiciones de desempe\~no requeridas.  
+
+Recordando que 
+\[
+z = e^{sT}, \quad \text{con } s = \sigma + j\omega_d,
+\]
+donde $\sigma = \zeta \cdot \omega_n$ y $\omega_d = \omega_n \sqrt{1-\zeta^2}$,
+se obtiene un punto candidato $p_{\text{target}}$, cuyas coordenadas en el plano-$z$ son
+\[
+x = 0.843273, \qquad y = 0.136677.
+\]
+
+Este punto representa la ubicaci\'on de los polos deseados que garantizar\'ian la aproximaci\'on de segundo orden y, por ende, las caracter\'isticas din\'amicas solicitadas.  
+
+Para verificar si el punto pertenece al lugar de las ra\'ices de la planta, se aplica la \emph{condici\'on de fase}, la cual establece que la suma de \'angulos debe satisfacer la Ec.~\eqref{eq:condicionFase}:
+
+\begin{equation}
+	\begin{aligned}
+		\angle (p_{\text{target}}-z_0) 
+		&- \angle (p_{\text{target}}-p_0) \\
+		&- \angle (p_{\text{target}}-p_1) 
+		&=& \phi \\&&\approx& -136.42^\circ
+	\end{aligned}
+	\label{eq:condicionFase}
+\end{equation}
+
+De este an\'alisis se deduce que es necesario introducir un compensador que aporte un desfase adicional de $-43.042^\circ$ para que el punto deseado forme parte del lugar de ra\'ices y el sistema cumpla con las especificaciones de dise\~no (v\'ease la Fig.~\ref{img:rlocusTarget}).  
+
+(CAMBIAR IMAGEN)
+\insertarfigura{./Img/lugarDeRaicesPlantaDigitalizada.png}
+{Lugar de las ra\'ices de la planta digitalizada con el polo candidato.}
+{img:rlocusTarget}{1}
+
 \begin{enumerate}[label=3.\arabic*.]
-	\item Diseñar compensador para $\zeta = 0.7$.
-	\input{compensador1.tex}
-	\item Diseñar otro compensador para que $\ESS = 0$.
-	\input{compensador2.tex}
+	\item Diseñar compensador para $\zeta = 0.7$: \input{compensador1.tex}
+	\item Diseñar otro compensador para que $\ESS = 0$: \input{compensador2.tex}
 \end{enumerate}
