@@ -45,12 +45,12 @@
 	\textbf{Función de transferencia discreta:}  
 	Finalmente, al multiplicar por $(1-z^{-1})$, se obtiene la expresión general de la planta discretizada:
 	\begin{equation}
-		G(z) = \frac{z-1}{z} \,\mathcal{Z}\left[\mathcal{L}^{-1}\left(\frac{G(s)}{s}\right)\right]
+		G(z) = \frac{z-1}{z} \,\mathcal{Z}\left[\mathcal{L}^{-1}\left(\frac{G(s)}{s}\right)^*\right]
 	\end{equation}
 	
 	\vspace{0.5em}
 	\textbf{Cálculo de coeficientes:}  
-	Con los valores $a = \tfrac{1}{81\,000 \cdot 200 \cdot 10^{-9}}$ y $b = \tfrac{1}{15 \cdot 10^{3} \cdot 100 \cdot 10^{-9}}$, y considerando $K = 1$, se obtienen los siguientes coeficientes:
+	Con los valores $a = \tfrac{1}{81\,000 \cdot 200 \cdot 10^{-9}}$ y $b = \tfrac{1}{15 \cdot 10^{3} \cdot 100 \cdot 10^{-9}}$, y considerando $K = 1$ y $T = 1.2452$, se obtienen los siguientes coeficientes:
 	\[
 	\delta = \frac{K}{ab} \approx 24.3 \times 10^{6}, \qquad
 	\beta = \frac{K}{b^2-ab} \approx -2.4 \times 10^{6},
@@ -67,4 +67,5 @@
 	\end{equation}
 	
 	\item Comparar este resultado con el obtenido en Matlab utilizando el comando \texttt{c2d}.
+	VER DESPUES
 \end{enumerate}
