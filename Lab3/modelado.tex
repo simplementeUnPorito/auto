@@ -1,0 +1,55 @@
+\subsection{Modelado del Sistema}
+\subsubsection{Obtención de la función de transferencia en lazo abierto}
+
+La planta puede interpretarse como la conexión en cascada de dos filtros activos de primer orden. Cada uno posee la misma topología: un amplificador operacional en configuración inversora cuya impedancia de realimentación está compuesta por una resistencia en paralelo con un capacitor.
+
+\paragraph{Impedancia de realimentación.}  
+Para el paralelo $R_f \parallel C_f$, se obtiene:
+\begin{equation}
+	Z_f \;=\; R_f \parallel \frac{1}{sC_f}
+	\;=\; \frac{R_f}{1 + s R_f C_f}
+	\label{eq:Zf}
+\end{equation}
+
+
+El sistema trabaja sobre una tensión de referencia en continua $V_{\text{cc}}/2 = 2.5$ V. En los cálculos posteriores se toma dicho valor como punto de referencia.
+
+\paragraph{Ganancia de una etapa (entrada inversora).}  
+Con $V_{\text{ref}}=0$, se cumple el cortocircuito virtual ($V_p = V_n = 0$). Aplicando KCL en el nodo inversor:
+\[
+\frac{V_i}{R_i} \;=\; \frac{-V_o}{Z_f}
+\quad\Rightarrow\quad
+\frac{V_o}{V_i} \;=\; -\,\frac{Z_f}{R_i}
+\]
+y reemplazando \eqref{eq:Zf}:
+\begin{equation}
+	\frac{V_o}{V_i}\Bigg|_{V_{\text{ref}}=0}
+	= -\,\frac{R_f}{R_i}\,\frac{1}{1+sR_f C_f}
+	\label{eq:gain_inverting}
+\end{equation}
+
+\paragraph{Encadenamiento de etapas.}  
+Como ambas etapas AO1 y AO2 responden a la forma \eqref{eq:gain_inverting}, la ganancia total en lazo abierto resulta del producto de sus transferencias:
+\[
+G_{\text{ol}}(s)
+= \Big(-\frac{Z_{f1}(s)}{R_{i1}}\Big)\,
+\Big(-\frac{Z_{f2}(s)}{R_{i2}}\Big)
+\]
+
+\paragraph{Implementación en Matlab.}  
+El siguiente código genera cada etapa de primer orden, calcula la función en lazo abierto y extrae información temporal de la respuesta al escalón:
+
+
+
+
+\paragraph{Resultados numéricos.}  
+A partir de la respuesta de la figura~\ref{fig:escalonLazoab} se obtuvieron:
+\begin{itemize}
+	\item \textbf{Tiempo de subida:} $t_r \approx 0.0332$ s (33.2 ms)
+	\item \textbf{Tiempo de establecimiento (2\%):} $t_s \approx 0.0603$ s (60.3 ms)
+	\item \textbf{Frecuencia natural estimada:} $\omega_n \approx 54.2$ rad/s
+\end{itemize}
+
+
+
+
