@@ -4,16 +4,15 @@ Con el objetivo de mejorar las prestaciones y evitar las limitaciones derivadas 
 
 Para ello, se empleó el osciloscopio a fin de muestrear la respuesta del sistema ante una entrada escalón. Posteriormente, mediante las funciones de identificación de sistemas en \textsc{Matlab}, se llevó a cabo una estimación de segundo orden que aproxima de manera adecuada el comportamiento dinámico de la planta.  
 
-\insertarfigura{./Img/circuito.png}
+\insertarfigura{./Img/estimado.png}
 {Respuesta al escalón de la planta estimada mediante identificación en \textsc{Matlab}.}
 {fig:PlantaEstimada}{0.8}
 
 De esta estimación se obtuvo la siguiente función de transferencia característica del sistema identificado:
 \begin{equation}
-	G(s) \;=\; \frac{K}{s^2 + a s + b},
+	G(s) \;=\; \frac{1.2472e05}{(s+771.3)(s+157.3)},
 \end{equation}
 donde los parámetros $K$, $a$ y $b$ fueron ajustados automáticamente por el algoritmo de estimación en función de los datos experimentales.  
 
 A partir de este nuevo modelo, y siguiendo procedimientos análogos a los presentados en secciones anteriores, se diseñaron dos compensadores que fueron implementados de manera similar al caso inicial.
 
-(FIGURAS)

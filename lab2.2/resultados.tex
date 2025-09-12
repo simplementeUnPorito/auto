@@ -1,8 +1,32 @@
+\onecolumn
 \subsection{Resultados}
-\begin{enumerate}[label=5.\arabic*.]
-	\item Gráficas del sistema con los compensadores.
-	\item Comparar Matlab vs.\ resultados experimentales.
-\end{enumerate}
+\begin{table}[H]
+\centering
+\caption{Comparación entre cálculos y mediciones}
+\begin{tabular}{|l|l|l|l|}
+	\hline
+	\textbf{Compensador} & \textbf{Overshoot (\%)} & \textbf{$t_r$ (ms)} & \textbf{$\zeta$} \\ \hline
+	Compensador 1 (primer modelo) - Cálculo  & 4.79 & 11.21 & 0.69 \\ \hline
+	Compensador 1 (primer modelo) - Medición & NV   & 5     & $>0.6$ \\ \hline
+	Compensador 3 (primer modelo) - Cálculo  & 4.62 & 11.21 & 0.69 \\ \hline
+	Compensador 3 (primer modelo) - Medición (polo en 1)   & 300  & NV    & NE \\ \hline
+	Compensador 3 (primer modelo) - Medición (polo en 0.9) & 25   & 10    & 0.404 \\ \hline
+	Compensador 1 (segundo modelo) - Cálculo & 5    & 10.4  & 0.70 \\ \hline
+	Compensador 1 (segundo modelo) - Medición& 5    & 7     & 0.69 \\ \hline
+	Compensador 2 (segundo modelo) - Cálculo & 5    & 13.6  & 0.70 \\ \hline
+	Compensador 2 (segundo modelo) - Medición& 5    & 8     & 0.69 \\ \hline
+\end{tabular}
+\end{table}
+
+\subsection{Conclusión}
+
+El diseño de los compensadores, si bien logró estabilizar el sistema, no reprodujo exactamente la respuesta esperada según los cálculos iniciales. En particular, los valores de $\zeta$ y del tiempo de subida no coincidieron con lo estimado teóricamente. Esto se debió principalmente a un modelado poco preciso de la planta, sumado al uso de valores nominales de resistencias y capacitores, lo cual introdujo un error significativo en la implementación práctica.  
+
+Además, se observó que al ubicar un polo cercano a $z=1$ la respuesta tiende a desestabilizarse; sin embargo, con un ajuste fino de su posición se logró mejorar el desempeño. Este efecto puede atribuirse también a la incertidumbre en el muestreo y a las pequeñas variaciones en el \textit{clock}, que desplazan el polo fuera del círculo unitario.  
+
+Finalmente, al emplear un modelo más preciso de la planta, sin necesidad de modificar de manera considerable los valores de $K$, polos ni ceros, se obtuvieron respuestas muy cercanas a las calculadas en Matlab. Esto demuestra la importancia de un modelado adecuado como base para una correcta implementación del control en hardware.
+
+
 
 
 

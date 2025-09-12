@@ -1,6 +1,31 @@
 
+
+\begin{table}[H]
+	\centering
+	\caption{Parámetros del Compensador 1 (con la nueva planta)}
+	\begin{tabular}{|c|c|}
+		\hline
+		$z_0$ & 0.380927627742363 \\ \hline
+		$p_0$ & 0.836970379456654 \\ \hline
+		$K$   & 0.226961597782889 \\ \hline
+	\end{tabular}
+\end{table}
+
+\begin{table}[H]
+	\centering
+	\caption{Parámetros del Compensador 2 (con la nueva planta)}
+	\begin{tabular}{|c|c|}
+		\hline
+		$z_{0,0}$ & 0.380927627742363 \\ \hline
+		$z_{0,1}$ & 0.821584532561100 \\ \hline
+		$p_{0,0}$ & 0.753973536568200 \\ \hline
+		$p_{0,1}$ & 1 \\ \hline
+		$K$       & 0.287529112579611 \\ \hline
+	\end{tabular}
+\end{table}
 \onecolumn
 \compararfigsC{./Img/comp1_v2}{Version dos del primer compensador diseñado en Matlab para $\zeta = 0.7$.}{fig:comp1v2}{./Img/CLOSCcomp1_v2}{Implementación del compensador en el PSoC.}{fig:CLOSCCOMP1v2}{}{fig:comparacion4}
 
 
-\compararfigsC{./Img/comp2_v2}{Version dos del segundo compensador diseñado en Matlab para $\zeta = 0.7$ y $ESS = 0$.}{fig:comp2v2}{./Img/CLOSCcomp1_v2}{Implementación del compensador en el PSoC.}{fig:CLOSCCOMP2v2}{}{fig:comparacion5}
+
+\compararfigsC{./Img/comp2_v2}{Version dos del segundo compensador diseñado en Matlab para $\zeta = 0.7$ y $ESS = 0$.}{fig:comp2v2}{./Img/CLOSCcomp2_v2}{Implementación del compensador en el PSoC.}{fig:CLOSCCOMP2v2}{}{fig:comparacion5}

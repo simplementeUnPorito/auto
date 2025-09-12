@@ -28,6 +28,18 @@ Inicialmente este enfoque parece prometedor: podemos calcularlo (valores obtenid
 
 No obstante, al observar la respuesta al escalón nos encontramos con una decepción: se obtiene un sobrepico del $20\%$, equivalente a un $\zeta \approx 0.4$, lo que no satisface las condiciones deseadas.
 
+\begin{table}[H]
+	\centering
+	\caption{Parámetros del Compensador 2}
+	\begin{tabular}{|c|c|}
+		\hline
+		$z_0$ & 0.857419558001 \\ \hline
+		$p_0$ & 1 \\ \hline
+		$K$   & 3.09 \\ \hline
+	\end{tabular}
+\end{table}
+
+
 \insertarfigura{./Img/StepCompensador2.png}
 {Respuesta al escalón del primer intento de compensador.}
 {fig:StepCompensador2}{1}
@@ -43,6 +55,18 @@ Finalmente, optamos por un compensador de segundo orden. En primer lugar, coloca
 A continuación, diseñamos un segundo compensador para completar lo faltante, anulando el polo más rápido de la planta con un cero en esa ubicación y hallando el nuevo polo mediante el mismo procedimiento aplicado en el primer compensador.
 
 Determinando la ganancia $K$ como en el caso anterior, obtenemos el siguiente resultado, el cual ahora cumple con las condiciones deseadas:
+\begin{table}[H]
+	\centering
+	\caption{Parámetros del Compensador 3}
+	\begin{tabular}{|c|c|}
+		\hline
+		$z_{0,0}$ & 0.9333 \\ \hline
+		$p_{0,0}$ & 1 \\ \hline
+		$z_{0,1}$ & 0.436 \\ \hline
+		$p_{0,1}$ & 0.71135 \\ \hline
+		$K$       & 1.14 \\ \hline
+	\end{tabular}
+\end{table}
 
 \insertarfigura{./Img/lugarDeRaicesCompensador3_completo.png}
 {Lugar de raíces de la planta compensada con un filtro \emph{lag} de segundo orden y polo en $z=1$.}
