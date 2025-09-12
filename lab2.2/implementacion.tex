@@ -1,5 +1,6 @@
 \newpage
 \onecolumn
+
 \subsection{Implementación en PSoC}
 \begin{enumerate}[label=4.\arabic*.]
 	\item Implementar las ecuaciones en diferencias:
@@ -8,21 +9,24 @@
 			\item Con el compensador de la sección 3.1.\\
 			Se realizó la implementación en \textit{PSoC Creator} empleando los parámetros obtenidos en Matlab para un amortiguamiento objetivo de $\zeta = 0.7$. La Figura~\ref{fig:CLOSCCOMP1} muestra el primer compensador y la respuesta medida en placa.
 
-			\compararfigsC{./Img/CLOSCcomp1}{Primer compensador diseñado para $\zeta = 0.7$.}{fig:CLOSCCOMP1}{./Img/step_y_esfuerzoCompensador1}{Step y esfuerzo del compensador diseñado para $\zeta = 0.7$.}{fig:stepysfuerzcomp1}{Se observa un pico alto en el esfuerzo de control (amarillo), así como en la simulación}{fig:comparacion1}
+			\compararfigsC{./Img/CLOSCcomp1}{Primer compensador diseñado para $\zeta = 0.7$.}{fig:CLOSCCOMP1}{./Img/step_y_esfuerzoCompensador1}{Step y esfuerzo del compensador diseñado para $\zeta = 0.7$.}{fig:stepysfuerzcomp1}{}{fig:comparacion1}
 			
-			
-			\item Con el compensador de la sección 3.2.
+			En la Figura \ref{fig:CLOSCCOMP1} se observa un pico pronunciado en el esfuerzo de control (traza amarilla), de manera consistente con lo obtenido en la simulación. La salida (traza magenta) presenta un comportamiento muy similar al simulado (Figura \ref{fig:stepysfuerzcomp1}), manteniéndose dentro del rango establecido y logrando un adecuado seguimiento de la referencia.
 			
 			\insertarfigurawide{./Img/step_y_esfuerzoCompensador2}{Segundo compensador diseñado para $\zeta = 0.7$.}{fig:stepysfuerzcomp2}{1}
 			
 			\compararfigsC{./Img/CLOSCcomp2_1}{Primer compensador diseñado para $\zeta = 0.7$ con $ESS = 0$ y un polo en el circulo unitario.}{fig:CLOSCCOMP2}{./Img/CLOSCcomp2_09}{Segundo compensador diseñado para $\zeta = 0.7$ con $ESS=0$ y un polo cercano al circulo unitario.}{fig:CLOSCCOMP209}{}{fig:comparacion2}
+			
+			En la Figura~\ref{fig:CLOSCCOMP2} se observa que el caso con el polo ubicado cerca del círculo unitario presenta picos en la respuesta, ya que este posicionamiento acelera la dinámica del sistema. En cambio, el sistema con el polo en el círculo unitario (Figura~\ref{fig:CLOSCCOMP209}) muestra una respuesta menos enérgica y más lenta, debido a su mayor amortiguamiento.
+			\item Con el compensador de la sección 3.2.
+			
 			
 			\insertarfigurawide{./Img/step_y_esfuerzoCompensador3}{Tercer compensador diseñado en Matlab.}{fig:stepysfuerzcomp3}{1}
 			
 			\compararfigsC{./Img/CLOSCcomp3_1}{Tercer compensador diseñado para $\zeta = 0.7$ con $ESS=0$ y un polo cercano en el circulo unitario.}{fig:CLOSCCOMP31}{./Img/CLOSCcomp3_09}{Tercer compensador diseñado para $\zeta = 0.7$ con $ESS=0$ y un polo cercano en el circulo unitario.}{fig:CLOSCCOMP209}{}{fig:comparacion3}
 			
 			
-			\twocolumn
+
 			
 			\input{segundoIntento.tex}
 		\end{enumerate}
