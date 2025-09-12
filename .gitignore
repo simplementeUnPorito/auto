@@ -105,3 +105,17 @@ build/
 *.blg
 *.bbl
 *.pdf
+
+# LaTeX builds
+*.aux
+*.out
+*.log
+*.synctex.gz
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.bbl
+*.blg
+*.pdf

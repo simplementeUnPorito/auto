@@ -2,10 +2,11 @@ Para el primer compensador, a partir del an\'alisis del \emph{ángulo faltante} 
 
 Una opci\'on es cancelar uno de los polos originales de la planta mediante la ubicaci\'on de un cero en la misma posici\'on, y colocar a continuaci\'on un nuevo polo de manera que el aporte de fase conjunto de estos dos compense el desfase requerido. De esta forma, el punto seleccionado pasar\'a a pertenecer al lugar de las ra\'ices.  
 
-En este caso, se procede a cancelar el polo m\'as lento del sistema. Para ello, se analiza el tri\'angulo formado por el cero, el nuevo polo y el punto deseado en el plano-$z$.  
+En este caso, se procede a cancelar el polo m\'as lento del sistema. Para ello, se analiza el tri\'angulo formado por el cero, el nuevo polo y el punto deseado en el plano-$z$, representado en la Figura \ref{fig:triagC1}.  
 
-(Poner esquema ilustrativo del tri\'angulo formado por cero, polo y punto deseado)  
-
+\insertarfigura{./Img/trianguloC1.png}
+{Análisis geométrico para el diseño del primer compensador (no es a escala).}
+{fig:triagC1}{1}
 Ecuacionando, por la ley de senos se obtienen las siguientes 2 relaciones:  
 \begin{equation}
 	\theta = \arcsin\!\left(\frac{y}{\sqrt{(x-z_c)^2+y^2}}\right)

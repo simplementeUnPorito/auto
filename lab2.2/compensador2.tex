@@ -1,4 +1,15 @@
+Para el segundo compensador solicitado, con el fin de cumplir la condición de que el error en estado estacionario sea cero, necesitamos que la función de transferencia de lazo abierto sea de tipo 1. Sin embargo, la planta original es de tipo 2, lo cual nos obliga a colocar un polo en $z=1$.
 
+Como primer intento, buscamos un cero que, junto con el polo en $z=1$, compense el ángulo faltante de manera similar al diseño del primer compensador. Inicialmente este enfoque parece prometedor: podemos calcularlo (valores obtenidos) y, utilizando \textsc{Matlab}, obtener la ganancia $K$ correspondiente (valores).  
 
-\input{integrador1.tex}
-\input{integrador2.tex}
+No obstante, al observar la respuesta al escalón nos encontramos con una decepción: se obtiene un sobrepico del $20\%$, equivalente a un $\zeta \approx 0.4$, lo que no satisface las condiciones deseadas.  
+\insertarfigura{./Img/StepCompensador1}{Respuesta al escalón del primer intento de compensador.}{fig:StepCompensador1}{0.8}
+
+Esto ocurre porque la ubicación de los polos del sistema final no presenta un par de polos dominantes, por lo que la aproximación de segundo orden utilizada al inicio no resulta válida.
+
+Finalmente, optamos por un compensador de segundo orden. En primer lugar, colocamos nuevamente el polo en $z=1$, pero esta vez anulamos el polo más cercano de la planta (el más lento) y calculamos su contribución a la compensación (valores).  
+
+A continuación, diseñamos un segundo compensador para completar lo faltante, anulando el polo más rápido de la planta con un cero en esa ubicación y hallando el nuevo polo mediante el mismo procedimiento aplicado en el primer compensador (valores).  
+
+Determinando la ganancia $K$ (valor), obtenemos el siguiente resultado, el cual ahora cumple con las condiciones deseadas:  
+\insertarfigura{./Img/StepCompensador2}{Respuesta al escalón con el segundo compensador propuesto.}{fig:StepCompensador2}{0.8}
