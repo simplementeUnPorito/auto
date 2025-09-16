@@ -130,20 +130,20 @@
 }
 
 % Macro: \insertarfigurawide{ruta}{caption}{label}{scale}
-\newcommand{\insertarfigurawide}[4]{%
-	\begin{figure*}[ht]
+\NewDocumentCommand{\insertarfigurawide}{O{!htb} m m m m}{%
+	\begin{figure*}[#1]
 		\centering
-		\includegraphics[width=#4\textwidth]{#1}
-		\caption{#2}
-		\label{#3}
-	\end{figure*}
+		\includegraphics[width=#5\textwidth]{#2}
+		\caption{#3}
+		\label{#4}
+	\end{figure*}%
 }
 
 % ======= Hyperref al final del preámbulo =======
 \usepackage[unicode,hidelinks]{hyperref}
 
 % ======= Metadatos =======
-\title{Práctica de Laboratorio 3: Diseño de controladores por el método de Diagramas de Bode.}
+\title{Práctica de Laboratorio 3: Diseño de controladores por el método de Bode.}
 
 \author{
 	\IEEEauthorblockN{Elías Álvarez}
@@ -178,8 +178,7 @@
 	\input{intro.tex}
 	\input{desarrollo.tex}
 	\input{resultados.tex}
-	\input{apendice.tex}
-	
+	\input{anexo.tex}
 	% Balancear columnas al final (si queda una página corta)
 	\balance
 	
