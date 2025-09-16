@@ -1,0 +1,34 @@
+
+% ================== INTRODUCCIÓN ==================
+\section{Introducción}
+
+El diseño de controladores en el dominio de la frecuencia constituye una de las técnicas más utilizadas en la ingeniería de control debido a su claridad gráfica y a la posibilidad de ajustar directamente márgenes de ganancia y de fase.  
+En esta práctica de laboratorio se aplica el método de Bode para modificar la dinámica de una planta, de modo a garantizar estabilidad y un comportamiento transitorio deseado.  
+
+El objetivo principal es comprender cómo el diseño de compensadores influye en la respuesta de un sistema de control en tiempo discreto, evaluando tanto el margen de fase como el error en estado estacionario frente a entradas de tipo rampa.  
+Asimismo, se busca contrastar los resultados obtenidos en Matlab con la implementación real en un PSoC, resaltando la importancia de la simulación previa y del análisis de la respuesta en frecuencia para un diseño robusto.
+
+
+% ================== OBJETIVOS ==================
+\section{Objetivos}
+\begin{itemize}
+	\item Diseñar un controlador que modifique la dinámica de la planta para satisfacer condiciones específicas de la respuesta transitoria del sistema de control en lazo cerrado.
+	\item Garantizar que el sistema regulado sea estable.
+	\item Observar y analizar los efectos del controlador en el comportamiento del sistema.
+	\item Considerar diferentes métodos para el ajuste de los parámetros del controlador y analizar los resultados.
+	\item Diseñar el sistema de control en Matlab e implementar la ecuación en diferencias en el PSoC.
+\end{itemize}
+
+
+% ================== MATERIALES ==================
+\section{Materiales}
+\begin{itemize}
+	\item PC con Matlab.
+	\item Planta analógica.
+	\item Sistema de adquisición en PSoC.
+\end{itemize}
+
+% ================== TEORÍA ==================
+\section{Teoría}
+Se recomienda consultar la referencia: \\
+K. Ogata, \textit{Sistemas de Control en Tiempo Discreto}, págs.\ 204--225, donde se desarrollan las bases teóricas necesarias para el diseño de compensadores mediante el diagrama de Bode y la evaluación de estabilidad en sistemas discretos.
