@@ -121,8 +121,23 @@ e = \frac{1}{1+K_p} = 45.8\%.
 
 Este valor resulta demasiado elevado. Además, al observar la figura~\ref{fig:esfuerzoC1}, se aprecia que el esfuerzo de control presenta saturación tanto al inicio como al final de la respuesta.  
 
-Por lo tanto, se descarta este primer diseño.
-\paragraph{Segundo intento: Compensador Lead}
+\paragraph{Segundo intento: Compensador Proporcional}  
+
+A partir del análisis del diagrama de Bode de la planta sin compensar (figura~\ref{fig:bodeMatlabSinComp}), se busca la frecuencia en la que el margen de fase alcanza el valor deseado de $60^\circ$.
+
+\insertarfigura{./img/C1_K/analisisK}{Análisis de la ganancia de la planta.}{fig:AnalK}{1}
+
+Como se observa en la figura~\ref{fig:AnalK}, la frecuencia correspondiente a un margen de fase de $60^\circ$ es de aproximadamente \SI{344}{Hz}, el margen de ganancia correspondiente para esta frecuencia es de $16.9\textbf{dB}$. Vemos que si aumentamos la ganancia a dicho valor, podemos forzar el cruce de tal manera que tengamos $60^\circ$:
+\[
+	20Log(K) = (MG_inicial - MG_deseado)
+\]
+siendo $MG_inicial - MG_deseado = 16.9$, tenemos entonces que la nueva ganancia es $K \approx 7$, con dicha ganancia tenemos los nuevos valores:
+\begin{itemize}
+	\item Margen de Ganancia = $GM = 14.47$
+	\item Margen de Fase = $PM = 60.28^\circ$
+	\item Cero
+\end{itemize}
+\insertarfigura{./img/C1_K/esfuerzoC1}{Esfuerzo con el Compensador Proporcional.}{fig:AnalK}{1}
 
 \subsubsection{El compensador debe permitir el seguimiento de una entrada rampa con un error en estado estable igual a $1/K_v$.}
 
