@@ -61,14 +61,15 @@ Puesto a que los métodos convencionales de la \emph{respuesta en frecuencia} no
 \end{equation}
 Sustituyendo la z de la ecuación \ref{eq:DiscZfin} con la ecuación \ref{eq:planoZ}:
 \begin{equation}
-	G(z) = \frac{-2.41 \times 10^{-9} (\omega +10.675 \times 10^{3})(\omega - 1.6 \times 10^{3})}{1.089 \times 10^{-6} (w + 55.372)(w + 622.22)}
+	G(w) = \frac{-2.41 \times 10^{-9} (w +10.675 \times 10^{3})(w - 1.6 \times 10^{3})}{1.089 \times 10^{-6} (w + 55.372)(w + 622.22)}
+	\label{eq:planoW}
 \end{equation}
 
 Con esto obtenemos la función de lazo abierto en el plano $\mathcal{\omega}$.  
-A continuación, es necesario trazar las curvas de Bode. Para ello, se hace tender $\omega \rightarrow jv$, donde $v$ representa la \emph{frecuencia ficticia} y $\omega$ la \emph{frecuencia real}, estando ambas relacionadas por:
+A continuación, trazamos las curvas de Bode. Para ello, es necesario recordar que al hacer tender $\omega \rightarrow jv$, donde $v$ representa la \emph{frecuencia ficticia} y $\omega$ la \emph{frecuencia real}, estando ambas relacionadas por:
 
 \begin{equation}
-	\omega \big|_{\omega = jv} = jv = \frac{2(z-1)}{T(z+1)}\bigg|_{z = e^{j\omega T}}
+	w \big|_{w = jv} = jv = \frac{2(z-1)}{T(z+1)}\bigg|_{z = e^{j\omega T}}
 	\label{Relavw}
 \end{equation}
 
@@ -79,3 +80,24 @@ De esta forma se obtiene la relación:
 \end{equation}
 
 \subsubsection{Comparar los resultados obtenidos con la simulación en Matlab}
+
+La planta discretizada obtenida en \textsc{Matlab} es:
+\[
+H(z) = \frac{21.596 \times 10^{-3}\,(z + 0.7419)}{(z - 0.9333)(z - 0.436)} 
+\]
+
+Como puede observarse, la expresión de la ecuación~\ref{eq:DiscZfin}:
+\[
+G(z) = \frac{22 \times 10^{-3}\,(z + 0.74)}{(z - 0.933)(z - 0.44)} 
+\]
+presenta una buena aproximación a los valores calculados.
+
+Por otro lado, la planta en el plano $\mathcal{\omega}$ obtenida a partir de \textsc{Matlab} es:
+\[
+H(w) = \frac{-2.0075 \times 10^{-3}\,(s + 10.84 \times 10^{3})(s - 1606)}{(s + 630.8)(s + 55.41)} 
+\]
+mientras que la expresión calculada resulta (\ref{eq:planoW}):
+\[
+G(w) = \frac{-2.21 \times 10^{-3}\,(w + 10.675 \times 10^{3})(w - 1.6 \times 10^{3})}{(w + 55.372)(w + 622.22)} 
+\]
+la cual también presenta valores aproximados.
