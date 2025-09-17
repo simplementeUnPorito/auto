@@ -6,9 +6,10 @@ G(s) = \frac{K}{(s+a)(s+b)}.
 \]
 
 Para discretizarla, se utiliza el método de la \emph{transformación de la respuesta al impulso}. La relación general es:
-\[
+\begin{equation}
 G(z) = (1 - z^{-1}) \, \mathcal{Z}\left\{\mathcal{L}^{-1}\left(\frac{G(s)}{s}\right)\right\}.
-\]
+\label{eq:RelacionGen}
+\end{equation}
 
 \noindent A partir de la descomposición en fracciones parciales, se obtiene:
 \begin{equation}
@@ -62,4 +63,19 @@ Sustituyendo la z de la ecuación \ref{eq:DiscZfin} con la ecuación \ref{eq:pla
 \begin{equation}
 	G(z) = \frac{-2.41 \times 10^{-9} (\omega +10.675 \times 10^{3})(\omega - 1.6 \times 10^{3})}{1.089 \times 10^{-6} (w + 55.372)(w + 622.22)}
 \end{equation}
-\subsubsection{Comparar los resultados obtenidos con la simulación en Matlab.}
+
+Con esto obtenemos la función de lazo abierto en el plano $\mathcal{W}$.  
+A continuación, es necesario trazar las curvas de Bode. Para ello, se hace tender $\omega \rightarrow jv$, donde $v$ representa la \emph{frecuencia ficticia} y $\omega$ la \emph{frecuencia real}, estando ambas relacionadas por:
+
+\begin{equation}
+	\omega \big|_{\omega = jv} = jv = \frac{2(z-1)}{T(z+1)}\bigg|_{z = e^{j\omega T}}
+	\label{Relavw}
+\end{equation}
+
+De esta forma se obtiene la relación:
+
+\begin{equation}
+	v = \frac{2}{T}\,\tan\!\left(\frac{\omega T}{2}\right)
+\end{equation}
+
+\subsubsection{Comparar los resultados obtenidos con la simulación en Matlab}
