@@ -43,7 +43,13 @@ y luego se aplica saturación simétrica (montaje: \(\texttt{SAT\_MIN}=\SI{0.0}{
 	\end{cases}
 \end{equation}
 Finalmente se escribe al DAC: \(\texttt{VDAC8\_SetValue(volt\_to\_dac(u\_sat));}\).
-En firmware, \eqref{eq:diff_u} se calcula en \texttt{actualizarEsfuerzo()}
+En firmware, \eqref{eq:diff_u} y \eqref{eq:u_sat} se calcula en \texttt{actualizarEsfuerzo()}
+
+
+% Figuras de implementación (usar tu macro)
+\insertarfigura{./img/OpenLoop/LazoAbiertoSinCompensador.png}
+{omparación de DAC sin carga (traza cian) vs.\ DAC cargado (traza violeta) y respuesta de la planta (traza verde) a la excitación en lazo abierto.}
+{fig:openloop_dac}{0.90}
 
 \subsubsection{Modo lazo abierto y parametrización}
 Para verificar la planta y \emph{debuguear} la cadena de adquisición/actuación, se incorporó un modo de \textbf{lazo abierto} que \emph{bypassea} el compensador y permite inyectar una referencia (escalón/rampa) directamente al DAC. La amplitud, los límites mínimo/máximo y el período del escalón se ajustan \emph{on-line} por comandos serie.
@@ -52,8 +58,8 @@ Para verificar la planta y \emph{debuguear} la cadena de adquisición/actuación
 En ensayos de lazo abierto se observó \textbf{error de carga} en el DAC al excitar directamente la planta (Fig.~\ref{fig:openloop_dac}):
 \begin{itemize}
 	\item \textbf{Trazas:} cian = DAC en vacío; lila = DAC cargado (planta); verde = respuesta de la planta.
-	\item \textbf{Reorden de etapas:} colocar primero la etapa con resistencia de entrada \(\SI{82}{k\ohm}\) y luego la de \(\SI{15}{k\ohm}\) mitigó parcialmente el problema (Fig.~\ref{fig:reorden_etapas}). Con la de \(\SI{15}{k\ohm}\) al inicio, la excursión quedó limitada a \(\sim\SI{250}{mV}\)–\(\SI{300}{mV}\) pico a pico, frente a \(\sim\SI{500}{mV}\) p–p del DAC en vacío.
-	\item \textbf{Mejora observada:} tras reordenar, la excursión aumentó hasta \(\sim\SI{440}{mV}\) p–p (Fig.~\ref{fig:reorden_etapas}).
+	\item \textbf{Reorden de etapas:} colocar primero la etapa con resistencia de entrada \(\SI{82}{k\ohm}\) y luego la de \(\SI{15}{k\ohm}\) mitigó parcialmente el problema (Fig.~\ref{fig:openloop_dac}). Con la de \(\SI{15}{k\ohm}\) al inicio, la excursión quedó limitada a \(\sim\SI{250}{mV}\)–\(\SI{300}{mV}\) pico a pico, frente a \(\sim\SI{500}{mV}\) p–p del DAC en vacío.
+	\item \textbf{Mejora observada:} tras reordenar, la excursión aumentó hasta \(\sim\SI{440}{mV}\) p–p (Fig.~\ref{fig:openloop_dac}).
 	\item \textbf{Mitigación propuesta:} añadir \emph{buffer} operacional a la salida del DAC; desacoplar \(\mathrm{VDDA}/2\) y alimentación con capacitores de \SIrange{1}{10}{\micro\farad} (y cerámicos \SIrange{100}{470}{nF} en paralelo local); evaluar el modo \emph{bypass}/\emph{buffered} del DAC/ADC y la impedancia de entrada efectiva de la primera etapa.
 \end{itemize}
 
