@@ -1,3 +1,65 @@
 \subsection{Discretización de la Planta}
-\subsubsection{Se debe elegir un tiempo de muestreo adecuado.}
+\subsubsection{Se debe elegir un tiempo de muestreo adecuado}
+La planta a discretizar está dada por:
+\[
+G(s) = \frac{K}{(s+a)(s+b)}.
+\]
+
+Para discretizarla, se utiliza el método de la \emph{transformación de la respuesta al impulso}. La relación general es:
+\[
+G(z) = (1 - z^{-1}) \, \mathcal{Z}\left\{\mathcal{L}^{-1}\left(\frac{G(s)}{s}\right)\right\}.
+\]
+
+\noindent A partir de la descomposición en fracciones parciales, se obtiene:
+\begin{equation}
+	\frac{G(s)}{s} =
+	\underset{\delta}{\frac{K}{ab}} \cdot \frac{1}{s}
+	+ \underset{\beta}{\frac{K}{\,b^2-ab\,}} \cdot \frac{1}{s+b}
+	+ \underset{\alpha}{\frac{K}{\,a^2-ab\,}} \cdot \frac{1}{s+a},
+	\label{eq:Gs}
+\end{equation}
+donde los coeficientes $\alpha$, $\beta$ y $\delta$ corresponden a los términos de la expansión.
+
+\textbf{Transformada-$Z$:}  
+Aplicando la transformada-$Z$ a cada término se obtiene:
+\[
+\mathcal{Z}\left[\frac{G(s)}{s}\right] =
+\delta \frac{z}{z-1} +
+\beta \frac{z}{z-e^{-bT}} +
+\alpha \frac{z}{z-e^{-aT}}.
+\]
+
+\noindent Finalmente, la planta discretizada puede escribirse como:
+\begin{equation}
+	G(z) = \frac{\gamma z^2 - \theta z + \psi}{(z-e^{-aT})(z-e^{-bT})},
+	\label{eq:DiscZ}
+\end{equation}
+donde los parámetros $\gamma$, $\theta$ y $\psi$ se expresan en función de los coeficientes de la fracción parcial \eqref{eq:Gs}:
+\begin{flalign*}
+	\gamma &= \alpha + \beta + \delta & \\
+	\theta &= \alpha + \beta + \delta + \alpha e^{-bT} + \beta e^{-aT} + \delta \big(e^{-aT}+e^{-bT}\big) & \\
+	\psi   &= \alpha e^{-bT} + \beta e^{-aT} + \delta e^{-aT} e^{-bT}\big. &
+\end{flalign*}
+
+Se tiene la siguiente ecuación, el tiempo de muestreo utilizado para este laboratorio será el mismo que el del laboratorio 2, $T = 1.25ms$, $a = \tfrac{1}{81\,000 \cdot 200 \cdot 10^{-9}}$ y $b = \tfrac{1}{15 \cdot 10^{3} \cdot 100 \cdot 10^{-9}}$, y considerando $K = 1$ se tienen ya calculados los valores de $\alpha$, $\beta$ y $\delta$:
+\begin{flalign*}
+	\delta &= \frac{K}{ab} \approx 24.3 \times 10^{-6} & \\
+	\beta &= \frac{K}{b^2-ab} \approx 2.48 \times 10^{-6} & \\
+	\alpha &= \frac{K}{a^2-ab} \approx -26.78 \times 10^{-6}.&
+\end{flalign*}
+
+con los siguientes valores se tiene G(z):
+\begin{equation}
+	G(z) = \frac{0.22(z+0.74)}{(z-0.933)(z-0.44)}
+	\label{eq:DiscZfin}
+\end{equation}
+Puesto a que los métodos convencionales de la \emph{respuesta en frecuencia} no se aplican en el plano $\mathcal{Z}$, volvemos al plano $\omega$ usando la siguiente ecuación:
+\begin{equation}
+	Z = \frac{1+(\frac{T}{2})\omega}{1-(\frac{T}{2})\omega}
+	\label{eq:planoZ}
+\end{equation}
+Sustituyendo la z de la ecuación \ref{eq:DiscZfin} con la ecuación \ref{eq:planoZ}:
+\begin{equation}
+	G(z) = \frac{-2.41 \times 10^{-9} (\omega +10.675 \times 10^{3})(\omega - 1.6 \times 10^{3})}{1.089 \times 10^{-6} (w + 55.372)(w + 622.22)}
+\end{equation}
 \subsubsection{Comparar los resultados obtenidos con la simulación en Matlab.}
