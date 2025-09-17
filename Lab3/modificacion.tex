@@ -105,8 +105,24 @@ donde los parámetros identificados son:
 	\item Cero: $Z = 0.622387144541200$
 	\item Polo: $P = 0.374311732736374$
 	\item Ganancia: $K = 1.184734400491065$
+	\item Sample time: $t_s = 0.0012452 s$
 \end{itemize}
 
+\insertarfigura{./img/C1_Lead/bodeC1}{Diagrama de Bode del primer compensador diseñado.}{fig:bodeC1}{1}
+
+\insertarfigura{./img/C1_Lead/esfuerzoC1}{Esfuerzo del primer compensador diseñado.}{fig:esfuerzoC1}{1}
+
+\insertarfigura{./img/C1_Lead/stepC1}{El step del primer compensador diseñado.}{fig:stepC1}{1}
+
+El resultado obtenido para este diseño no es el más óptimo. Con una ganancia $K = 1.18$, el sistema presenta un error significativo debido a que es de tipo $0$. Al aplicar una entrada escalón, el error en estado estacionario calculado es:
+\[
+e = \frac{1}{1+K_p} = 45.8\%.
+\]
+
+Este valor resulta demasiado elevado. Además, al observar la figura~\ref{fig:esfuerzoC1}, se aprecia que el esfuerzo de control presenta saturación tanto al inicio como al final de la respuesta.  
+
+Por lo tanto, se descarta este primer diseño.
+\paragraph{Segundo intento: Compensador Lead}
 
 \subsubsection{El compensador debe permitir el seguimiento de una entrada rampa con un error en estado estable igual a $1/K_v$.}
 
