@@ -1,36 +1,59 @@
 \subsection{Modificación de la Dinámica de la Planta}
 \subsubsection{Diseñar un compensador que logre un margen de fase de $60^\circ$} 
 
-Para el diseño, en primer lugar se debe transformar la planta del plano $\mathcal{S}$ al plano $\mathcal{Z}$, y posteriormente al plano $\mathcal{\omega}$. Para la primera transformación se emplea la relación dada en la ecuación~\ref{eq:RelacionGen}.  
+Para el diseño, en primer lugar se transforma la planta del plano $\mathcal{S}$ al plano $\mathcal{Z}$, y posteriormente al plano $\mathcal{W}$. La primera transformación se realiza empleando la relación presentada en la ecuación~\ref{eq:RelacionGen}.  
 
-A continuación, para pasar del plano $\mathcal{Z}$ al plano $\mathcal{W}$, se utiliza la relación de Tustin, expresada en la ecuación~\ref{eq:planoZ}, tal como se explicó en el ítem anterior (\ref{sec:disc}).
+Luego, para pasar del plano $\mathcal{Z}$ al plano $\mathcal{W}$, se utiliza la relación de Tustin, expresada en la ecuación~\ref{eq:planoZ}, tal como se explicó en el ítem anterior (\ref{sec:disc}).
 
-\textbf{Diseño de compensadores, parte compartida:}
+\textbf{Diseño de compensadores – análisis preliminar:}  
 
 En primer lugar, se analizan los márgenes de fase y de ganancia de la planta sin compensar.
 
 \insertarfigura{./img/C1_Lead/margenesPlanta.png}{Diagrama de Bode de la planta sin compensación.}{fig:bodeMatlabSinComp}{1}
 
-Se observa que el margen inicial de ganancia es de $31.4\,\text{dB}$, por lo que es posible incrementar el valor de la ganancia $K$.
+Se observa que el margen inicial de ganancia es de $31.4\,\text{dB}$, lo que permite incrementar el valor de la ganancia $K$.  
 
-\paragraph{Primer intento - Compensador Lead}
-Por decisi\'on de los diseñadores, se eligue un margen de ganancia aceptable, el cual es aquel que se encuentra por encima de los $10dB$, por lo que calculamos la ganancia:
+\paragraph{Primer intento – Compensador Lead}  
+
+Por criterio de diseño, se selecciona un margen de ganancia aceptable, correspondiente a valores superiores a $10\,\text{dB}$. A partir de esta condición se calcula la ganancia:
 \[
-	|G(w)|=20Log(K) = 31.4-10 \Rightarrow K = 10^{21.4/20}
-\]
-La nueva ganancia calculada:
-\[
-	K = 11.149
+|G(\omega)| = 20 \log(K) = 31.4 - 10 
+\;\;\Rightarrow\;\; K = 10^{21.4/20}.
 \]
 
-Con la nueva ganancia se obtiene el siguiente gr\'afico:
-\insertarfigura{./img/C1_Lead/margenesConK}{Diagrama de Bode de la planta sin compensación con la nueva ganancia.}{fig:bodenuevak}{1}
+La nueva ganancia resulta:
+\[
+K = 11.149.
+\]
 
-Analizando la figura \ref{fig:bodenuevak} podemos observar el desplazamiento que supone con la nueva ganancia $K = 11.7057$, se observan los valores:
+Con este valor de ganancia se obtiene el siguiente diagrama de Bode:
+
+\insertarfigura{./img/C1_Lead/margenesConK}{Diagrama de Bode de la planta con la nueva ganancia.}{fig:bodenuevak}{1}
+
+En la figura~\ref{fig:bodenuevak} se aprecia el desplazamiento producido por la nueva ganancia $K = 11.7057$, con los siguientes resultados:
 \begin{itemize}
-	\item \textbf{Margen de Ganancia:} $GM = 10.00 dB$
-	\item \textbf{Margen de Fase:} $PM = 61.12$
-	\item \textbf{Frecuencia del cero:} $$
+	\item \textbf{Margen de ganancia:} $GM = 10.00\,\text{dB}$
+	\item \textbf{Margen de fase:} $PM = 41.13^\circ$
+	\item \textbf{Frecuencia de cruce de ganancia:} $\omega_{cg} = 1.2 \times 10^3$
+	\item \textbf{Frecuencia de cruce de fase:} $\omega_{cp} = 523$
 \end{itemize}
+
+Se observa que el margen de fase obtenido es $PM = 41.13^\circ$, lo que representa una diferencia respecto al valor solicitado de $60^\circ$:
+\[
+\Delta PM = 60^\circ - 41.13^\circ = 18.87^\circ \approx 20^\circ.
+\]
+
+Denominamos a este valor $\phi$. Como aún faltan aproximadamente $20^\circ$ para alcanzar el margen de fase deseado, se decide emplear un compensador de adelanto (Lead).  
+
+Conociendo la frecuencia de cruce actual $\omega_{cp_{now}}$ y la fase adicional requerida ($\phi \approx 20^\circ$), se procede al diseño del compensador mediante la siguiente función implementada en \textsc{Matlab}:
+
+\begin{lstlisting}[style=matlabstyle,caption={Primer intento: Compensador 1.},label={matlab:comp1}]
+alpha = (1 - sin(phi)) / (1 + sin(phi));
+T = 1 / (wcp_now * sqrt(alpha));
+C0 = (1 + T*s) / (1 + alpha*T*s);
+g = 1 / abs(freqresp(C0, 1j*wc));     % |C(jwc)|=1 //normalizamos el compensador para que no atenue
+C = g * C0;
+\end{lstlisting}
+
 
 \subsubsection{El compensador debe permitir el seguimiento de una entrada rampa con un error en estado estable igual a $1/K_v$.}
