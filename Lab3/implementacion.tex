@@ -1,2 +1,67 @@
 \subsection{Implementación del Sistema}
-\subsubsection{Implementar los compensadores en el PSoC mediante la ecuación en diferencias obtenida.}
+La implementación se realizó en plataforma PSoC, ejecutando el controlador discreto a período fijo de muestreo \(T=\SI{1.2452}{ms}\) (promediado). Se programó un firmware que permite: (i) abrir/cerrar el lazo para ensayos en lazo abierto, (ii) imponer distintos valores mínimos y máximos para el escalón y (iii) cambiar el período del escalón desde el puerto serie. El esfuerzo de control se genera con un \texttt{VDAC8} hacia la planta (referenciada a \(\mathrm{VDDA}/2\)) y la salida de la planta se adquiere con un ADC-SAR.
+
+\subsubsection{Ecuación en diferencias y saturación}
+Cada compensador discreto se implementa a partir de la forma racional
+\begin{equation}
+	\label{eq:Cz_form}
+	\begin{split}
+		C(z)
+		= \frac{K\big(E_0 + E_1 z^{-1} + E_2 z^{-2}\big)}
+		{U_0 + U_1 z^{-1} + U_2 z^{-2}}.
+	\end{split}
+\end{equation}
+
+Junto con \(u[k]=\mathcal{Z}^{-1}\!\big\{C(z)\,E(z)\big\}\), se llega a la ecuación en diferencias
+\begin{equation}
+	\label{eq:diff_balance}
+	\begin{aligned}
+		&U_0\,u[k] + U_1\,u[k-1] + U_2\,u[k-2]
+		=\\
+		 & K\Big(E_0\,e[k] + E_1\,e[k-1] + E_2\,e[k-2]\Big),
+	\end{aligned}
+\end{equation}
+y despejando \(u[k]\):
+\begin{equation}
+	\label{eq:diff_u}
+	\begin{split}
+		u[k] \;=\;\frac{1}{U0}[
+		-\,U_1\,u[k-1] \;-\; U_2\,u[k-2]
+			\;+\; \\K\big(E_0\,e[k] + E_1\,e[k-1] + E_2\,e[k-2]\big)]
+	\end{split}
+\end{equation}
+
+
+y luego se aplica saturación simétrica (montaje: \(\texttt{SAT\_MIN}=\SI{0.0}{V}\), \(\texttt{SAT\_MAX}=\SI{4.08}{V}\)):
+\begin{equation}
+	\label{eq:u_sat}
+	\texttt{u\_sat}=
+	\begin{cases}
+		\texttt{SAT\_MAX}, & \text{si } \texttt{u\_unsat}>\texttt{SAT\_MAX},\\
+		\texttt{SAT\_MIN}, & \text{si } \texttt{u\_unsat}<\texttt{SAT\_MIN},\\
+		\texttt{u\_unsat}, & \text{en otro caso.}
+	\end{cases}
+\end{equation}
+Finalmente se escribe al DAC: \(\texttt{VDAC8\_SetValue(volt\_to\_dac(u\_sat));}\).
+En firmware, \eqref{eq:diff_u} se calcula en \texttt{actualizarEsfuerzo()}
+
+\subsubsection{Modo lazo abierto y parametrización}
+Para verificar la planta y \emph{debuguear} la cadena de adquisición/actuación, se incorporó un modo de \textbf{lazo abierto} que \emph{bypassea} el compensador y permite inyectar una referencia (escalón/rampa) directamente al DAC. La amplitud, los límites mínimo/máximo y el período del escalón se ajustan \emph{on-line} por comandos serie.
+
+\subsubsection{Observaciones de hardware (carga del DAC)}
+En ensayos de lazo abierto se observó \textbf{error de carga} en el DAC al excitar directamente la planta (Fig.~\ref{fig:openloop_dac}):
+\begin{itemize}
+	\item \textbf{Trazas:} cian = DAC en vacío; lila = DAC cargado (planta); verde = respuesta de la planta.
+	\item \textbf{Reorden de etapas:} colocar primero la etapa con resistencia de entrada \(\SI{82}{k\ohm}\) y luego la de \(\SI{15}{k\ohm}\) mitigó parcialmente el problema (Fig.~\ref{fig:reorden_etapas}). Con la de \(\SI{15}{k\ohm}\) al inicio, la excursión quedó limitada a \(\sim\SI{250}{mV}\)–\(\SI{300}{mV}\) pico a pico, frente a \(\sim\SI{500}{mV}\) p–p del DAC en vacío.
+	\item \textbf{Mejora observada:} tras reordenar, la excursión aumentó hasta \(\sim\SI{440}{mV}\) p–p (Fig.~\ref{fig:reorden_etapas}).
+	\item \textbf{Mitigación propuesta:} añadir \emph{buffer} operacional a la salida del DAC; desacoplar \(\mathrm{VDDA}/2\) y alimentación con capacitores de \SIrange{1}{10}{\micro\farad} (y cerámicos \SIrange{100}{470}{nF} en paralelo local); evaluar el modo \emph{bypass}/\emph{buffered} del DAC/ADC y la impedancia de entrada efectiva de la primera etapa.
+\end{itemize}
+
+
+\subsubsection{Desempeño medido vs.\ esperado}
+El tiempo de subida medido fue \(\SI{34.2}{ms}\) frente a \(\sim\SI{40}{ms}\) estimados por simulación. La diferencia concuerda con tolerancias de componentes (\(\pm\SI{10}{\percent}\) en resistencias y hasta \(\pm\SI{20}{\percent}\) en capacitores) y con la atenuación observada en la cadena de actuación (de \(\SI{440}{mV}\) a \(\SI{432}{mV}\)). Aun con dichas limitaciones, la dinámica global (márgenes y forma de la respuesta) se mantuvo alineada con el diseño en Matlab.
+
+\subsubsection{Compensadores implementados}
+Se cargaron en firmware tres compensadores: (i) proporcional con adelanto de primer orden (lead), (ii) adelanto con polo en el origen (tipo~1) para seguimiento de rampa y (iii) proporcional de referencia. Las respuestas temporales y bode de cada uno se muestran en las Figs.~\ref{fig:c1}, \ref{fig:c2} y \ref{fig:c3}.
+
+
