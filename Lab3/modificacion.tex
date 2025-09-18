@@ -178,6 +178,38 @@ Con el nuevo margen de ganancia se obtienen los siguientes valores a partir de l
 Se observa que el margen de fase obtenido es de $22.56^\circ$, por lo que para alcanzar el criterio de $60^\circ$ aún faltan aproximadamente $37.44^\circ$. En consecuencia, se incorpora un compensador de adelanto (Lead) con el objetivo de aportar la fase adicional requerida.
 
 \insertarfigura{./img/C2/margenConCompensador}{Diagrama de Bode del Compensador - Etapa Lead.}{fig:margenConCompensador2}{1}
+\paragraph{Datos del compensador $C_2$}  
+
+El compensador obtenido puede expresarse de las siguientes formas:  
+
+Forma explícita
+\[
+C_2(z) = \frac{0.1856\,z^2 + 0.009526\,z - 0.1761}{z^2 - 1.805\,z + 0.805}
+\]
+
+con un período de muestreo asociado de:
+\[
+T_s = 0.0012452 \; \text{s}.
+\]
+
+Forma cero–polo–ganancia (ZPK) – redondeada  
+\[
+C_2(z) = 0.18562 \cdot \frac{(z+1)(z-0.9487)}{(z-1)(z-0.805)}.
+\]
+
+\noindent
+Los parámetros identificados son:
+\begin{itemize}
+	\item \textbf{Ceros:} $Z = \{-1.0,\; 0.948680356607820\}$
+	\item \textbf{Polos:} $P = \{1.0,\; 0.805044751405714\}$
+	\item \textbf{Ganancia:} $K = 0.185620357009816$
+	\item \textbf{Período de muestreo:} $T_s = 0.0012452$ s
+\end{itemize}
 
 
+\insertarfigura{./img/C2/stepC2}{Diagrama de Bode del Compensador - Etapa Lead.}{fig:stepC2}{1}
 
+\insertarfigura{./img/C2/rampaC2}{Diagrama de Bode del Compensador - Etapa Lead.}{fig:rampaC2}{1}
+
+\insertarfigura{./img/C2/esfuerzoC2}{Diagrama de Bode del Compensador - Etapa Lead.}{fig:esfuerzoC2
+}{1}
