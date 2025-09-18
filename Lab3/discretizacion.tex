@@ -7,7 +7,7 @@ G(s) = \frac{K}{(s+a)(s+b)}.
 
 Para discretizarla, se utiliza el método de la \emph{transformación de la respuesta al impulso}. La relación general es:
 \begin{equation}
-G(z) = (1 - z^{-1}) \, \mathcal{Z}\left\{\mathcal{L}^{-1}\left(\frac{G(s)}{s}\right)\right\}.
+G(z) = (1 - z^{-1}) \, \mathcal{Z}\left\{\mathcal{L}^{-1}\left(\frac{G(s)}{s}\right)^*\right\}.
 \label{eq:RelacionGen}
 \end{equation}
 
@@ -22,7 +22,7 @@ G(z) = (1 - z^{-1}) \, \mathcal{Z}\left\{\mathcal{L}^{-1}\left(\frac{G(s)}{s}\ri
 donde los coeficientes $\alpha$, $\beta$ y $\delta$ corresponden a los términos de la expansión.
 
 \textbf{Transformada-$Z$:}  
-Aplicando la transformada-$Z$ a cada término se obtiene:
+Aplicando la transformada inversa de Laplace, discretizando la señal con un muestreador de orden cero, y por último aplicando la transformada-$Z$ a cada se obtiene:
 \[
 \mathcal{Z}\left[\frac{G(s)}{s}\right] =
 \delta \frac{z}{z-1} +
@@ -54,19 +54,20 @@ con los siguientes valores se tiene G(z):
 	G(z) = \frac{0.22(z+0.74)}{(z-0.933)(z-0.44)}
 	\label{eq:DiscZfin}
 \end{equation}
-Puesto a que los métodos convencionales de la \emph{respuesta en frecuencia} no se aplican en el plano $\mathcal{Z}$, volvemos al plano $\omega$ usando la siguiente ecuación:
+\paragraph{Transformación bilineal y plano $\omega$}
+Puesto a que los métodos convencionales de la \emph{respuesta en frecuencia} no se aplican en el plano $\mathcal{Z}$, nos pasamos al plano $w$ usando la siguiente relación:
 \begin{equation}
-	Z = \frac{1+(\frac{T}{2})\omega}{1-(\frac{T}{2})\omega}
+	z = \frac{1+(\frac{T}{2})w}{1-(\frac{T}{2})w}
 	\label{eq:planoZ}
 \end{equation}
-Sustituyendo la z de la ecuación \ref{eq:DiscZfin} con la ecuación \ref{eq:planoZ}:
+Sustituyendo la z de la ecuación \ref{eq:DiscZfin} con la relación \ref{eq:planoZ}:
 \begin{equation}
 	G(w) = \frac{-2.41 \times 10^{-9} (w +10.675 \times 10^{3})(w - 1.6 \times 10^{3})}{1.089 \times 10^{-6} (w + 55.372)(w + 622.22)}
 	\label{eq:planoW}
 \end{equation}
 
 Con esto obtenemos la función de lazo abierto en el plano $\mathcal{\omega}$.  
-A continuación, trazamos las curvas de Bode. Para ello, es necesario recordar que al hacer tender $\omega \rightarrow jv$, donde $v$ representa la \emph{frecuencia ficticia} y $\omega$ la \emph{frecuencia real}, estando ambas relacionadas por:
+A continuación, trazamos las curvas de Bode figura \ref{fig:bodeAMano}. Es importante recalcar que, al hacer tender $\omega \rightarrow jv$, donde $v$ representa la \emph{frecuencia ficticia} y $\omega$ la \emph{frecuencia real}, ambas se encuentran relacionadas por:
 
 \begin{equation}
 	w \big|_{w = jv} = jv = \frac{2(z-1)}{T(z+1)}\bigg|_{z = e^{j\omega T}}
@@ -83,21 +84,18 @@ De esta forma se obtiene la relación:
 
 La planta discretizada obtenida en \textsc{Matlab} es:
 \[
-H(z) = \frac{21.596 \times 10^{-3}\,(z + 0.7419)}{(z - 0.9333)(z - 0.436)} 
+G(z) = \frac{21.596 \times 10^{-3}\,(z + 0.7419)}{(z - 0.9333)(z - 0.436)} 
 \]
 
-Como puede observarse, la expresión de la ecuación~\ref{eq:DiscZfin}:
-\[
-G(z) = \frac{22 \times 10^{-3}\,(z + 0.74)}{(z - 0.933)(z - 0.44)} 
-\]
-presenta una buena aproximación a los valores calculados.
+Como puede observarse, la expresión de la ecuación~\ref{eq:DiscZfin}, se obtuvo una buena aproximación a los valores calculados, solo presentando pequeños errores de redondeo.
 
 Por otro lado, la planta en el plano $\mathcal{\omega}$ obtenida a partir de \textsc{Matlab} es:
 \[
-H(w) = \frac{-2.0075 \times 10^{-3}\,(s + 10.84 \times 10^{3})(s - 1606)}{(s + 630.8)(s + 55.41)} 
+G(w) = \frac{-2.0075 \times 10^{-3}\,(s + 10.84 \times 10^{3})(s - 1606)}{(s + 630.8)(s + 55.41)} 
 \]
-mientras que la expresión calculada resulta (\ref{eq:planoW}):
-\[
-G(w) = \frac{-2.21 \times 10^{-3}\,(w + 10.675 \times 10^{3})(w - 1.6 \times 10^{3})}{(w + 55.372)(w + 622.22)} 
-\]
-la cual también presenta valores aproximados.
+La expresión calculada (\ref{eq:planoW}) también presenta buenos valores aproximados.
+
+
+\insertarfigura{./img/C1_Lead/margenesPlanta.png}{Diagrama de Bode con \textsc{Matlab}.}{fig:bodeMatlabSinComp}{1}
+
+\insertarfigura{./img/OpenLoop/bodeAMano.jpg}{Diagrama de Bode hecho a mano.}{fig:bodeAMano}{1}

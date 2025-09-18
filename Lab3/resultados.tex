@@ -10,33 +10,33 @@ En esta sección se presentan comparaciones \emph{en el dominio del tiempo} entr
 
 
 
-\insertarfigura{img/C1_Lead/conOffset}
+\insertarfigurawide{img/C1_Lead/conOffset}
 {Compensador de adelanto: respuesta al escalón y esfuerzo (simulado vs.\ experimental, \emph{con} offset).}
 {fig:step_c1_con_offset}{1}
 
-\insertarfigura{img/C1_Lead/sinOffset}
+\insertarfigurawide{img/C1_Lead/sinOffset}
 {Compensador de adelanto: respuesta al escalón y esfuerzo (simulado vs.\ experimental, \emph{sin} offset).}
 {fig:step_c1_sin_offset}{1}
 
-\insertarfigura{img/C1_K/compConOffset}
+\insertarfigurawide{img/C1_K/compConOffset}
 {Compensador Proporcional: respuesta al escalón y esfuerzo (simulado vs.\ experimental, \emph{con} offset).}
 {fig:step_prop_con_offset}{1}
 
-\insertarfigura{img/C1_K/compSinOffset}
+\insertarfigurawide{img/C1_K/compSinOffset}
 {Compensador Proporcional: respuesta al escalón y esfuerzo (simulado vs.\ experimental, \emph{sin} offset).}
 {fig:step_prop_sin_offset}{1}
 
-\insertarfigura{img/C2/conOffset}
+\insertarfigurawide{img/C2/conOffset}
 {Compensador de adelanto + integrador: respuesta al escalón y esfuerzo (simulado vs.\ experimental, \emph{con} offset).}
 {fig:step_c2_con_offset}{1}
 
-\insertarfigura{img/C2/sinOFFset}
+\insertarfigurawide{img/C2/sinOFFset}
 {Compensador de adelanto + integrador: respuesta al escalón y esfuerzo (simulado vs.\ experimental, \emph{sin} offset).}
 {fig:step_c2_sin_offset}{0.92}
 
 
 
-\subsection{Métricas de ajuste y desempeño temporal}
+\subsection{Métricas de desempeño temporal}
 Las métricas usadas en cada gráfica (y en la tabla resumen) son:
 \begin{equation}
 	\label{eq:rmse_temporal}
@@ -52,12 +52,12 @@ Las métricas usadas en cada gráfica (y en la tabla resumen) son:
 \end{equation}
 \balance
 % ===== Resultados (solo tiempo) =====
-En la tabla \ref{tab:comparativa_temporal_min}, los índices de \emph{tiempo de subida} \(t_r\) y \emph{sobreimpulso} \(M_p\) se obtienen de las curvas de esta sección. El error en estado estacionario \(e_{ss}\) se reporta cuando aplica (lazo cerrado), y el \emph{error cuadratico medio normalizado} entre las mediciones y simulaciones se especifica tanto \emph{con} como \emph{sin} el offset de las señales.
+En la tabla \ref{tab:comparativa_temporal_min}, los índices de \emph{tiempo de subida} \(t_r\) y \emph{sobreimpulso} \(M_p\) se obtienen de las curvas de esta sección y anteriores. El error en estado estacionario \(e_{ss}\) se reporta cuando aplica (lazo cerrado), y el \emph{error cuadratico medio normalizado} entre las mediciones y simulaciones se especifica tanto \emph{con} como \emph{sin} el offset de las señales.
 
 % EN EL TEXTO (sin \onecolumn ni \balance aquí)
 \begin{table}[t]
 	\centering
-	\caption{Comparativa temporal (simulado vs.\ experimental) y NRMSE (con/sin offset).}
+	\caption{Comparativa temporal (simulado vs.\ experimental).}
 	\label{tab:comparativa_temporal_min}
 	\small
 	\setlength{\tabcolsep}{4pt}
@@ -94,20 +94,20 @@ Con el \(L(z)\) obtenido, se midió/estimó \(K_v\simeq 78.43\Rightarrow e_{ss}^
 {fig:rampa_c2}{0.92}
 
 \subsection{Discusión de discrepancias}
-Las diferencias entre curvas simuladas y experimentales se explican principalmente por: (i) \textbf{limitación/saturación} en la señal de esfuerzo debido a la carga del DAC (la excitación queda “achatada”), y (ii) \textbf{descalce de referencia} (offset). A ello se suman tolerancias de componentes pasivos, lo que desplaza levemente parámetros característicos de la planta. Aun así, la \emph{dinámica global} buscada (forma de la respuesta y tiempos) se mantuvo acorde a la simulación.
+Las diferencias entre curvas simuladas y experimentales se explican principalmente por: (i) \textbf{limitación/saturación} en la señal de esfuerzo debido a la carga en el DAC (la excitación queda “achatada”), y (ii) \textbf{descalce de referencia} (offset). A ello se suman tolerancias de componentes pasivos, lo que desplaza levemente parámetros característicos de la planta. Aun así, la \emph{dinámica global} buscada (forma de la respuesta y tiempos) se mantuvo acorde a la simulación.
 
 
 
 
 \section{Conclusiones}
 
-El conjunto de ensayos y comparaciones \emph{dominio del tiempo} demuestra que, a pesar de las limitaciones de implementación y de la dispersión de la planta real, el desempeño experimental se mantiene coherente con el diseño y dentro de las bandas esperadas. A continuación se sintetizan los hallazgos principales.
+El conjunto de ensayos y comparaciones en el \emph{dominio del tiempo} demuestra que, a pesar de las limitaciones de implementación y de la dispersión de la planta real, el desempeño experimental se mantiene coherente con el diseño y dentro de las bandas esperadas. A continuación se sintetizan los hallazgos principales.
 
 \subsection*{Ajuste simulación–experimento}
-Al simular con la \textbf{misma entrada} medida y remover el \textbf{offset estático} entre DAC y ADC, el ajuste mejora de forma notable (véase la tabla~\ref{tab:comparativa_temporal_min}). Lo que persiste se explica por \emph{efectos dinámicos} no ideales: como saturaciones suaves del actuador y  atenuaciones por carga.
+Al simular con la \textbf{misma entrada} medida y remover el \textbf{offset estático} entre DAC y ADC, el ajuste mejora de forma notable (véase la tabla~\ref{tab:comparativa_temporal_min}). Lo que persiste se explica por \emph{efectos dinámicos} no ideales: como saturaciones suaves del actuador (no linealidad) y  atenuaciones por carga o discrepancias entre resistencias que definen la ganancia.
 
 \subsection*{Limitaciones de hardware observadas}
-Se verificó que la \textbf{corriente de salida del DAC} no es suficiente para excitar directamente la planta ---no logramos conseguir los rangos exactos de corriente que puede suministrar en el datasheet---, lo que produce \emph{achatamiento} y \emph{recorte} del esfuerzo de control y, en consecuencia, discrepancias de forma en las respuestas. Además, la referencia $\mathrm{VDDA}/2$ y las líneas de alimentación presentan \emph{desacople insuficiente}, favoreciendo derivas de nivel que se manifiestan como offset y ligeras variaciones de ganancia. Estas condiciones explican parte del desajuste restante aun tras corregir el offset en posprocesado.
+Se verificó que la \textbf{corriente de salida del DAC} no es suficiente para excitar directamente la planta ---aunque no logramos conseguir los rangos exactos de corriente que puede suministrar en el datasheet---, lo que produce \emph{achatamiento} y \emph{recorte} del esfuerzo de control y, en consecuencia, discrepancias de forma en las respuestas. Además, la referencia $\mathrm{VDDA}/2$ y las líneas de alimentación presentan \emph{desacople insuficiente}, favoreciendo derivas de nivel que se manifiestan como offset. Estas condiciones explican parte del desajuste restante aun tras corregir el offset en posprocesado.
 
 \subsection*{Planta real vs.\ modelo nominal}
 La planta implementada difiere levemente del modelo continuo asumido por \emph{tolerancias} de pasivos, ordenamiento de etapas e impedancia de entrada vista por la fuente del esfuerzo. Aun así, las respuestas medidas se ubican mayormente \textbf{dentro de la banda de tolerancias} obtenida por análisis estadístico, lo que respalda la \emph{validez del modelo} para propósitos de diseño y la \emph{robustez} del procedimiento seguido.
@@ -116,7 +116,7 @@ La planta implementada difiere levemente del modelo continuo asumido por \emph{t
 
 \subsection*{Acciones recomendadas}
 \begin{itemize}
-	\item Añadir un \textbf{buffer operacional} rail–to–rail y de baja impedancia a la salida del DAC para eliminar el error de carga y evitar recortes del esfuerzo.
+	\item Añadir un \textbf{buffer} a la salida del DAC para eliminar el error de carga en el DAC y evitar recortes del esfuerzo.
 	\item \textbf{Biaspassear} la referencia $\mathrm{VDDA}/2$ y las líneas de alimentación, mejorando estabilidad de nivel y rechazo de ruido.
 \end{itemize}
 

@@ -1,15 +1,14 @@
 \subsection{Modificación de la Dinámica de la Planta}
 \subsubsection{Diseñar un compensador que logre un margen de fase de $60^\circ$} 
 
-Para el diseño, en primer lugar se transforma la planta del plano $\mathcal{S}$ al plano $\mathcal{Z}$, y posteriormente al plano $\mathcal{W}$. La primera transformación se realiza empleando la relación presentada en la ecuación~\ref{eq:RelacionGen}.  
+Para el diseño, en primer lugar se transforma la planta del plano $\mathcal{S}$ al plano $\mathcal{Z}$ y, posteriormente, al plano $\mathcal{W}$. La primera transformación se realiza empleando la relación presentada en la ecuación~\ref{eq:RelacionGen}.  
 
 Luego, para pasar del plano $\mathcal{Z}$ al plano $\mathcal{W}$, se utiliza la relación de Tustin, expresada en la ecuación~\ref{eq:planoZ}, tal como se explicó en el ítem anterior (\ref{sec:disc}).
 
-\textbf{Diseño de compensadores – análisis preliminar:}  
+\textbf{Diseño de compensadores – análisis preliminar}  
 
-En primer lugar, se analizan los márgenes de fase y de ganancia de la planta sin compensar.
+En primer lugar, se analizan los márgenes de fase y de ganancia de la planta sin compensar, pudiendo ver las curvas de Bode en las figuras \ref{fig:bodeMatlabSinComp} y \ref{fig:bodeAMano}.
 
-\insertarfigura{./img/C1_Lead/margenesPlanta.png}{Diagrama de Bode de la planta sin compensación.}{fig:bodeMatlabSinComp}{1}
 
 Se observa que el margen inicial de ganancia es de \SI{31.4}{dB}, lo que permite incrementar el valor de la ganancia $K$.  
 
@@ -17,199 +16,186 @@ Se observa que el margen inicial de ganancia es de \SI{31.4}{dB}, lo que permite
 
 Por criterio de diseño, se selecciona un margen de ganancia aceptable, correspondiente a valores superiores a \SI{10}{dB}. A partir de esta condición se calcula la ganancia:
 \[
-|G(\omega)| = 20 \log(K) = 31.4 - 10 
+|G(\omega)| = 20 \log_{10}(K) = 31.4 - 10 
 \;\;\Rightarrow\;\; K = 10^{21.4/20}.
 \]
-
-La nueva ganancia resulta:
 \[
 K = 11.149.
 \]
 
 Con este valor de ganancia se obtiene el siguiente diagrama de Bode:
 
-\insertarfigura{./img/C1_Lead/margenesConK}{Diagrama de Bode de la planta con la nueva ganancia.}{fig:bodenuevak}{1}
+\insertarfigura{./img/C1_Lead/margenesConK.png}{Diagrama de Bode de la planta con la nueva ganancia.}{fig:bodenuevak}{1}
 
-En la figura~\ref{fig:bodenuevak} se aprecia el desplazamiento producido por la nueva ganancia $K = 11.7057$, con los siguientes resultados:
+En la figura~\ref{fig:bodenuevak} se aprecia el desplazamiento producido por la nueva ganancia $K = 11.149$, con los siguientes resultados:
 \begin{itemize}
 	\item \textbf{Margen de ganancia:} $GM = \SI{10.00}{dB}$
-	\item \textbf{Margen de fase:} $PM = 41.13^\circ$
+	\item \textbf{Margen de fase:} $PM = \ang{41.13}$
 	\item \textbf{Frecuencia de cruce de ganancia:} $\omega_{cg} = 1.2 \times 10^3$
 	\item \textbf{Frecuencia de cruce de fase:} $\omega_{cp} = 523$
 \end{itemize}
 
-Se observa que el margen de fase obtenido es $PM = 41.13^\circ$, lo que representa una diferencia respecto al valor solicitado de $60^\circ$:
+Se observa que el margen de fase obtenido es $PM = \ang{41.13}$, por lo que falta aproximadamente:
 \[
-\Delta PM = 60^\circ - 41.13^\circ = 18.87^\circ \approx 20^\circ.
+\Delta PM = \ang{60} - \ang{41.13} = \ang{18.87} \ (\text{tomamos } \phi \approx \ang{20}).
 \]
 
-Denominamos a este valor $\phi$. Como aún faltan aproximadamente $20^\circ$ para alcanzar el margen de fase deseado, se decide emplear un compensador de adelanto (Lead).  
-
-Conociendo la frecuencia de cruce actual $\omega_{cp,\text{now}}$ y la fase adicional requerida ($\phi \approx 20^\circ$), se procede al diseño del compensador, implementando las siguientes ecuaciones en \textsc{Matlab}:
+Conociendo la frecuencia de cruce actual $\omega_{cp,\text{now}}$ y la fase adicional requerida ($\phi \approx \ang{20}$), se procede al diseño del compensador Lead mediante:
 \[
 \alpha = \frac{1 - \sin(\phi)}{1 + \sin(\phi)}, 
 \qquad 
-T = \frac{1}{\omega_{cp,\text{now}} \sqrt{\alpha}} 
+T = \frac{1}{\omega_{cp,\text{now}} \sqrt{\alpha}} ,
 \]
 \[
-C_0 = \frac{1 + T s}{1 + \alpha T s}, 
+C_0(s) = \frac{1 + T s}{1 + \alpha T s}, 
 \qquad 
-g = \frac{1}{\left| G(j\omega_c) C_0(j\omega_c) \right|}
-\]
-\[
-C = g \cdot C_0
+g = \frac{1}{\left| G(j\omega_c) \, C_0(j\omega_c) \right|}, 
+\qquad
+C(s) = g \, C_0(s).
 \]
 
-\insertarfigura{./img/C1_Lead/margenConC1}{Diagrama de Bode con el primer compensador diseñado.}{fig:bodeConC1}{1}
+\insertarfigura{./img/C1_Lead/margenConC1.png}{Diagrama de Bode con el primer compensador diseñado.}{fig:bodeConC1}{1}
 
-Los nuevos resultados obtenidos con este compensador son los siguientes:
+Los nuevos resultados son:
 \begin{itemize}
 	\item \textbf{Margen de ganancia:} $GM = \SI{10.83}{dB}$
-	\item \textbf{Margen de fase:} $PM = 61.12^\circ$
+	\item \textbf{Margen de fase:} $PM = \ang{61.12}$
 	\item \textbf{Frecuencia de cruce de ganancia:} $\omega_{cg} = 1.57 \times 10^3$
 	\item \textbf{Frecuencia de cruce de fase:} $\omega_{cp} = 523$
 \end{itemize}
 
-\textbf{Datos del compensador:} El compensador obtenido puede expresarse de distintas formas.  
+\textbf{Datos del compensador.} Formas equivalentes:
 
-\textbf{Forma explícita con todos los decimales}  
+\textit{Explícita (redondeada)}:
 \[
-C(z) = \frac{1.18473440049107 \, z - 0.737363460561365}{z - 0.374311732736374}
+C_1(z) = \frac{1.185\,z - 0.7374}{z - 0.3743}.
 \]
 
-\textbf{Forma explícita con decimales redondeados}  
+\textit{Explícita (todos los decimales)}:
 \[
-C_1(z) = \frac{1.185 \, z - 0.7374}{z - 0.3743}
+C(z) = \frac{1.18473440049107\, z - 0.737363460561365}{z - 0.374311732736374}.
 \]
 
-El período de muestreo asociado es:
+\textit{Cero–polo–ganancia (ZPK, redondeada)}:
 \[
-T_s = 0.001245213061220 \; \text{s}
+C_1(z) = 1.1847 \cdot \frac{z - 0.6224}{z - 0.3743}.
 \]
 
-\textbf{Forma cero-polo-ganancia (ZPK)}
-
-\textbf{Con redondeo:}  
+\textit{Cero–polo–ganancia (ZPK, completa)}:
 \[
-C_1(z) = 1.1847 \cdot \frac{(z - 0.6224)}{(z - 0.3743)}
+C(z) = 1.184734400491065 \cdot \frac{z - 0.622387144541200}{z - 0.374311732736374}.
 \]
 
-\textbf{Con todos los decimales:}  
+Período de muestreo: 
 \[
-C(z) = 1.184734400491065 \cdot \frac{(z - 0.622387144541200)}{(z - 0.374311732736374)}
+T_s = \SI{1,2452}{ms}.
 \]
 
-\noindent
-donde los parámetros identificados son:
-\begin{itemize}
-	\item Cero: $Z = 0.622387144541200$
-	\item Polo: $P = 0.374311732736374$
-	\item Ganancia: $K = 1.184734400491065$
-	\item Sample time: $t_s = 0.0012452 s$
-\end{itemize}
+\insertarfigura{./img/C1_Lead/bodeC1.png}{Diagrama de Bode del primer compensador diseñado.}{fig:bodeC1}{1}
+\insertarfigura{./img/C1_Lead/esfuerzoC1.png}{Esfuerzo del primer compensador diseñado.}{fig:esfuerzoC1}{1}
+\insertarfigura{./img/C1_Lead/stepC1.png}{Respuesta al escalón del primer compensador diseñado.}{fig:stepC1}{1}
 
-\insertarfigura{./img/C1_Lead/bodeC1}{Diagrama de Bode del primer compensador diseñado.}{fig:bodeC1}{1}
-
-\insertarfigura{./img/C1_Lead/esfuerzoC1}{Esfuerzo del primer compensador diseñado.}{fig:esfuerzoC1}{1}
-
-\insertarfigura{./img/C1_Lead/stepC1}{El step del primer compensador diseñado.}{fig:stepC1}{1}
-
-El resultado obtenido para este diseño no es el más óptimo. Con una ganancia $K = 1.18$, el sistema presenta un error significativo debido a que es de tipo $0$. Al aplicar una entrada escalón, el error en estado estacionario calculado es:
+El resultado de este diseño no es óptimo. Con $K = 1.18$, el sistema (tipo $0$) presenta error en estado estacionario ante escalón:
 \[
-e = \frac{1}{1+K_p} = 45.8\%.
+e = \frac{1}{1+K_p} = 0.458 \;\Rightarrow\; \SI{45.8}{\percent}.
 \]
-
-Este valor resulta demasiado elevado. Además, al observar la figura~\ref{fig:esfuerzoC1}, se aprecia que el esfuerzo de control presenta saturación tanto al inicio como al final de la respuesta.  
+Además, en la figura~\ref{fig:esfuerzoC1} se observa saturación del esfuerzo de control en las transiciones de estado.
 
 \paragraph{Segundo intento – Compensador Proporcional}  
 
-A partir del análisis del diagrama de Bode de la planta sin compensar (figura~\ref{fig:bodeMatlabSinComp}), se determina la frecuencia en la que el margen de fase alcanza el valor deseado de $60^\circ$.
-\insertarfigura{./img/C1_K/analisisK}{Análisis de la ganancia de la planta.}{fig:AnalK}{1}
-Como se aprecia en la figura~\ref{fig:AnalK}, la frecuencia correspondiente a un margen de fase de $60^\circ$ es de aproximadamente \SI{344}{Hz}. El margen de ganancia en dicha frecuencia es de \SI{16.9}{dB}. De este modo, si se incrementa la ganancia en ese valor, es posible forzar el cruce de tal manera que se alcance el margen de fase requerido:
+A partir del Bode de la planta sin compensar (figura~\ref{fig:bodeMatlabSinComp}), se determina la frecuencia donde el margen de fase alcanza \ang{60}. 
+\insertarfigura{./img/C1_K/analisisK.png}{Análisis de la ganancia de la planta.}{fig:AnalK}{1}
+
+En la figura~\ref{fig:AnalK}, la frecuencia correspondiente es aproximadamente \SI{344}{rad/s} y el margen de ganancia allí es \SI{16.9}{dB}. Forzando el cruce:
 \[
-20\log(K) = MG_{\text{inicial}} - MG_{\text{deseado}}.
+20\log_{10}(K) = MG_{\text{inicial}} - MG_{\text{deseado}} = 16.9
+\;\;\Rightarrow\;\; K \approx 7.
 \]
-Dado que $MG_{\text{inicial}} - MG_{\text{deseado}} = 16.9$, la nueva ganancia es aproximadamente:
-\[
-K \approx 7.
-\]
-Con esta ganancia se obtienen los siguientes resultados:
+
+Con esta ganancia:
 \begin{itemize}
-	\item \textbf{Margen de ganancia:} $GM = \SI{14.47}{dB}$
-	\item \textbf{Margen de fase:} $PM = 60.28^\circ$
-	\item \textbf{Frecuencia de cruce de ganancia:} $\omega_{cg} = 1.2 \times 10^3$
-	\item \textbf{Frecuencia de cruce de fase:} $\omega_{cp} = 344$
+	\item \textbf{GM:} \SI{14.47}{dB}
+	\item \textbf{PM:} \ang{60.28}
+	\item \textbf{$\omega_{cg}$}$ = 1.2 \times 10^3$, \quad \textbf{$\omega_{cp}$}$ = 344$
 \end{itemize}
 
-\insertarfigura{./img/C1_K/esfuerzoC1}{Esfuerzo de control con el compensador proporcional.}{fig:esfuerzoC1K}{1}
+\insertarfigura{./img/C1_K/esfuerzoC1.png}{Esfuerzo de control con el compensador proporcional.}{fig:esfuerzoC1K}{1}
+\insertarfigura{./img/C1_K/stepC1.png}{Respuesta al escalón con el compensador proporcional.}{fig:stepC1K}{1}
 
-\insertarfigura{./img/C1_K/stepC1}{Respuesta al escalón con el compensador proporcional.}{fig:stepC1K}{1}
-
-Con la nueva ganancia $K$ se calcula el error en estado estacionario:
+El error en estado estacionario es:
 \[
-e \approx \frac{1}{1+K_p} \approx 0.125 \;\; \Rightarrow \;\; 12.5\%.
+e \approx \frac{1}{1+K_p} \approx 0.125 \;\Rightarrow\; \SI{12.5}{\percent}.
 \]
+Aunque mejora el error, la respuesta presenta un \emph{overshoot} mayor y esfuerzos de control bruscos (figura~\ref{fig:esfuerzoC1K}), principalmente en las transiciones de estado, provocando saturación del VDAC del \textsc{PSoC} aún para escalones pequeños. Este diseño tampoco cumple las espectativas esperadas para un buen controlador.
 
-Este error es considerablemente menor al obtenido con el primer compensador. Sin embargo, la respuesta presenta un \emph{overshoot} más pronunciado, lo que se traduce en esfuerzos de control abruptos al inicio, como puede observarse en la figura~\ref{fig:esfuerzoC1K}. Esto provoca la saturación del VDAC incluso con escalones pequeños.  
+\subsubsection{El compensador debe permitir el seguimiento de una entrada rampa con un error en estado estacionario igual a $1/K_v$}
 
-Por lo tanto, se concluye que este segundo diseño tampoco constituye una solución óptima.
+Para cumplir este requerimiento, se diseña un compensador con un polo en el origen (puesto que la planta es de tipo $0$ y necesitamos que sea tipo $1$), de modo que el error frente a rampa sea finito.  
 
-\subsubsection{El compensador debe permitir el seguimiento de una entrada rampa con un error en estado estable igual a $1/K_v$}
+Los márgenes iniciales obtenidos se muestran en la figura~\ref{fig:margIniC2}.  
 
-Para cumplir con este requerimiento, es necesario diseñar un compensador que incorpore un polo en el origen. De esta forma, el sistema podrá alcanzar un error en estado estacionario finito frente a una entrada rampa.  
+\insertarfigura{./img/C2/margenInicio.png}{Diagrama de Bode con margen de ganancia inicial con un polo al origen.}{fig:margIniC2}{1}
 
-Los márgenes iniciales obtenidos con este compensador se muestran en la figura~\ref{fig:margIniC2}.  
+Como criterio de diseño, se fija un margen de ganancia deseado de \SI{10}{dB}; se determina entonces la ganancia $K$ correspondiente.
 
-\insertarfigura{./img/C2/margenInicio}{Diagrama de Bode con Margen de Ganancia inicial.}{fig:margIniC2}{1}
+\insertarfigura{./img/C2/margenPosK.png}{Diagrama de Bode con el margen de ganancia ajustado.}{fig:margenPosK}{1}
 
-Como criterio de diseño, se establece un margen de ganancia deseada es de \SI{10}{dB}. Por lo tanto, se debe determinar el valor de la ganancia $K$ que cumpla con esta condición.
-
-\insertarfigura{./img/C2/margenPosK}{Diagrama de Bode nuevo de margen de ganancia (GM).}{fig:margenPosK}{1}
-
-Con el nuevo margen de ganancia se obtienen los siguientes valores a partir de la figura~\ref{fig:margenPosK}:
+Los valores obtenidos (figura~\ref{fig:margenPosK}) son:
 \begin{itemize}
 	\item \textbf{Ganancia:} $K = 158.932$
-	\item \textbf{Margen de ganancia:} $GM = \SI{10}{dB}$
-	\item \textbf{Margen de fase:} $PM = 22.56^\circ$
-	\item \textbf{Frecuencia de cruce de ganancia:} $\omega_{cg} = 160$
-	\item \textbf{Frecuencia de cruce de fase:} $\omega_{cp} = 85.7$
+	\item \textbf{GM:} \SI{10}{dB}
+	\item \textbf{PM:} \ang{22.56}
+	\item $\omega_{cg} = 160$, \quad $\omega_{cp} = 85.7$
 \end{itemize}
 
-Se observa que el margen de fase obtenido es de $22.56^\circ$, por lo que para alcanzar el criterio de $60^\circ$ aún faltan aproximadamente $37.44^\circ$. En consecuencia, se incorpora un compensador de adelanto (Lead) con el objetivo de aportar la fase adicional requerida.
+Dado que el margen de fase $PM = \ang{22.56}$ aún se encuentra lejos del valor deseado de \ang{60}, se agrega un compensador de adelanto (Lead) para aportar aproximadamente \ang{37.44} adicionales.
 
-\insertarfigura{./img/C2/margenConCompensador}{Diagrama de Bode del Compensador - Etapa Lead.}{fig:margenConCompensador2}{1}
+\insertarfigura{./img/C2/margenConCompensador.png}{Diagrama de Bode con el compensador (etapa Lead).}{fig:margenConCompensador2}{1}
+
 \paragraph{Datos del compensador $C_2$}  
 
-El compensador obtenido puede expresarse de las siguientes formas:  
-
-Forma explícita
+\textit{Forma explícita:}
 \[
-C_2(z) = \frac{0.1856\,z^2 + 0.009526\,z - 0.1761}{z^2 - 1.805\,z + 0.805}
+C_2(z) = \frac{0.1856\,z^2 + 0.009526\,z - 0.1761}{z^2 - 1.805\,z + 0.805}, 
+\qquad
+T_s = \SI{0.0012452}{s}.
 \]
 
-con un período de muestreo asociado de:
-\[
-T_s = 0.0012452 \; \text{s}.
-\]
-
-Forma cero–polo–ganancia (ZPK) – redondeada  
+\textit{Forma cero–polo–ganancia (redondeada):}
 \[
 C_2(z) = 0.18562 \cdot \frac{(z+1)(z-0.9487)}{(z-1)(z-0.805)}.
 \]
 
-\noindent
-Los parámetros identificados son:
+Parámetros identificados:
 \begin{itemize}
 	\item \textbf{Ceros:} $Z = \{-1.0,\; 0.948680356607820\}$
 	\item \textbf{Polos:} $P = \{1.0,\; 0.805044751405714\}$
 	\item \textbf{Ganancia:} $K = 0.185620357009816$
-	\item \textbf{Período de muestreo:} $T_s = 0.0012452$ s
+	\item \textbf{Período de muestreo:} $T_s = \SI{1.2452}{ms}$
 \end{itemize}
 
+\insertarfigura{./img/C2/stepC2.png}{Respuesta al escalón con el compensador (etapa Lead).}{fig:stepC2}{1}
+\insertarfigura{./img/C2/rampaC2.png}{Seguimiento a la rampa con el compensador (etapa Lead).}{fig:rampaC2}{1}
+\insertarfigura{./img/C2/esfuerzoC2.png}{Esfuerzo de control con el compensador (etapa Lead).}{fig:esfuerzoC2}{1}
 
-\insertarfigura{./img/C2/stepC2}{Diagrama de Bode del Compensador - Etapa Lead.}{fig:stepC2}{1}
+El escalón (figura~\ref{fig:stepC2}) muestra una buena respuesta, con $\zeta \approx 0.63$ y un tiempo de subida $t_r = \SI{14}{ms}$. En la figura~\ref{fig:esfuerzoC2}, el esfuerzo máximo alcanza \SI{2.6}{V}, muy por debajo de la saturación del \textsc{PSoC}, a diferencia de diseños anteriores que llegaban a \SI{4}{V}.  
 
-\insertarfigura{./img/C2/rampaC2}{Diagrama de Bode del Compensador - Etapa Lead.}{fig:rampaC2}{1}
+Para la entrada rampa, tras un transitorio breve, el error se estabiliza y queda determinado por:
+\[
+K_v = \lim_{z \to 1} \left( \frac{z-1}{z} \cdot \frac{C_2(z)\, G_d(z)}{T_s} \right),
+\qquad
+e = \frac{1}{K_v}.
+\]
 
-\insertarfigura{./img/C2/esfuerzoC2}{Diagrama de Bode del Compensador - Etapa Lead.}{fig:esfuerzoC2
-}{1}
+Resolviendo $K_v$ para $T_s = \SI{1.24}{ms}$:
+\[
+K_v = \lim_{z \to 1} \left( \frac{3.2192 \,(z + 0.7419)(z + 1)(z - 0.9487)}
+{z \,(z - 0.9333)(z - 0.805)(z - 0.436)} \right).
+\]
+
+Evaluando el límite, se obtiene $K_v = 78.429$. Por lo tanto, el error es:
+\[
+e = \frac{1}{K_v} = 0.01275 \;\Rightarrow\; \SI{12.75}{\percent}.
+\]
+
+Finalmente, observando la figura~\ref{fig:rampaC2}, se confirma que se cumplen de manera satisfactoria los objetivos planteados para esta etapa del laboratorio: el sistema logra un seguimiento estable de la rampa, con un error aceptable y consistente con el valor calculado.
