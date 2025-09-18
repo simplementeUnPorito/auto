@@ -35,11 +35,11 @@ y despejando \(u[k]\):
 y luego se aplica saturación (montaje: \(\texttt{SAT\_MIN}=\SI{0.0}{V}\), \(\texttt{SAT\_MAX}=\SI{4.08}{V}\)):
 \begin{equation}
 	\label{eq:u_sat}
-	\texttt{u\_sat}=
+	u_{DAC}[k]=
 	\begin{cases}
-		\texttt{SAT\_MAX}, & \text{si } \texttt{u\_unsat}>\texttt{SAT\_MAX},\\
-		\texttt{SAT\_MIN}, & \text{si } \texttt{u\_unsat}<\texttt{SAT\_MIN},\\
-		\texttt{u\_unsat}, & \text{en otro caso.}
+		\texttt{SAT\_MAX}, & \text{si } u[k]>\texttt{SAT\_MAX},\\
+		\texttt{SAT\_MIN}, & \text{si } u[k]<\texttt{SAT\_MIN},\\
+		u[k], & \text{en otro caso.}
 	\end{cases}
 \end{equation}
 Finalmente se escribe al DAC: \(\texttt{VDAC8\_SetValue(volt\_to\_dac(u\_sat));}\)

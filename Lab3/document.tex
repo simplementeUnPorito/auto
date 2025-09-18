@@ -143,6 +143,35 @@
 % ======= Hyperref al final del preámbulo =======
 \usepackage[unicode,hidelinks]{hyperref}
 
+
+% ==== Codificación y fuentes (XeLaTeX/LuaLaTeX) ====
+\usepackage{fontspec}
+\defaultfontfeatures{Ligatures=TeX}
+\setmainfont{Latin Modern Roman} % o la que uses
+\usepackage{listings}
+\usepackage{listingsutf8}
+
+
+\lstset{
+	inputencoding=utf8,
+	extendedchars=true,
+	breaklines=true,
+	breakatwhitespace=true,
+	columns=fullflexible
+}
+% Mapeo de Unicode frecuentes en los listados:
+\lstset{literate=
+	{á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1
+	{Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1 {Ñ}{{\~N}}1
+	{°}{{\textdegree}}1 {º}{{\textordmasculine}}1 {µ}{{\textmu}}1
+	{Ω}{{$\Omega$}}1 {ω}{{$\omega$}}1 {σ}{{$\sigma$}}1 {φ}{{$\varphi$}}1
+	{·}{{$\cdot$}}1 {±}{{$\pm$}}1
+	{–}{{\textendash}}1 {—}{{\textemdash}}1
+	{“}{{\textquotedblleft}}1 {”}{{\textquotedblright}}1
+	{…}{{\ldots}}1
+}
+
+
 % ======= Metadatos =======
 \title{Práctica de Laboratorio 3: Diseño de controladores por el método de Bode.}
 

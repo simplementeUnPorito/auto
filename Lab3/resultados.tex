@@ -1,10 +1,94 @@
 \section{Resultados}
-\subsection{Obtener la respuesta en frecuencia del sistema sin compensar y del sistema compensado.}
 
-\subsection{Comparar los resultados obtenidos en Matlab con los resultados experimentales.}
+\subsection{Respuestas temporales (simulado vs.\ experimental)}
+En esta sección se presentan comparaciones \emph{en el dominio del tiempo} entre simulación y experimento para: planta sin compensar, C1 (proporcional), C2 (lead), C3 (integrador+lead). En cada figura se incluyen las métricas \emph{RMSE}, \emph{NRMSE} y \(e_{\max}\) (definidas en las ecuaciones \eqref{eq:rmse_temporal}–\eqref{eq:emax_temporal}). Se muestran versiones \emph{con} y \emph{sin} remoción de offset para evidenciar el descalce de referencia señalado en la implementación.
+
+% ===== AJUSTAR RUTAS =====
+\insertarfigura{img/OpenLoop/comparacionLazoAbierto.png}
+{Planta sin compensación en lazo abierto: respuesta al escalón (simulado vs.\ experimental, con bandas de tolerancia para \(\sigma = \frac{tolerance}{3}\)).}
+{fig:step_openLoop}{1}
 
 
-\subsection{Mostrar el error de velocidad del sistema.}
+
+\insertarfigura{img/C1_Lead/conOffset}
+{Compensador de adelanto: respuesta al escalón y esfuerzo (simulado vs.\ experimental, \emph{con} offset).}
+{fig:step_c1_con_offset}{1}
+
+\insertarfigura{img/C1_Lead/sinOffset}
+{Compensador de adelanto: respuesta al escalón y esfuerzo (simulado vs.\ experimental, \emph{sin} offset).}
+{fig:step_c1_sin_offset}{1}
+
+\insertarfigura{img/C1_K/compConOffset}
+{Compensador Proporcional: respuesta al escalón y esfuerzo (simulado vs.\ experimental, \emph{con} offset).}
+{fig:step_prop_con_offset}{1}
+
+\insertarfigura{img/C1_K/compSinOffset}
+{Compensador Proporcional: respuesta al escalón y esfuerzo (simulado vs.\ experimental, \emph{sin} offset).}
+{fig:step_prop_sin_offset}{1}
+
+\insertarfigura{img/C2/conOffset}
+{Compensador de adelanto + integrador: respuesta al escalón y esfuerzo (simulado vs.\ experimental, \emph{con} offset).}
+{fig:step_c2_con_offset}{1}
+
+\insertarfigura{img/C2/sinOFFset}
+{Compensador de adelanto + integrador: respuesta al escalón y esfuerzo (simulado vs.\ experimental, \emph{sin} offset).}
+{fig:step_c2_sin_offset}{0.92}
 
 
-\subsection{Incluir junto con el informe el archivo \texttt{.m} de Matlab utilizado.}
+
+\subsection{Métricas de ajuste y desempeño temporal}
+Las métricas usadas en cada gráfica (y en la tabla resumen) son:
+\begin{equation}
+	\label{eq:rmse_temporal}
+	\mathrm{RMSE}=\sqrt{\frac{1}{N}\sum_{k=1}^{N}\big(y[k]-\hat{y}[k]\big)^2},
+\end{equation}
+\begin{equation}
+	\label{eq:rmse_porct}
+	\mathrm{NRMSE}=\frac{\mathrm{RMSE}}{y_{\max}-y_{\min}},
+\end{equation}
+\begin{equation}
+	\label{eq:emax_temporal}
+	e_{\max}=\max_k\,\lvert y[k]-\hat{y}[k]\rvert.
+\end{equation}
+\balance
+% ===== Resultados (solo tiempo) =====
+Los índices de \emph{tiempo de subida} \(t_r\) y \emph{sobreimpulso} \(M_p\) se obtienen de las curvas de esta sección. El error en estado estacionario \(e_{ss}\) se reporta cuando aplica (lazo cerrado).
+
+\begin{table}[H]
+	\centering
+	\caption{Comparativa temporal (simulado vs.\ experimental) y ajuste NRMSE (con/sin offset).}
+	\label{tab:comparativa_temporal_min}
+	\begin{tabular}{lcccc}
+		\toprule
+		\textbf{Sistema} &
+		\(\mathbf{t_r}\) [ms] (sim/exp) &
+		\(\mathbf{M_p}\) [\%] (sim/exp) &
+		\(\mathbf{e_{ss}}\) [\%] (sim/exp) &
+		\(\mathbf{NRMSE}\) [\%] (con/sin off)\\
+		\midrule
+		Lazo abierto         & 40.0 / 34.2   & 0 / 0             & 0 / 1.8182                    & 19.14 / 18.43 \\
+		C1 (lead)            & 21.17 / 19.8  & 0 / 0                 & 45.77 / 42--46.79   & 38.02 / 7.31 \\
+		Proporcional         & 3.736 / 3.950 & 15.4 / 10--20         & 12.5/\(\approx 15.825\)                   & 19.24 / 6.57 \\
+		Lead + integrador    & 13.7 / 17.10     & 7.433 / \(\approx 5\) & 0 / 0               & 13.54 / 5.61 \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+
+\subsection{Error de velocidad (seguimiento de rampa)}
+Para el compensador C2 (integrador+lead) se ensayó seguimiento a rampa \(r[k]=kT\) (pendiente \(1\ \mathrm{u}/\mathrm{s}\)). El error en régimen para sistemas tipo~1 en discreto es
+\begin{equation}
+	\label{eq:ess_rampa_discreto}
+	e_{ss}=\frac{T}{K_{v,z}},\qquad K_{v,z}=\lim_{z\to1}(z-1)\,L(z).
+\end{equation}
+Con el \(L(z)\) obtenido, se midió/estimó \(K_v\simeq 78.43\Rightarrow e_{ss}^{(\mathrm{teo})}\approx 1/78.43\approx 1.28\%\), en concordancia con el valor observado tras un transitorio breve.
+
+% ===== AJUSTAR RUTA =====
+\insertarfigura{img/C2/rampaC2linda}
+{Seguimiento de rampa con Compensador integrador + lead.}
+{fig:rampa_c2}{0.92}
+
+\subsection{Discusión de discrepancias}
+Las diferencias entre curvas simuladas y experimentales se explican principalmente por: (i) \textbf{limitación/saturación} en la señal de esfuerzo debido a la carga del DAC (la excitación queda “achatada”), y (ii) \textbf{descalce de referencia} (offset). A ello se suman tolerancias de componentes pasivos, lo que desplaza levemente parámetros característicos de la planta. Aun así, la \emph{dinámica global} buscada (forma de la respuesta y tiempos) se mantuvo acorde a la simulación.
+
+

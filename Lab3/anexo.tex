@@ -1,0 +1,1854 @@
+\onecolumn
+\appendices
+\section{Códigos de Matlab}
+
+\begin{lstlisting}[style=matlabstyle,caption={Hoja cálculos utilizada para el diseño de los compensadores.},label={matlab:hojaDeCalculos}]
+close all
+clear all
+close all
+clear all
+
+addpath('..\Lab1\')
+addpath('..\Lab2\')
+
+%% Definicion de parametros
+R_1 = 15e3;
+R_3 = 15e3;
+C_2 = 100e-9;
+
+R_2 = 82e3;
+R_4 = 82e3;
+C_1 = 0.22e-6;
+
+%% Generar funcion de transferencia d
+numStage = [-R_3/R_1 -R_4/R_2];
+denStage = { [C_2*R_3 1], [C_1*R_4 1] };
+
+% Usamos celdas para guardar los tf de cada stage
+Gstage = cell(1,2);
+G = 1;
+for i = 1:2
+Gstage{i} = tf(numStage(i), denStage{i});
+G = G*Gstage{i};
+end
+
+%% Analizamos en el tiempo
+[tr, ts, wn] = plot_step_info(G);
+disp('Planta continua G(s):')
+G
+zpk(G)
+
+
+
+%% Paso 1: Definir periodo de muestreo
+% Se busca una mejora de 4 en el tiempo de rising , o sea tr = 10 ms
+N = 4; 
+T = tr/(8*N);
+%Gcl = feedback(G,1);
+%figure;
+%step(Gcl)
+%T = stepinfo(Gcl).SettlingTime/8;
+
+%% Paso 2: Digitalizar con ZOH
+Gd = c2d(G, T, 'zoh');
+disp('Planta digital G(z):')
+Gd
+zpk(Gd)
+
+%% === K para PM deseada ===
+Gw = d2c(Gd,'tustin');        % continuo equivalente por Tustin
+figure;
+margin(Gw);grid on;
+%% === LOOP INTERACTIVO: ajustar K, agregar LEAD/LAG, o auto-ajustar specs ===
+% Requiere tener Gw (continuo por Tustin) ya definido.
+s = tf('s');
+C_total = tf(1);
+K = 1;
+
+fprintf('\n=== Estado inicial (K=1, C=1) ===\n');
+L_now = K*C_total*Gw;
+[GM, PM, Wcg, Wcp] = margin(L_now);
+fprintf('GM = %.2f dB, PM = %.2f°, Wcg = %.3g rad/s, Wcp = %.3g rad/s\n', 20*log10(GM), PM, Wcg, Wcp);
+figure; margin(L_now); grid on; title('L(s) = K*C*G_w  (inicio)');
+
+seguir = true;
+while seguir
+fprintf('\nOpciones:\n');
+fprintf('  [1] Ajustar K a un GM deseado (dB)\n');
+fprintf('  [2] Agregar etapa LEAD/LAG (normalizada en Wcp)\n');
+fprintf('  [3] Auto-ajustar a (GM_dB, PM)  — o usar K fijo y PM\n');
+fprintf('  [4] Fijar K explícito (sin cálculos)\n');
+fprintf('  [0] Terminar\n');
+op = str2double(input('Elegí opción: ','s'));
+
+switch op
+case 1
+GM_des_dB = str2double(input(' GM deseado (dB): ','s'));
+L_now = K*C_total*Gw;
+[GM_now, ~, ~, ~] = margin(L_now);
+GM_now_dB = 20*log10(GM_now);
+if ~isfinite(GM_now_dB)
+error('GM no definido; agregá una etapa o cambiá el rango antes de ajustar K.');
+end
+% K_new saca GM a GM_des_dB (aprox directo en dB)
+K = K * 10^((GM_now_dB - GM_des_dB)/20);
+L_now = K*C_total*Gw;
+[GM, PM, Wcg, Wcp] = margin(L_now);
+fprintf('  -> K = %.6g; GM = %.2f dB, PM = %.2f°, Wcg = %.3g, Wcp = %.3g\n', ...
+K, 20*log10(GM), PM, Wcg, Wcp);
+figure; margin(L_now); grid on; title('Tras ajustar K');
+
+case 2
+tipo = lower(strtrim(input(' Tipo ("lead" o "lag"): ','s')));
+phi  = str2double(input(' Fase a compensar (grados, positivo): ','s'));
+[C_total, rep] = add_stage_at_Wcp(Gw, C_total, K, tipo, phi, s);
+fprintf('  -> Etapa %s %+g° aplicada en wc=%.3g rad/s (normalizada)\n', rep.type, rep.phi_deg, rep.wc_used);
+L_now = K*C_total*Gw;
+[GM, PM, Wcg, Wcp] = margin(L_now);
+fprintf('  -> GM = %.2f dB, PM = %.2f°, Wcg = %.3g, Wcp = %.3g\n', 20*log10(GM), PM, Wcg, Wcp);
+figure; margin(L_now); grid on; title('Tras agregar etapa');
+
+case 3
+usa_k_fijo = lower(strtrim(input(' ¿Usar K fijo? [y/n]: ','s')));
+if strcmpi(usa_k_fijo,'y')
+K_fixed = str2double(input(' Valor de K fijo: ','s'));
+PM_des  = str2double(input(' PM deseada (grados): ','s'));
+[K, C_total, rep] = auto_hit_specs_fixedK(Gw, C_total, K_fixed, PM_des, s);
+fprintf('  -> AUTO (K fijo=%.6g) listo: PM=%.2f°, GM=%.2f dB, Wcg=%.3g, Wcp=%.3g\n', ...
+K, rep.PM, rep.GMdB, rep.Wcg, rep.Wcp);
+else
+GM_des_dB = str2double(input(' GM deseado (dB): ','s'));
+PM_des    = str2double(input(' PM deseada (grados): ','s'));
+[K, C_total, rep] = auto_hit_specs(Gw, C_total, K, GM_des_dB, PM_des, s);
+fprintf('  -> AUTO listo (iters=%d): GM=%.2f dB, PM=%.2f°, Wcg=%.3g, Wcp=%.3g\n', ...
+rep.iters, rep.GMdB, rep.PM, rep.Wcg, rep.Wcp);
+end
+L_now = K*C_total*Gw;
+figure; margin(L_now); grid on; title('Tras auto-ajuste');
+
+case 4
+K = str2double(input(' K = ','s'));
+L_now = K*C_total*Gw;
+[GM, PM, Wcg, Wcp] = margin(L_now);
+fprintf('  -> K fijado. GM = %.2f dB, PM = %.2f°, Wcg = %.3g, Wcp = %.3g\n', 20*log10(GM), PM, Wcg, Wcp);
+figure; margin(L_now); grid on; title('Tras fijar K');
+
+case 0
+seguir = false;
+continue;
+
+otherwise
+fprintf('Opción inválida.\n');
+end
+end
+
+
+%% Resultado final
+K = 7;
+C_total = K;
+% C_total = 11.7057*d2c(C1,'tustin',T);
+L_final = C_total*Gw;
+[GMf, PMf, Wcgf, Wcpf] = margin(L_final);
+fprintf('Márgenes: GM = %.2f dB, PM = %.2f°, Wcg = %.3g, Wcp = %.3g\n', 20*log10(GMf), PMf, Wcgf, Wcpf);
+% % figure; bode(C_total); grid on;
+% figure; margin(L_final); grid on; title('L_{final}(s) = K · C_{total}(s) · G_w(s)');
+% % C1 = c2d(C_total,T,'tustin');
+%  figure;step(feedback(C1*Gd,1));grid on;title('Respuesta al escalon');
+% figure;step(feedback(C1,Gd));grid on;title('Esfuerzo al escalon');
+
+
+
+umin = 0;
+umax =  4.08;
+refmin = 1.75;
+refmax = 2.25;
+n_per_seg = 500;
+
+Gc1f = feedback(Gd*C1,1);
+%figure;
+%step(Gc1f)
+info = stepinfo(Gc1f);
+
+
+info_ext = plot_step_annot(Gc1f, 'la planta compensada con un lag-filter de 1º orden, anulando el polo más rápido de la planta.');
+compensador = zpk(C1);
+
+% [td, refd, yd, ud, ed, coefs] = sim_compensador_first_order( ...
+%     Gd, compensador.Z{1}, compensador.P{1}, compensador.K, T, umin, umax, refmin, refmax, n_per_seg);
+
+[td, refd, yd, ud, ed, coefs] = sim_compensador_first_order( ...
+Gd, 0, 0, K, T, umin, umax, refmin, refmax, n_per_seg);
+
+% [td, refd, yd, ud, ed, coefs] = sim_compensador_second_order( ...
+%     Gd, compensador.Z{1}(1), ...
+%     compensador.Z{1}(2), ...
+%     compensador.P{1}(1), ...
+%     compensador.P{1}(2), compensador.K, ...
+%     T, umin, umax, refmin, refmax, n_per_seg);
+
+Nini = 100;              % descartar al inicio
+Nfin = 100;              % descartar al final
+idx0 = Nini + 1;         % índice inicial válido
+idx1 = length(td) - Nfin; % índice final válido
+
+td   = td(idx0:idx1)-td(idx0);
+refd = refd(idx0:idx1);
+yd   = yd(idx0:idx1);
+ud   = ud(idx0:idx1);
+ed   = ed(idx0:idx1);
+
+% Si querés que el tiempo arranque en 0
+
+
+
+
+
+figure;
+
+% ---------- Subplot 1 ----------
+axAbs = subplot(2,1,1);  % eje izquierdo (absoluto)
+hold(axAbs,'on'); grid(axAbs,'on');
+
+% y[k] en rojo (abs)
+hY = stairs(axAbs, td, yd, 'r-', 'LineWidth', 1.4);
+
+% Armamos eje derecho transparente
+axPct = axes('Position', get(axAbs,'Position'), ...
+'Color','none', 'YAxisLocation','right', ...
+'XLim', get(axAbs,'XLim'), 'XTick',[], 'Box','off');
+hold(axPct,'on');
+
+% r[k] en negro, graficado en %
+ref_pct = 100*(refd - refmin)/(refmax - refmin);
+hR = stairs(axPct, td, refd, 'k--', 'LineWidth', 1.2);
+
+% ======= Cálculo de límites con margen =======
+yd_pct  = 100*(yd - refmin)/(refmax - refmin);
+pctAll  = [yd_pct; ref_pct];
+
+% Valores extremos en % con margen del 5 %
+rawMin = min(pctAll);
+rawMax = max(pctAll);
+span   = rawMax - rawMin;
+pctMin = rawMin - 0.05*span;
+pctMax = rawMax + 0.05*span;
+
+% Redondeamos a múltiplos de 20 para ticks
+stepPct = 20;
+tickMin = stepPct*floor(pctMin/stepPct);
+tickMax = stepPct*ceil (pctMax/stepPct);
+pctTicks = tickMin:stepPct:tickMax;
+
+% Convertimos a absolutos
+valTicks = refmin + (pctTicks/100)*(refmax - refmin);
+
+% Aplicamos a ambos ejes
+set(axAbs,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks);
+set(axPct,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks,...
+'YTickLabel',compose('%.0f %%',pctTicks));
+
+% Etiquetas
+xlabel(axAbs,'Tiempo [s]');
+ylabel(axAbs,'Respuesta [valor absoluto]');
+ylabel(axPct,'Escala relativa a ref [%]');
+title(axAbs,'Respuesta discreta con compensador 1º orden, anulando el polo más rápido de la planta.');
+legend(axAbs, [hY, hR], {'y[k]', 'r[k]'}, 'Location', 'best');
+
+% ---------- Subplot 2: esfuerzo de control ----------
+axU = subplot(2,1,2);
+stairs(axU, td, ud, 'LineWidth',1.2); grid(axU,'on');
+yline(axU, umax,'r:'); yline(axU, umin,'r:');
+xlabel(axU,'Tiempo [s]'); ylabel(axU,'u[k]');
+title(axU,'Esfuerzo de control con saturación');
+
+% --- Margen de 5% en eje Y ---
+uMin = min(ud);
+uMax = max(ud);
+span = uMax - uMin;
+ylim(axU, [uMin - 0.05*span, uMax + 0.05*span]);
+
+
+grid(axAbs,'on');    % grilla principal
+grid(axAbs,'minor'); % grilla secundaria
+
+grid(axPct,'on');
+grid(axPct,'minor');
+
+grid(axU,'on');
+grid(axU,'minor');
+%% ================== SETUP INICIAL ==================
+% Asumimos que ya construiste G (continuo), calculaste T, y obtuviste:
+%   Gd = c2d(G, T, 'zoh');
+%   Gw = d2c(Gd, 'tustin');   % "plano w" para diseñar
+%
+% Si no, descomenta y ajustá a tu caso:
+% R_1 = 15e3; R_3 = 15e3; C_2 = 100e-9; R_2 = 82e3; R_4 = 82e3; C_1 = 0.22e-6;
+% numStage = [-R_3/R_1 -R_4/R_2];
+% denStage = { [C_2*R_3 1], [C_1*R_4 1] };
+% Gstage = cell(1,2); G = 1;
+% for i = 1:2, Gstage{i} = tf(numStage(i), denStage{i}); G = G*Gstage{i}; end
+% [tr, ts, wn] = plot_step_info(G); N = 4; T = tr/(8*N);
+% Gd = c2d(G, T, 'zoh'); Gw = d2c(Gd, 'tustin');
+
+assert(exist('Gw','var')==1 && exist('Gd','var')==1 && exist('T','var')==1, ...
+'Definí primero Gw, Gd y T antes de correr este script.');
+
+s = tf('s');
+
+%% ================== COMPENSADOR INICIAL ==================
+% Tu elección: integrador por defecto (podés cambiar a tf(1) si no querés I)
+C_total = 1/s;     % <-- SI NO QUERÉS integrador, poné: C_total = tf(1);
+K = 1;
+
+%% ================== ESTADO INICIAL (CONTINUO, PLANO w) ==================
+fprintf('\n=== Estado inicial (K=1, C inicial) ===\n');
+L_now = K*C_total*Gw;
+[GM, PM, Wcg, Wcp] = margin(L_now);
+fprintf('GM = %.2f dB, PM = %.2f°, Wcg = %.3g rad/s, Wcp = %.3g rad/s\n', 20*log10(GM), PM, Wcg, Wcp);
+figure; margin(L_now); grid on; title('L(s) = K*C(s)*G_w(s)  (inicio)');
+
+%% ================== LOOP INTERACTIVO ==================
+seguir = true;
+while seguir
+fprintf('\nOpciones:\n');
+fprintf('  [1] Ajustar K a un GM deseado (dB)\n');
+fprintf('  [2] Agregar etapa LEAD/LAG (normalizada en Wcp)\n');
+fprintf('  [3] Auto-ajustar a (GM_dB, PM)  — o usar K fijo y PM\n');
+fprintf('  [4] Fijar K explícito (sin cálculos)\n');
+fprintf('  [5] Ir a DISCRETO (c2d con prewarp) y simular\n');
+fprintf('  [0] Terminar\n');
+op = str2double(input('Elegí opción: ','s'));
+
+switch op
+case 1  % Ajustar K a GM deseado
+GM_des_dB = str2double(input(' GM deseado (dB): ','s'));
+L_now = K*C_total*Gw;
+[GM_now, ~, ~, ~] = margin(L_now);
+GM_now_dB = 20*log10(GM_now);
+if ~isfinite(GM_now_dB)
+error('GM no definido; agregá una etapa o cambiá el rango antes de ajustar K.');
+end
+K = K * 10^((GM_now_dB - GM_des_dB)/20);
+L_now = K*C_total*Gw;
+[GM, PM, Wcg, Wcp] = margin(L_now);
+fprintf('  -> K = %.6g; GM = %.2f dB, PM = %.2f°, Wcg = %.3g, Wcp = %.3g\n', ...
+K, 20*log10(GM), PM, Wcg, Wcp);
+figure; margin(L_now); grid on; title('Tras ajustar K');
+
+case 2  % Agregar etapa lead/lag normalizada en Wcp
+tipo = lower(strtrim(input(' Tipo ("lead" o "lag"): ','s')));
+phi  = str2double(input(' Fase a compensar (grados, positivo): ','s'));
+[C_total, rep] = add_stage_at_Wcp(Gw, C_total, K, tipo, phi, s);
+fprintf('  -> Etapa %s %+g° aplicada en wc=%.3g rad/s (normalizada)\n', rep.type, rep.phi_deg, rep.wc_used);
+L_now = K*C_total*Gw;
+[GM, PM, Wcg, Wcp] = margin(L_now);
+fprintf('  -> GM = %.2f dB, PM = %.2f°, Wcg = %.3g, Wcp = %.3g\n', 20*log10(GM), PM, Wcg, Wcp);
+figure; margin(L_now); grid on; title('Tras agregar etapa');
+
+case 3  % Auto-ajuste
+usa_k_fijo = lower(strtrim(input(' ¿Usar K fijo? [y/n]: ','s')));
+if strcmpi(usa_k_fijo,'y')
+K_fixed = str2double(input(' Valor de K fijo: ','s'));
+PM_des  = str2double(input(' PM deseada (grados): ','s'));
+[K, C_total, rep] = auto_hit_specs_fixedK(Gw, C_total, K_fixed, PM_des, s);
+fprintf('  -> AUTO (K fijo=%.6g) listo: PM=%.2f°, GM=%.2f dB, Wcg=%.3g, Wcp=%.3g\n', ...
+K, rep.PM, rep.GMdB, rep.Wcg, rep.Wcp);
+else
+GM_des_dB = str2double(input(' GM deseado (dB): ','s'));
+PM_des    = str2double(input(' PM deseada (grados): ','s'));
+[K, C_total, rep] = auto_hit_specs(Gw, C_total, K, GM_des_dB, PM_des, s);
+fprintf('  -> AUTO listo (iters=%d): GM=%.2f dB, PM=%.2f°, Wcg=%.3g, Wcp=%.3g\n', ...
+rep.iters, rep.GMdB, rep.PM, rep.Wcg, rep.Wcp);
+end
+L_now = K*C_total*Gw;
+figure; margin(L_now); grid on; title('Tras auto-ajuste');
+
+case 4  % Fijar K
+K = str2double(input(' K = ','s'));
+L_now = K*C_total*Gw;
+[GM, PM, Wcg, Wcp] = margin(L_now);
+fprintf('  -> K fijado. GM = %.2f dB, PM = %.2f°, Wcg = %.3g, Wcp = %.3g\n', 20*log10(GM), PM, Wcg, Wcp);
+figure; margin(L_now); grid on; title('Tras fijar K');
+
+case 5  % Discretizar C(s) -> C(z) con prewarp y simular
+Lc = K*C_total*Gw;
+[~, ~, ~, Wcp_c] = margin(Lc);
+if ~(isfinite(Wcp_c) && Wcp_c>0)
+warning('No hay Wcp continuo definido; uso prewarp=0 (Tustin simple).');
+opt = c2dOptions('tustin');
+else
+opt = c2dOptions('tustin','PrewarpFrequency', Wcp_c);
+end
+C2 = c2d(C_total, T, opt);
+
+% Renormalizar en la frecuencia digital equivalente
+if isfinite(Wcp_c) && Wcp_c>0
+Omega_c = 2*atan(Wcp_c*T/2);                 % Ωc
+Cz_ejO  = evalfr(C2, exp(1j*Omega_c));
+gfix    = 1/abs(Cz_ejO);
+C2      = gfix * C2;
+end
+
+% Lazo discreto y márgenes
+Lz = K * C2 * Gd;
+figure; margin(Lz); grid on; title('Discreto: Lz = K*C(z)*Gd(z)');
+[GMz, PMz, Wcgz, Wcpz] = margin(Lz);
+fprintf('DISCRETO: GM=%.2f dB, PM=%.2f°, Wcg=%.3g rad/s, Wcp=%.3g rad/s\n', 20*log10(GMz), PMz, Wcgz, Wcpz);
+
+% Respuesta al escalón (y[k])
+Ts = Gd.Ts; if Ts<=0, Ts = T; end
+N  = 2000; tvec = (0:N-1)'*Ts;
+CLz_y = feedback(Lz, 1);
+[y, tstep] = step(CLz_y, tvec);
+figure; stairs(tstep, y); grid on; title('Discreto: y[k] ante escalón'); xlabel('t [s]');
+
+% Esfuerzo u[k] = C(z)/(1+C(z)Gd(z)) * r[k]  (para r=step)
+T_u_r = feedback(C2, Gd*C2);   % C2 / (1 + C2*Gd)
+[u, tstep2] = step(T_u_r, tvec);
+figure; stairs(tstep2, u); grid on; title('Discreto: esfuerzo u[k] ante escalón'); xlabel('t [s]');
+
+case 0
+seguir = false;
+continue;
+
+otherwise
+fprintf('Opción inválida.\n');
+end
+end
+
+%% ================== RESUMEN FINAL (CONTINUO Y DISCRETO, TUSTIN SIMPLE) ==================
+% --- Continuo (diseño sobre Gw) ---
+L_final = K*C_total*Gw;
+[GMf, PMf, Wcgf, Wcpf] = margin(L_final);
+
+fprintf('\n=== RESULTADO FINAL (CONTINUO, DISEÑO) ===\n');
+fprintf('K = %.6g\n', K);
+disp('C_total(s) ='); disp(zpk(C_total));
+fprintf('Márgenes: GM = %.2f dB, PM = %.2f°, Wcg = %.3g, Wcp = %.3g\n', 20*log10(GMf), PMf, Wcgf, Wcpf);
+
+figure; bode(C_total); grid on; title('Compensador total C_{total}(s)');
+figure; margin(L_final); grid on; title('L_{final}(s) = K · C_{total}(s) · G_w(s)');
+
+% --- Discretizar el compensador (Tustin “normal”, sin prewarp) ---
+C1  = K*c2d(C_total, T, 'tustin');
+
+% --- Lazo discreto y márgenes ---
+Lz = C1*Gd;
+figure; margin(Lz); grid on; title('Final discreto: Lz = K·C(z)·G_d(z)');
+[GMz, PMz, Wcgz, Wcpz] = margin(Lz);
+fprintf('=== DISCRETO FINAL (Tustin simple) ===\nGM=%.2f dB, PM=%.2f°, Wcg=%.3g, Wcp=%.3g\n', ...
+20*log10(GMz), PMz, Wcgz, Wcpz);
+
+
+% Salida y[k] ante escalón (CL: (K*C2*Gd)/(1+K*C2*Gd))
+CLz_y = feedback(Lz, 1);
+[y, tstep] = step(CLz_y);
+figure; stairs(tstep, y); grid on; xlabel('t [s]'); ylabel('y[k]');
+title(' y[k] ante escalón');
+
+
+
+% Esfuerzo u[k] ante escalón: T_{u<-r}(z) = (K*C2)/(1+K*C2*Gd)
+T_u_r = feedback(C1, Gd);   % equivalente a (K*C2) / (1 + K*C2*Gd)
+[u, tstep2] = step(T_u_r);
+figure; stairs(tstep2, u); grid on; xlabel('t [s]'); ylabel('u[k]');
+title('Final discreto: esfuerzo u[k] ante escalón');
+
+
+%% ================== COMPENSADOR INICIAL ==================
+% Tu elección: integrador por defecto (podés cambiar a tf(1) si no querés I)
+C_total = 1/s;     % <-- SI NO QUERÉS integrador, poné: C_total = tf(1);
+K = 1;
+
+fprintf('\n=== Estado inicial (K=1, C inicial) ===\n');
+L_now = K*C_total*Gw;
+[GM, PM, Wcg, Wcp] = margin(L_now);
+fprintf('GM = %.2f dB, PM = %.2f°, Wcg = %.3g rad/s, Wcp = %.3g rad/s\n', 20*log10(GM), PM, Wcg, Wcp);
+figure; margin(L_now); grid on; title('L(s) = K*C(s)*G_w(s)  (inicio)');
+
+seguir = true;
+while seguir
+fprintf('\nOpciones:\n');
+fprintf('  [1] Ajustar K a un GM deseado (dB)\n');
+fprintf('  [2] Agregar etapa LEAD/LAG (normalizada en Wcp)\n');
+fprintf('  [3] Auto-ajustar a (GM_dB, PM)  — o usar K fijo y PM\n');
+fprintf('  [4] Fijar K explícito (sin cálculos)\n');
+fprintf('  [5] Ir a DISCRETO (c2d con prewarp) y simular\n');
+fprintf('  [0] Terminar\n');
+op = str2double(input('Elegí opción: ','s'));
+
+switch op
+case 1  % Ajustar K a GM deseado
+GM_des_dB = str2double(input(' GM deseado (dB): ','s'));
+L_now = K*C_total*Gw;
+[GM_now, ~, ~, ~] = margin(L_now);
+GM_now_dB = 20*log10(GM_now);
+if ~isfinite(GM_now_dB)
+error('GM no definido; agregá una etapa o cambiá el rango antes de ajustar K.');
+end
+K = K * 10^((GM_now_dB - GM_des_dB)/20);
+L_now = K*C_total*Gw;
+[GM, PM, Wcg, Wcp] = margin(L_now);
+fprintf('  -> K = %.6g; GM = %.2f dB, PM = %.2f°, Wcg = %.3g, Wcp = %.3g\n', ...
+K, 20*log10(GM), PM, Wcg, Wcp);
+figure; margin(L_now); grid on; title('Tras ajustar K');
+
+case 2  % Agregar etapa lead/lag normalizada en Wcp
+tipo = lower(strtrim(input(' Tipo ("lead" o "lag"): ','s')));
+phi  = str2double(input(' Fase a compensar (grados, positivo): ','s'));
+[C_total, rep] = add_stage_at_Wcp(Gw, C_total, K, tipo, phi, s);
+fprintf('  -> Etapa %s %+g° aplicada en wc=%.3g rad/s (normalizada)\n', rep.type, rep.phi_deg, rep.wc_used);
+L_now = K*C_total*Gw;
+[GM, PM, Wcg, Wcp] = margin(L_now);
+fprintf('  -> GM = %.2f dB, PM = %.2f°, Wcg = %.3g, Wcp = %.3g\n', 20*log10(GM), PM, Wcg, Wcp);
+figure; margin(L_now); grid on; title('Tras agregar etapa');
+
+case 3  % Auto-ajuste
+usa_k_fijo = lower(strtrim(input(' ¿Usar K fijo? [y/n]: ','s')));
+if strcmpi(usa_k_fijo,'y')
+K_fixed = str2double(input(' Valor de K fijo: ','s'));
+PM_des  = str2double(input(' PM deseada (grados): ','s'));
+[K, C_total, rep] = auto_hit_specs_fixedK(Gw, C_total, K_fixed, PM_des, s);
+fprintf('  -> AUTO (K fijo=%.6g) listo: PM=%.2f°, GM=%.2f dB, Wcg=%.3g, Wcp=%.3g\n', ...
+K, rep.PM, rep.GMdB, rep.Wcg, rep.Wcp);
+else
+GM_des_dB = str2double(input(' GM deseado (dB): ','s'));
+PM_des    = str2double(input(' PM deseada (grados): ','s'));
+[K, C_total, rep] = auto_hit_specs(Gw, C_total, K, GM_des_dB, PM_des, s);
+fprintf('  -> AUTO listo (iters=%d): GM=%.2f dB, PM=%.2f°, Wcg=%.3g, Wcp=%.3g\n', ...
+rep.iters, rep.GMdB, rep.PM, rep.Wcg, rep.Wcp);
+end
+L_now = K*C_total*Gw;
+figure; margin(L_now); grid on; title('Tras auto-ajuste');
+
+case 4  % Fijar K
+K = str2double(input(' K = ','s'));
+L_now = K*C_total*Gw;
+[GM, PM, Wcg, Wcp] = margin(L_now);
+fprintf('  -> K fijado. GM = %.2f dB, PM = %.2f°, Wcg = %.3g, Wcp = %.3g\n', 20*log10(GM), PM, Wcg, Wcp);
+figure; margin(L_now); grid on; title('Tras fijar K');
+
+case 5  % Discretizar C(s) -> C(z) con prewarp y simular
+Lc = K*C_total*Gw;
+[~, ~, ~, Wcp_c] = margin(Lc);
+if ~(isfinite(Wcp_c) && Wcp_c>0)
+warning('No hay Wcp continuo definido; uso prewarp=0 (Tustin simple).');
+opt = c2dOptions('tustin');
+else
+opt = c2dOptions('tustin','PrewarpFrequency', Wcp_c);
+end
+C2 = c2d(C_total, T, opt);
+
+% Renormalizar en la frecuencia digital equivalente
+if isfinite(Wcp_c) && Wcp_c>0
+Omega_c = 2*atan(Wcp_c*T/2);                 % Ωc
+Cz_ejO  = evalfr(C2, exp(1j*Omega_c));
+gfix    = 1/abs(Cz_ejO);
+C2      = gfix * C2;
+end
+
+% Lazo discreto y márgenes
+Lz = K * C2 * Gd;
+figure; margin(Lz); grid on; title('Discreto: Lz = K*C(z)*Gd(z)');
+[GMz, PMz, Wcgz, Wcpz] = margin(Lz);
+fprintf('DISCRETO: GM=%.2f dB, PM=%.2f°, Wcg=%.3g rad/s, Wcp=%.3g rad/s\n', 20*log10(GMz), PMz, Wcgz, Wcpz);
+
+% Respuesta al escalón (y[k])
+Ts = Gd.Ts; if Ts<=0, Ts = T; end
+N  = 2000; tvec = (0:N-1)'*Ts;
+CLz_y = feedback(Lz, 1);
+[y, tstep] = step(CLz_y, tvec);
+figure; stairs(tstep, y); grid on; title('Discreto: y[k] ante escalón'); xlabel('t [s]');
+
+% Esfuerzo u[k] = C(z)/(1+C(z)Gd(z)) * r[k]  (para r=step)
+T_u_r = feedback(C2, Gd*C2);   % C2 / (1 + C2*Gd)
+[u, tstep2] = step(T_u_r, tvec);
+figure; stairs(tstep2, u); grid on; title('Discreto: esfuerzo u[k] ante escalón'); xlabel('t [s]');
+
+case 0
+seguir = false;
+continue;
+
+otherwise
+fprintf('Opción inválida.\n');
+end
+end
+
+
+%% Resultado final
+C_total = K*C_total;
+L_final = C_total*Gw;
+[GMf, PMf, Wcgf, Wcpf] = margin(L_final);
+fprintf('Márgenes: GM = %.2f dB, PM = %.2f°, Wcg = %.3g, Wcp = %.3g\n', 20*log10(GMf), PMf, Wcgf, Wcpf);
+figure; bode(C_total); grid on;
+figure; margin(L_final); grid on; title('L_{final}(s) = K · C_{total}(s) · G_w(s)');
+C2 = c2d(C_total,T,'tustin');
+figure;step(feedback(C2*Gd,1));grid on;title('Respuesta al escalon');
+figure;step(feedback(C2,Gd));grid on;title('Esfuerzo al escalon');
+
+
+Lz = Gd*C2;
+% Salida y[k] ante la rampa (CL: (K*C2*Gd)/(1+K*C2*Gd))
+CLz_y = feedback(Lz, 1);
+N = 100*T;            % duración total
+t = 0:T:N;            % vector de tiempo
+rampa = t;            % rampa pendiente 1
+
+[y, tstep] = lsim(CLz_y, rampa, t);
+
+figure;
+stairs(tstep, y, 'LineWidth',1.5); hold on;
+plot(tstep, rampa, 'r--','LineWidth',1.2);
+
+xlabel('t [s]');
+ylabel('y[k]');
+title('Respuesta y[k] ante rampa');
+grid on; grid minor;
+
+% Forzar relación 1:1 en ejes
+axis equal
+
+
+
+
+umin = 0;
+umax =  4.08;
+refmin = 1.75;
+refmax = 2.25;
+n_per_seg = 500;
+
+Gc1f = feedback(Gd*C2,1);
+%figure;
+%step(Gc1f)
+info = stepinfo(Gc1f);
+
+
+info_ext = plot_step_annot(Gc1f, 'la planta compensada con un lag-filter de 1º orden, anulando el polo más rápido de la planta.');
+compensador = zpk(C2);
+
+
+[td, refd, yd, ud, ed, coefs] = sim_compensador_second_order( ...
+Gd, compensador.Z{1}(1), ...
+compensador.Z{1}(2), ...
+compensador.P{1}(1), ...
+compensador.P{1}(2), compensador.K, ...
+T, umin, umax, refmin, refmax, n_per_seg);
+
+figure;
+[y,td]=lsim(Gc1f,td);
+stairs(td,y);
+hold on;
+grid on;
+plot(td,td);
+
+
+Nini = 100;              % descartar al inicio
+Nfin = 100;              % descartar al final
+idx0 = Nini + 1;         % índice inicial válido
+idx1 = length(td) - Nfin; % índice final válido
+
+td   = td(idx0:idx1)-td(idx0);
+refd = refd(idx0:idx1);
+yd   = yd(idx0:idx1);
+ud   = ud(idx0:idx1);
+ed   = ed(idx0:idx1);
+
+% Si querés que el tiempo arranque en 0
+
+
+
+
+
+figure;
+
+% ---------- Subplot 1 ----------
+axAbs = subplot(2,1,1);  % eje izquierdo (absoluto)
+hold(axAbs,'on'); grid(axAbs,'on');
+
+% y[k] en rojo (abs)
+hY = stairs(axAbs, td, yd, 'r-', 'LineWidth', 1.4);
+
+% Armamos eje derecho transparente
+axPct = axes('Position', get(axAbs,'Position'), ...
+'Color','none', 'YAxisLocation','right', ...
+'XLim', get(axAbs,'XLim'), 'XTick',[], 'Box','off');
+hold(axPct,'on');
+
+% r[k] en negro, graficado en %
+ref_pct = 100*(refd - refmin)/(refmax - refmin);
+hR = stairs(axPct, td, refd, 'k--', 'LineWidth', 1.2);
+
+% ======= Cálculo de límites con margen =======
+yd_pct  = 100*(yd - refmin)/(refmax - refmin);
+pctAll  = [yd_pct; ref_pct];
+
+% Valores extremos en % con margen del 5 %
+rawMin = min(pctAll);
+rawMax = max(pctAll);
+span   = rawMax - rawMin;
+pctMin = rawMin - 0.05*span;
+pctMax = rawMax + 0.05*span;
+
+% Redondeamos a múltiplos de 20 para ticks
+stepPct = 20;
+tickMin = stepPct*floor(pctMin/stepPct);
+tickMax = stepPct*ceil (pctMax/stepPct);
+pctTicks = tickMin:stepPct:tickMax;
+
+% Convertimos a absolutos
+valTicks = refmin + (pctTicks/100)*(refmax - refmin);
+
+% Aplicamos a ambos ejes
+set(axAbs,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks);
+set(axPct,'YLim',[valTicks(1) valTicks(end)],'YTick',valTicks,...
+'YTickLabel',compose('%.0f %%',pctTicks));
+
+% Etiquetas
+xlabel(axAbs,'Tiempo [s]');
+ylabel(axAbs,'Respuesta [valor absoluto]');
+ylabel(axPct,'Escala relativa a ref [%]');
+title(axAbs,'Respuesta discreta con compensador 1º orden, anulando el polo más rápido de la planta.');
+legend(axAbs, [hY, hR], {'y[k]', 'r[k]'}, 'Location', 'best');
+
+% ---------- Subplot 2: esfuerzo de control ----------
+axU = subplot(2,1,2);
+stairs(axU, td, ud, 'LineWidth',1.2); grid(axU,'on');
+yline(axU, umax,'r:'); yline(axU, umin,'r:');
+xlabel(axU,'Tiempo [s]'); ylabel(axU,'u[k]');
+title(axU,'Esfuerzo de control con saturación');
+
+% --- Margen de 5% en eje Y ---
+uMin = min(ud);
+uMax = max(ud);
+span = uMax - uMin;
+ylim(axU, [uMin - 0.05*span, uMax + 0.05*span]);
+
+
+grid(axAbs,'on');    % grilla principal
+grid(axAbs,'minor'); % grilla secundaria
+
+grid(axPct,'on');
+grid(axPct,'minor');
+
+grid(axU,'on');
+grid(axU,'minor');
+\end{lstlisting}
+
+\begin{lstlisting}[style=matlabstyle,caption={Funciones creadas para este laboratorio.},label={matlab:newfunc}]
+function C = lag_norm_at_wc(phi_deg, wc, s)
+phi_deg = max(1, min(60, phi_deg));
+sphi = sind(phi_deg);
+beta = (1 + sphi) / (1 - sphi);       % >1
+T = 1 / (wc * sqrt(beta));
+C0 = (1 + T*s) / (1 + (T/beta)*s);
+g = 1 / abs(freqresp(C0, 1j*wc));     % |C(jwc)|=1
+C = g * C0;
+end
+
+
+function C = lag_gain_at_wc_db(drop_dB, wc, s, kfactor)
+% Lag que REDUCE el módulo ~drop_dB en torno a wc sin tocar K.
+% NO normalizado (justamente para cambiar GM). Ubica esquinas a wc/kfactor.
+% Aproxima |C(jω)| ~ 1/β para ω >> 1/T (efecto lag clásico).
+if nargin<4 || isempty(kfactor), kfactor = 10; end
+beta = max(1.05, 10^(drop_dB/20));     % objetivo de caída de |C|≈1/beta (dB ~ -drop_dB)
+% Colocar esquinas bien por debajo: ωz=1/T, ωp=1/(βT); con β>1 => polo más bajo.
+% Elegimos ωz = wc/kfactor => T = kfactor/wc
+T = kfactor / wc;
+C = (1 + T*s) / (1 + beta*T*s);        % lag correcto (módulo ~1/β a altas frecuencias)
+end
+function [K_out, C_out, report] = auto_hit_specs_fixedK(Gw, C_in, K_fixed, PM_des, s)
+% No toca K. Ajusta PM usando:
+%  (1) Lead normalizado en el Wcp actual para sumar fase hasta PM_des
+%  (2) Si por el lead se movió GM y querés recuperar un poquito de fase,
+%      mete un lead suavito extra (<=20°). (Lag normalizado opcional si querés bajar fase)
+tolPM = 1.0;    % deg
+maxit = 4;
+
+K = K_fixed;
+C = C_in;
+
+for it = 1:maxit
+L = K*C*Gw;
+[~, PM, ~, Wcp] = margin(L);
+if ~(isfinite(Wcp) && Wcp > 0)
+error('No hay Wcp con K fijo; probá agregar una etapa o cambiar K.');
+end
+
+phi_need = PM_des - PM;
+if phi_need > 0.5
+phi_apply = min(max(phi_need, 1), 60);
+C = lead_norm_at_wc(phi_apply, Wcp, s) * C;
+elseif phi_need < -0.5
+% Si te pasaste de PM, podés usar lag NORMALIZADO suave para restar fase
+phi_lag = min(max(abs(phi_need), 1), 30);
+C = lag_norm_at_wc(phi_lag, Wcp, s) * C;
+else
+break;  % dentro de tolerancia
+end
+
+% ¿ya estamos dentro de tolerancia?
+L2 = K*C*Gw;
+[~, PM2] = margin(L2);
+if isfinite(PM2) && abs(PM2 - PM_des) <= tolPM
+break;
+end
+end
+
+K_out = K;
+C_out = C;
+
+Lf = K_out*C_out*Gw;
+[GMf, PMf, Wcgf, Wcpf] = margin(Lf);
+report = struct('GMdB',20*log10(GMf), 'PM',PMf, 'Wcg',Wcgf, 'Wcp',Wcpf, 'iters',it);
+end
+
+function [K_out, C_out, report] = auto_hit_specs(Gw, C_in, K_in, GM_des_dB, PM_des, s)
+% AUTO que prioriza: (1) ajustar K ~ GM, (2) sumar LEAD (normalizado) para PM,
+% (3) si GM < objetivo, sumar LAG "de ganancia" (NO normalizado) para subir GM,
+% (4) si el LAG te bajó PM, agrega un LEAD chiquito para recuperar.
+%
+% Devuelve K_out, C_out y reporte (GM, PM, Wcg, Wcp, iters).
+
+tolGM = 0.5;    % dB
+tolPM = 1.0;    % deg
+maxit = 4;
+
+K = K_in;
+C = C_in;
+
+for it = 1:maxit
+% --- (A) Ajustar K para GM deseado (aprox directo en dB)
+L = K*C*Gw;
+[GM, PM, ~, ~] = margin(L); GMdB = 20*log10(GM);
+if ~isfinite(GMdB), error('GM no definido; añadí una etapa antes.'); end
+K = K * 10^((GMdB - GM_des_dB)/20);
+
+% --- (B) LEAD normalizado para alcanzar PM deseada en Wcp actual
+L = K*C*Gw;
+[~, PM, ~, Wcp] = margin(L);
+if ~(isfinite(Wcp) && Wcp>0), error('No hay Wcp tras ajustar K.'); end
+
+phi_need = PM_des - PM;            % fase a sumar
+if phi_need > 0.5
+phi_apply = min(max(phi_need, 1), 60);   % limitar 1..60°
+C = lead_norm_at_wc(phi_apply, Wcp, s) * C;
+end
+
+% --- Recalculamos márgenes
+L = K*C*Gw;
+[GM, PM, ~, Wcp] = margin(L); GMdB = 20*log10(GM);
+
+% --- (C) Si GM quedó por debajo, metemos un LAG de ganancia (NO normalizado)
+if isfinite(GMdB) && (GMdB < GM_des_dB - tolGM)
+dB_needed = GM_des_dB - GMdB;                 % cuánto GM falta
+C = lag_gain_at_wc_db(dB_needed, Wcp, s, 10) * C;  % kfactor=10 => esquinas bien por debajo
+
+% recuperar PM si el lag bajó demasiado
+L2 = K*C*Gw;
+[~, PM2, ~, Wcp2] = margin(L2);
+if isfinite(PM2) && PM2 < PM_des - tolPM
+phi_fix = min(max(PM_des - PM2, 1), 30);         % LEAD suave de corrección
+C = lead_norm_at_wc(phi_fix, Wcp2, s) * C;
+end
+end
+
+% --- (D) Chequeo de convergencia
+Lf = K*C*Gw;
+[GMf, PMf, ~, ~] = margin(Lf); GMf_dB = 20*log10(GMf);
+doneGM = isfinite(GMf_dB) && abs(GMf_dB - GM_des_dB) <= tolGM;
+donePM = isfinite(PMf)    && abs(PMf    - PM_des)    <= tolPM;
+if doneGM && donePM, break; end
+end
+
+K_out = K; C_out = C;
+Lf = K_out*C_out*Gw; [GMf, PMf, Wcgf, Wcpf] = margin(Lf);
+report = struct('GMdB',20*log10(GMf), 'PM',PMf, 'Wcg',Wcgf, 'Wcp',Wcpf, 'iters',it);
+end
+
+function [C_out, report] = add_stage_at_Wcp(Gw, C_in, K, comp_type, phi_deg, s)
+% Agrega UNA etapa (lead o lag) normalizada en el Wcp del lazo actual L = K*C*G.
+% No modifica K. Devuelve C_out y un pequeño reporte con los nuevos márgenes.
+
+% 1) Wcp del lazo actual
+L_now = K * C_in * Gw;
+[GM_now, PM_now, Wcg_now, Wcp_now] = margin(L_now);
+if ~(isfinite(Wcp_now) && Wcp_now > 0)
+error('No hay cruce de ganancia (Wcp) con el lazo actual. Ajustá K o añadí otra etapa antes.');
+end
+wc = Wcp_now;
+
+% 2) Construir la etapa normalizada en wc
+comp_type = lower(strtrim(comp_type));
+if strcmpi(comp_type,'lead')
+C_stage = lead_norm_at_wc(phi_deg, wc, s);     % |C(j wc)| = 1
+elseif strcmpi(comp_type,'lag')
+C_stage = lag_norm_at_wc(phi_deg, wc, s);      % |C(j wc)| = 1
+else
+error('comp_type debe ser "lead" o "lag".');
+end
+
+% 3) Encadenar etapa (K NO cambia)
+C_out = C_stage * C_in;
+
+% 4) Reporte (con K fijo)
+L_new = K * C_out * Gw;
+[GMf, PMf, Wcgf, Wcpf] = margin(L_new);
+report = struct('GMdB', 20*log10(GMf), 'PM', PMf, 'Wcg', Wcgf, 'Wcp', Wcpf, ...
+'wc_used', wc, 'type', comp_type, 'phi_deg', phi_deg);
+end
+
+function C = lead_norm_at_wc(phi_deg, wc, s)
+phi_deg = max(1, min(60, phi_deg));
+sphi = sind(phi_deg);
+alpha = (1 - sphi) / (1 + sphi);      % 0<alpha<1
+T = 1 / (wc * sqrt(alpha));
+C0 = (1 + T*s) / (1 + alpha*T*s);
+g = 1 / abs(freqresp(C0, 1j*wc));     % |C(jwc)|=1
+C = g * C0;
+end
+
+\end{lstlisting}
+
+\begin{lstlisting}[style=matlabstyle,caption={Funciones reutilizadas de laboratorios pasados.},label={matlab:oldfunc}]
+function info_ext = plot_step_annot(sys, nameStr, Ts_override)
+% STEP discreto con STAIRS; anota 10-90% (en s y en T), OS, zeta y omega_n.
+% Grafica en milisegundos y marca el OS en el pico.
+
+if nargin < 2 || isempty(nameStr), nameStr = inputname(1); end
+if isempty(nameStr), nameStr = 'sys'; end
+
+% ----- Respuesta y métricas básicas -----
+[y, t] = step(sys); y = y(:); t = t(:);
+t_ms = t * 1000;   % graficamos en milisegundos
+
+% Estimar yss por promedio en cola
+Ntail = max(10, round(0.05*length(y)));
+yss = mean(y(end-Ntail+1:end));
+
+% Límites 10-90
+if abs(yss) < 1e-12
+t10 = NaN; t90 = NaN; tr_10_90 = NaN; y10 = 0; y90 = 0;
+else
+y10 = 0.10*yss; y90 = 0.90*yss;
+sgn = sign(yss);
+idx10 = find(sgn*y >= sgn*y10, 1, 'first');
+idx90 = find(sgn*y >= sgn*y90, 1, 'first');
+t10 = tern(~isempty(idx10), t(idx10), NaN);
+t90 = tern(~isempty(idx90), t(idx90), NaN);
+tr_10_90 = tern(~isnan(t10)&&~isnan(t90)&&t90>=t10, t90 - t10, NaN);
+end
+t10_ms = t10 * 1000; t90_ms = t90 * 1000;
+
+% Pico y %OS (para zeta y omega_n)
+[ypeak_raw, idxpk] = max(sign(yss).*y);
+ypeak = sign(yss)*ypeak_raw;
+tpeak = t(idxpk); tpeak_ms = tpeak * 1000;
+OS_percent = tern(yss ~= 0, max(0, (ypeak - yss)/abs(yss)*100), NaN);
+
+% zeta desde %OS:  OS% = 100*exp(-zeta*pi/sqrt(1-zeta^2))
+if isnan(OS_percent) || OS_percent <= 0
+zeta_est = NaN;
+else
+logterm = log(OS_percent/100);
+zeta_est = -logterm / sqrt(pi^2 + logterm^2);
+end
+
+% ----- Ts y rise en T -----
+Ts = NaN;
+try
+if isprop(sys,'Ts') && ~isempty(sys.Ts) && sys.Ts > 0, Ts = sys.Ts; end
+catch, end
+if nargin >= 3 && ~isempty(Ts_override) && Ts_override > 0, Ts = Ts_override; end
+tr_10_90_T = tern(~isnan(Ts) && ~isnan(tr_10_90), tr_10_90/Ts, NaN);
+
+% ----- Estimacion de omega_n -----
+omega_n = NaN;
+if ~isnan(zeta_est) && zeta_est < 1 && OS_percent > 0 && tpeak > 0
+omega_n = pi / ( tpeak * sqrt(1 - zeta_est^2) );
+end
+if isnan(omega_n)
+S = stepinfo(y, t);   % Ts(2%) ~ 4/(zeta*omega_n)
+if isfield(S,'SettlingTime') && ~isempty(S.SettlingTime) && S.SettlingTime > 0 && ~isnan(zeta_est) && zeta_est > 0
+omega_n = 4 / ( zeta_est * S.SettlingTime );
+end
+end
+if isnan(omega_n) && ~isnan(tr_10_90) && tr_10_90 > 0
+k_rise = 1.4;  % aprox para 10-90% en 2do orden subamortiguado
+omega_n = k_rise / tr_10_90;
+end
+
+% ----- Grafico -----
+figure;
+stairs(t_ms, y, 'LineWidth', 1.5); grid on;grid minor; hold on;
+xlabel('Tiempo [ms]'); ylabel('Salida');
+title(sprintf('Respuesta al escalon de %s', nameStr));
+
+% Líneas guía 10% y 90% y marcadores (en ms)
+if ~isnan(tr_10_90)
+yline(y10, '--', '10% yss', 'LabelHorizontalAlignment','left');
+yline(y90, '--', '90% yss', 'LabelHorizontalAlignment','left');
+xline(t10_ms, ':', 't10%');
+xline(t90_ms, ':', 't90%');
+plot([t10_ms t90_ms], [y10 y90], 'o', 'MarkerSize', 6, 'LineWidth', 1.2);
+end
+% Línea de yss
+yline(yss, '-', sprintf('yss=%.3g', yss), 'LabelHorizontalAlignment','left');
+
+% ----- Marca del OS en el pico -----
+if ~isnan(OS_percent) && OS_percent > 0
+% línea vertical desde yss a ypeak en tpeak
+plot([tpeak_ms tpeak_ms], [yss ypeak], '-', 'LineWidth', 1.2);
+% texto al costado derecho de la línea
+dx = 0.02 * (t_ms(end) - t_ms(1));
+text(tpeak_ms + dx, yss + 0.5*(ypeak - yss), ...
+sprintf('OS=%.3g%%', OS_percent), ...
+'Interpreter','none', 'Margin',2);
+% marcar el pico
+plot(tpeak_ms, ypeak, 's', 'MarkerSize', 6, 'LineWidth', 1.2);
+end
+
+% ----- Cuadro de metricas (abajo-derecha; chico) -----
+w = 0.15; h = 0.12; rmargin = 0.1; x = 1 - rmargin - w; y0 = 0.30;
+txtLines = {
+	sprintf('t_r(10%%-90%%) = %.4g ms  (~%.4g Ts)', safeNum(tr_10_90*1000), safeNum(tr_10_90_T))
+	sprintf('OS = %.4g%%',          safeNum(OS_percent))
+	sprintf('zeta = %.4g',          safeNum(zeta_est))
+	sprintf('omega_n = %.4g rad/s', safeNum(omega_n))
+};
+annotation('textbox', [x y0 w h], ...
+'String', txtLines, 'Interpreter','none', ...
+'FontName','Consolas', 'FontSize',9, ...
+'EdgeColor',[0.5 0.5 0.5], 'FaceAlpha',0.88, 'BackgroundColor','w');
+
+hold off;
+
+% ----- Salida -----
+info_ext = struct( ...
+'yss', yss, ...
+'t10', t10, ...
+'t90', t90, ...
+'tr_10_90', tr_10_90, ...
+'tr_10_90_T', tr_10_90_T, ...
+'OS_percent', OS_percent, ...
+'zeta_est', zeta_est, ...
+'omega_n', omega_n, ...
+'Ts', Ts);
+end
+
+% --------- helpers ---------
+function y = tern(cond, a, b)
+if cond, y = a; else, y = b; end
+end
+
+function v = safeNum(x)
+if isnan(x) || isinf(x), v = NaN; else, v = x; end
+end
+
+function [td, refd, yd, ud, ed, coefs] = sim_compensador_second_order( ...
+Gd, z0_0, z0_1, p0_0, p0_1, Kc, T, umin, umax, refmin, refmax, n_per_seg)
+
+% ===== Planta: y(k+1)=b0*u(k)+b1*u(k-1)+b2*u(k-2)-a1*y(k)-a2*y(k-1) =====
+% Compensador (posición, 2º orden):
+% u(k) = (p0_0+p0_1)*u(k-1) - (p0_0*p0_1)*u(k-2) ...
+%      + Kc*[ e(k) - (z0_0+z0_1)*e(k-1) + (z0_0*z0_1)*e(k-2) ]
+% e(k) = refd(k) - yd(k)
+
+if nargin < 12 || isempty(n_per_seg), n_per_seg = 600; end
+if ~isa(Gd,'tf'), error('Gd debe ser tf discreto.'); end
+
+% --- Coefs planta (normalizados a a0=1) ---
+[numD, denD] = tfdata(Gd, 'v');
+numD = numD(:).'; denD = denD(:).';
+if abs(denD(1) - 1) > 1e-12
+numD = numD/denD(1);
+denD = denD/denD(1);
+end
+
+% Asegurar longitud mínima del denominador [1 a1 a2]
+if numel(denD) < 3, denD(end+1:3) = 0; end
+a1 = denD(2);
+a2 = denD(3);
+
+% b0,b1,b2 sin romper si faltan términos en el numerador
+b0 = 0; b1 = 0; b2 = 0;
+if numel(numD) >= 2, b0 = numD(2); end
+if numel(numD) >= 3, b1 = numD(3); end
+if numel(numD) >= 4, b2 = numD(4); end
+% Nota: esto respeta tu estilo previo (b0=numD(2), b1=numD(3), ...)
+
+coefs = struct('b0',b0,'b1',b1,'b2',b2,'a1',a1,'a2',a2, ...
+'z0_0',z0_0,'z0_1',z0_1,'p0_0',p0_0,'p0_1',p0_1,'Kc',Kc);
+
+% --- Tiempo y referencia (refmin -> refmax -> refmin) ---
+N  = 3*n_per_seg;
+td = (0:N-1)' * T;
+refd = [refmin*ones(n_per_seg,1);
+refmax*ones(n_per_seg,1);
+refmin*ones(n_per_seg,1)];
+
+% --- Inicialización ---
+yd = zeros(N,1);
+ed = zeros(N,1);
+ud = zeros(N,1);
+
+% --- Precalculos del compensador ---
+P1 = (p0_0 + p0_1);
+P2 = (p0_0 * p0_1);
+Z1 = (z0_0 + z0_1);
+Z2 = (z0_0 * z0_1);
+
+% --- Loop ---
+for k = 3:N-1
+ed(k) = refd(k) - yd(k);
+
+% Compensador 2º orden
+u_k = P1*ud(k-1) - P2*ud(k-2) + Kc*( ed(k) - Z1*ed(k-1) + Z2*ed(k-2) );
+
+% Saturación
+if u_k > umax
+ud(k) = umax;
+elseif u_k < umin
+ud(k) = umin;
+else
+ud(k) = u_k;
+end
+
+% Planta discreta
+yd(k+1) = b0*ud(k) + b1*ud(k-1) + b2*ud(k-2) - a1*yd(k) - a2*yd(k-1);
+end
+end
+
+function [td, refd, yd, ud, ed, coefs] = sim_compensador_first_order( ...
+Gd, z0, p0, Kc, T, umin, umax, refmin, refmax, n_per_seg)
+
+% ===== Igual que tu PID: y(k+1)=b0*u(k)+b1*u(k-1)-a1*y(k)-a2*y(k-1) =====
+% Controlador (posición): u(k) = p0*u(k-1) + Kc*ed(k) - Kc*z0*ed(k-1)
+% ed(k) = refd(k) - yd(k)
+
+if nargin < 10 || isempty(n_per_seg), n_per_seg = 600; end
+if ~isa(Gd,'tf'), error('Gd debe ser tf discreto.'); end
+
+% --- Coefs planta exactamente como en tu ejemplo ---
+[numD, denD] = tfdata(Gd, 'v');
+b0 = numD(2);
+b1 = numD(3);
+a1 = denD(2);
+a2 = denD(3);
+coefs = struct('b0',b0,'b1',b1,'a1',a1,'a2',a2);
+
+% --- Tiempo y referencia (refmin -> refmax -> refmin) ---
+N  = 3*n_per_seg;
+td = (0:N-1)' * T;
+refd = [refmin*ones(n_per_seg,1);
+refmax*ones(n_per_seg,1);
+refmin*ones(n_per_seg,1)];
+
+% --- Inicialización idéntica a tu estilo ---
+yd = zeros(N,1);
+ed = zeros(N,1);
+ud = zeros(N,1);
+
+% --- Loop (misma estructura y orden que tu PID) ---
+for k = 3:N-1
+ed(k) = refd(k) - yd(k);
+
+% Compensador: u(k) = p0*u(k-1) + Kc*ed(k) - Kc*z0*ed(k-1)
+u_k = p0*ud(k-1) + Kc*ed(k) - Kc*z0*ed(k-1);
+
+
+if u_k>umax
+ud(k) = umax;
+elseif u_k<umin
+ud(k) = umin;
+else 
+ud(k) = u_k;
+end
+
+
+% Planta discreta (dividido por a0 implícito como en tu ejemplo)
+yd(k+1) = b0*ud(k) + b1*ud(k-1) - a1*yd(k) - a2*yd(k-1);
+end
+end
+
+function [tr, ts, wn] = plot_step_info(G)
+info = stepinfo(G);
+tr = info.RiseTime; 
+ts = info.SettlingTime; 
+wn = 1.8 / tr;
+
+t_end = 1.1 * ts;
+if ~isfinite(t_end) || t_end <= 0, t_end = 5 * max(tr, 1e-3); end
+t = linspace(0, t_end, 2*pi/wn);
+
+[y, tout] = step(G, t);
+figure; plot(tout*1000, y, 'LineWidth', 1.4); grid on;grid minor; hold on;
+xlabel('Tiempo [ms]'); ylabel('Salida');
+title(sprintf('Escalón: tr=%.4gms, ts=%.4gms, \\omega_n=%.4g rad/s', tr*1000, ts*1000, wn));
+xline(tr*1000, '--', sprintf('  t_r=%.3g ms', tr*1000), 'LabelOrientation','horizontal');
+xline(ts*1000,  '--', sprintf('  t_s=%.3g ms', ts*1000), 'LabelOrientation','horizontal');
+legend('G(t)', 'Location', 'best');
+end
+\end{lstlisting}
+
+\begin{lstlisting}[style=matlabstyle,caption={Script para la comparación de la planta en lazo abierto nominal vs mediciones.},label={matlab:openLoop}]
+close all; clear; clc;
+
+%% ====================== Parámetros nominales ======================
+R_1 = 15e3;  R_2 = 82e3;  R_3 = 15e3;  R_4 = 82e3;
+C_1 = 0.22e-6;  C_2 = 100e-9;
+
+% Tolerancias de catálogo (especificación)
+tolR = 0.05;   % ±5% resistencias
+tolC = 0.20;   % ±20% capacitores
+
+% Para Monte Carlo (3σ ≈ tolerancia) -> σ = tol/3
+sigR = tolR/3;
+sigC = tolC/3;
+
+% Correlación entre resistores "pareja" del mismo valor (más realista)
+rhoR = 0;  % entre R1-R3 (15k/15k) y R2-R4 (82k/82k)
+
+% Nominales (alias)
+R1n = R_1; R2n = R_2; R3n = R_3; R4n = R_4;
+C1n = C_1; C2n = C_2;
+
+%% ====================== Helper de planta continua ======================
+% G(s) = [(R3/R1)*(R4/R2)] / [(R3*C2 s + 1)(R4*C1 s + 1)]
+makeG = @(R1,R2,R3,R4,C1,C2) tf( (R3/R1)*(R4/R2), conv([R3*C2 1],[R4*C1 1]) );
+
+%% ====================== Cargar datos medidos ======================
+data = readmatrix('./imagenes/OpenLoop/mediciones.csv');
+
+% u = ENTRADA medida; y = SALIDA medida
+u = data(:, 11);   % ajustá si cambia columna
+y = data(:, 17);
+
+Ts = 0.000099999997474;  % tiempo de muestreo (≈100 µs)
+
+% Vector de tiempo alineado a la medición
+Ndata = min(length(y), length(u));
+u = u(1:Ndata); y = y(1:Ndata);
+u = u(:); y = y(:);
+tdata = (0:Ndata-1).' * Ts;
+
+%% ====================== Modelo estimado (opcional, referencia) ======================
+try
+data_id = iddata(y, u, Ts);
+sys0 = tfest(data_id, 2,0);              % 2 polos por defecto
+if sys0.Ts==0, sys0d = c2d(sys0, Ts, 'zoh'); else, sys0d = d2d(sys0, Ts); end
+catch
+sys0d = [];  % si no está el toolbox, seguimos sin el estimado
+end
+
+%% ====================== Nominal (discreto) ======================
+Gc_nom = makeG(R1n,R2n,R3n,R4n,C1n,C2n);
+Gd_nom = c2d(Gc_nom, Ts, 'zoh');
+
+%% ====================== MONTE CARLO realista ======================
+Nmc = 1000;           % # de muestras (subí si querés más suavidad)
+rng(123);             % reproducible
+
+% Ruido normal correlacionado para (R1,R3) y (R2,R4)
+Zc13 = randn(Nmc,1);  % común par (R1,R3)
+Z1   = randn(Nmc,1);  % propio R1
+Z3   = randn(Nmc,1);  % propio R3
+
+Zc24 = randn(Nmc,1);  % común par (R2,R4)
+Z2   = randn(Nmc,1);  % propio R2
+Z4   = randn(Nmc,1);  % propio R4
+
+% Construir deltas relativos con correlación rhoR
+a = rhoR; b = sqrt(1 - rhoR^2);
+dR1 = sigR*(a*Zc13 + b*Z1);
+dR3 = sigR*(a*Zc13 + b*Z3);
+dR2 = sigR*(a*Zc24 + b*Z2);
+dR4 = sigR*(a*Zc24 + b*Z4);
+
+% Capacitores: independientes (distinto valor/naturaleza)
+dC1 = sigC*randn(Nmc,1);
+dC2 = sigC*randn(Nmc,1);
+
+% Clip a las tolerancias físicas (no exceder ±tol)
+clip = @(x,tol) min(max(x, -tol), tol);
+dR1 = clip(dR1, tolR); dR3 = clip(dR3, tolR);
+dR2 = clip(dR2, tolR); dR4 = clip(dR4, tolR);
+dC1 = clip(dC1, tolC); dC2 = clip(dC2, tolC);
+
+% Vectores absolutos
+R1s = R1n*(1 + dR1);  R3s = R3n*(1 + dR3);
+R2s = R2n*(1 + dR2);  R4s = R4n*(1 + dR4);
+C1s = C1n*(1 + dC1);  C2s = C2n*(1 + dC2);
+
+% Simular todas las muestras con la MISMA entrada u
+Ymc = zeros(Ndata, Nmc);
+for k = 1:Nmc
+Gc  = makeG(R1s(k),R2s(k),R3s(k),R4s(k),C1s(k),C2s(k));
+Gdz = c2d(Gc, Ts, 'zoh');
+yk  = lsim(Gdz, u, tdata);
+if isrow(yk), yk = yk.'; end
+Ymc(:,k) = yk;
+end
+
+% Envolvente percentil (más realista) y también min/max por si querés ver extremos
+yP05 = prctile(Ymc, 5,  2);
+yP95 = prctile(Ymc, 95, 2);
+yMin = min(Ymc, [], 2);
+yMax = max(Ymc, [], 2);
+
+%% ====================== (Opcional) WORST-CASE 64 corners ======================
+plot_worstcase = false;   % ponelo true si querés superponerlo
+if plot_worstcase
+R1_lo = (1 - tolR)*R1n;   R1_hi = (1 + tolR)*R1n;
+R2_lo = (1 - tolR)*R2n;   R2_hi = (1 + tolR)*R2n;
+R3_lo = (1 - tolR)*R3n;   R3_hi = (1 + tolR)*R3n;
+R4_lo = (1 - tolR)*R4n;   R4_hi = (1 + tolR)*R4n;
+C1_lo = (1 - tolC)*C1n;   C1_hi = (1 + tolC)*C1n;
+C2_lo = (1 - tolC)*C2n;   C2_hi = (1 + tolC)*C2n;
+
+pairs = [ R1_lo R1_hi; R2_lo R2_hi; R3_lo R3_hi; R4_lo R4_hi; C1_lo C1_hi; C2_lo C2_hi ];
+comb = dec2bin(0:(2^6-1)) - '0';   % 64x6
+
+Ywc = zeros(Ndata, size(comb,1));
+for k = 1:size(comb,1)
+sel = comb(k,:)+1;
+R1 = pairs(1,sel(1)); R2 = pairs(2,sel(2));
+R3 = pairs(3,sel(3)); R4 = pairs(4,sel(4));
+C1 = pairs(5,sel(5)); C2 = pairs(6,sel(6));
+Gc  = makeG(R1,R2,R3,R4,C1,C2);
+Gdz = c2d(Gc, Ts, 'zoh');
+Ywc(:,k) = lsim(Gdz, u, tdata);
+end
+yWmin = min(Ywc, [], 2);
+yWmax = max(Ywc, [], 2);
+else
+yWmin = []; yWmax = [];
+end
+
+%% ====================== Simulación nominal y estimado con misma u ======================
+y_nom = lsim(Gd_nom, u, tdata);
+if ~isempty(sys0d), y_est = lsim(sys0d, u, tdata); else, y_est = []; end
+
+%% ====================== Plot comparativo ======================
+figure; hold on; box on;
+
+% Banda percentil (más realista)
+fill([tdata; flipud(tdata)], [yP05; flipud(yP95)], [0.80 0.92 1.00], ...
+'EdgeColor','none','FaceAlpha',0.55);
+
+% (opcional) extremos worst-case en líneas finas
+if ~isempty(yWmin)
+plot(tdata, yWmin, 'Color',[0.2 0.4 0.8], 'LineStyle','--', 'LineWidth',0.8);
+plot(tdata, yWmax, 'Color',[0.2 0.4 0.8], 'LineStyle','--', 'LineWidth',0.8);
+end
+
+% Medición y modelos
+stairs(tdata, y, 'k', 'LineWidth', 1.3);          % medición
+plot(tdata, y_nom, 'LineWidth', 1.2);             % nominal
+if ~isempty(y_est), plot(tdata, y_est, 'LineWidth', 1.2); end  % estimado
+
+xlabel('t [s]'); ylabel('y');
+leg = {'Banda MC (p5–p95)'};
+if ~isempty(yWmin), leg{end+1} = 'Worst-case min/max'; end
+leg = [leg, {'Medición','Nominal'}];
+if ~isempty(y_est), leg{end+1} = 'Estimado (tfest)'; end
+legend(leg, 'Location','best');
+title('Comparación temporal con la MISMA entrada u[k] — banda de tolerancia realista');
+grid on; grid minor;
+
+%% ====================== (Opcional) corner MC más parecido por RMSE ======================
+RMSE = sqrt(mean( (Ymc - y).^2, 1 ));
+[rmseBest, kBest] = min(RMSE);
+fprintf('MC con menor RMSE: #%d  RMSE = %.4g\n', kBest, rmseBest);
+best = struct('R1',R1s(kBest),'R2',R2s(kBest),'R3',R3s(kBest),'R4',R4s(kBest),'C1',C1s(kBest),'C2',C2s(kBest));
+disp(best);
+\end{lstlisting}
+
+
+\begin{lstlisting}[style=matlabstyle,caption={Script utilizado para la comparación de las simulaciones con las mediciones de los compensadores.},label={matlab:calculo1}]
+close all
+clear all
+
+addpath('..\Lab1\')
+
+%% Definicion de parametros
+R_1 = 15e3;
+R_3 = 15e3;
+C_2 = 100e-9;
+
+R_2 = 82e3;
+R_4 = 82e3;
+C_1 = 0.22e-6;
+
+%% Generar funcion de transferencia d
+numStage = [-R_3/R_1 -R_4/R_2];
+denStage = { [C_2*R_3 1], [C_1*R_4 1] };
+
+% Usamos celdas para guardar los tf de cada stage
+Gstage = cell(1,2);
+G = 1;
+for i = 1:2
+Gstage{i} = tf(numStage(i), denStage{i});
+G = G*Gstage{i};
+end
+
+%% Analizamos en el tiempo
+[tr, ts, wn] = plot_step_info(G);
+
+disp('Planta continua G(s):');
+%% Paso 1: Definir periodo de muestreo
+% Se busca una mejora de 2 en el tiempo de rising =, o sea tr = 10 ms
+N = 4; 
+T = tr/(8*N);
+%Gcl = feedback(G,1);
+%figure;
+%step(Gcl)
+%T = stepinfo(Gcl).SettlingTime/8;
+
+%% Paso 2: Digitalizar con ZOH
+Gd = c2d(G, T, 'zoh');
+disp('Planta digital G(z):')
+Gd
+
+
+
+
+
+%% C1_K
+
+data = readmatrix('.\C1_K\tablas.csv');  % lee todo el CSV en una matriz
+
+t_meas   = data(:,4);   % columna 1 = tiempo
+ref_meas = data(:,5);   % columna 2 = referencia
+u_meas   = data(:,11);   % columna 3 = esfuerzo
+y_meas   = data(:,17);   % columna 4 = salida
+
+% Suponiendo que tenés vectores del osciloscopio:
+% t_meas, ref_meas, u_meas, y_meas  (todos Nx1, en segundos y unidades reales)
+opts = struct('Nini', 1, 'Nfin', 1, 'plot', true,'demean_errors',false);
+
+S = sim_compensador_first_order_meas( ...
+Gd, 0, 0, 7, T, 0, 4.08, ...
+t_meas, ref_meas, u_meas, y_meas, ...
+opts);
+
+% Accesos:
+S.errors.u    % métricas esfuerzo sim vs real
+S.errors.y    % métricas salida  sim vs real
+
+opts = struct('Nini', 1, 'Nfin', 1, 'plot', true);
+
+S = sim_compensador_first_order_meas( ...
+Gd, 0, 0, 7, T, 0, 4.08, ...
+t_meas, ref_meas, u_meas, y_meas, ...
+opts);
+
+% Accesos:
+S.errors.u    % métricas esfuerzo sim vs real
+S.errors.y    % métricas salida  sim vs real
+
+
+%% C1_Lead
+
+data = readmatrix('.\C1_lead\tablas.csv');  % lee todo el CSV en una matriz
+
+t_meas   = data(:,4);   % columna 1 = tiempo
+ref_meas = data(:,5);   % columna 2 = referencia
+u_meas   = data(:,11);   % columna 3 = esfuerzo
+y_meas   = data(:,17);   % columna 4 = salida
+
+% Suponiendo que tenés vectores del osciloscopio:
+% t_meas, ref_meas, u_meas, y_meas  (todos Nx1, en segundos y unidades reales)
+opts = struct('Nini', 1, 'Nfin', 1, 'plot', true);
+
+S = sim_compensador_first_order_meas( ...
+Gd, 0.622387144541200, 0.374311732736374,  1.184734400491065, T, 0, 4.08, ...
+t_meas, ref_meas, u_meas, y_meas, ...
+opts);
+
+% Accesos:
+S.errors.u    % métricas esfuerzo sim vs real
+S.errors.y    % métricas salida  sim vs real
+
+opts = struct('Nini', 1, 'Nfin', 1, 'plot', true,'demean_errors',true);
+
+S = sim_compensador_first_order_meas( ...
+Gd, 0.622387144541200, 0.374311732736374,  1.184734400491065, T, 0, 4.08, ...
+t_meas, ref_meas, u_meas, y_meas, ...
+opts);
+
+% Accesos:
+S.errors.u    % métricas esfuerzo sim vs real
+S.errors.y    % métricas salida  sim vs real
+
+%% C2
+
+data = readmatrix('.\C2\tablas.csv');  % lee todo el CSV en una matriz
+
+t_meas   = data(:,4);   % columna 1 = tiempo
+ref_meas = data(:,5);   % columna 2 = referencia
+u_meas   = data(:,11);   % columna 3 = esfuerzo
+y_meas   = data(:,17);   % columna 4 = salida
+
+% Suponiendo que tenés vectores del osciloscopio:
+% t_meas, ref_meas, u_meas, y_meas  (todos Nx1, en segundos y unidades reales)
+opts = struct('Nini', 1, 'Nfin', 1, 'plot', true,'demean_errors',false);
+
+S = sim_compensador_second_order_meas( ...
+Gd,-1,0.948680356607820,...
+1,0.805044751405714,...
+0.185620357009816,...
+T, 0, 4.08, ...
+t_meas, ref_meas, u_meas, y_meas, ...
+opts);
+
+
+opts = struct('Nini', 1, 'Nfin', 1, 'plot', true,'demean_errors',true);
+
+S = sim_compensador_second_order_meas( ...
+Gd,-1,0.948680356607820,...
+1,0.805044751405714,...
+0.185620357009816,...
+T, 0, 4.08, ...
+t_meas, ref_meas, u_meas, y_meas, ...
+opts);
+
+% Accesos:
+S.errors.u    % métricas esfuerzo sim vs real
+S.errors.y    % métricas salida  sim vs real
+\end{lstlisting}
+
+\section{Código desarrollado para el PSoC }
+\begin{lstlisting}[style=cstyle,
+	caption={Código desarrollado para la implementación de los compensadores con el PSoC en lenguaje C.},
+	label={c:psoc}
+	]
+
+#include "project.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
+
+/* ==== Prototipos ==== */
+CY_ISR_PROTO(adquirirMuestra);
+static void pc_process_rx(void);
+static void handle_command(const char *line);
+static void set_ref_value(float *target, float val, const char *name);
+static void set_ref_period(uint16_t period);
+static void ref_status(void);
+
+/* ==== Config general / límites ==== */
+#define SAT_MIN        (0.0f)
+#define SAT_MAX        (4.08f)
+#define MIDDLE_VOLTAGE ((SAT_MAX - SAT_MIN)/2.0f)
+
+#define RX_BUF_SZ 64
+
+/* ==== Estado global ==== */
+volatile char  flag    = '0';
+volatile float ref_max = (float)(MIDDLE_VOLTAGE + 0.5f);
+volatile float ref_min = (float)(MIDDLE_VOLTAGE - 0.5f);
+volatile float ref     = 0.0f;
+volatile float muestra = 0.0f;
+volatile float e       = 0.0f;
+
+/* Modo de operación: 0 = closed loop (PID), 1 = open loop (DAC = ref) */
+enum { MODE_CLOSED = 0, MODE_OPEN = 1 };
+volatile uint8 mode = MODE_CLOSED;
+
+/* ==== UART RX line buffer ==== */
+static char   rx_buf[RX_BUF_SZ];
+static uint8  rx_len = 0;
+
+/* ==== Helpers sin libm ==== */
+static long my_lroundf(float x) { return (x >= 0.0f) ? (long)(x + 0.5f) : (long)(x - 0.5f); }
+
+/* Mapear voltaje a 0..255 con clamps a [SAT_MIN, SAT_MAX] */
+static inline uint8 volt_to_dac(float v)
+{
+	if (v < SAT_MIN) v = SAT_MIN;
+	if (v > SAT_MAX) v = SAT_MAX;
+	float norm = v / SAT_MAX;               /* 0..1 */
+	if (norm < 0.0f) norm = 0.0f;
+	if (norm > 1.0f) norm = 1.0f;
+	return (uint8)(norm * 255.0f);
+}
+
+/* ==== ISR de muestra ==== */
+CY_ISR(adquirirMuestra)
+{
+	/* Limpiar fuente de interrupción de “muestra disponible” */
+	muestra_disponible_ClearPending();
+	
+	/* Conmutar referencia según pin/switch (1 -> max, 0 -> min) */
+	ref = (ref_state_Read()) ? ref_max : ref_min;
+	
+	VDAC8_ref_SetValue(volt_to_dac(ref));
+	
+	/* Leer ADC y calcular error */
+	muestra = VADC_CountsTo_Volts(VADC_GetResult16());
+	e = ref - muestra;
+	
+	flag = '1';
+	
+	/* Según tu diseño, deshabilitás y re-habilitás en el main */
+	muestra_disponible_Disable();
+}
+
+/* ==== Controlador discreto (forma recursiva estándar) ==== */
+/* Parámetros (ajustá a gusto) */
+#define T   (double)(0.001245213061220)
+#define Ts  T
+//
+//
+//#define U0  -0.737363460561365/1.18473440049107
+//#define U1  1
+//#define U2  0
+//
+//#define E0  -0.737363460561365
+//#define E1  1.18473440049107
+//#define E2  0
+
+
+#define z0  -1//0//0.6224
+#define z1  0.948680356607820//0
+#define p0  1.00000000000000//0//0.3743
+#define p1  0.805044751405714//0
+#define K  0.185620357009816 //7//1.1847
+
+
+#define U0  1
+#define U1  -(p0+p1)
+#define U2  p0*p1
+
+
+#define E0  1
+#define E1  -(z0+z1)
+#define E2 z0*z1
+
+
+
+/* Hook del esfuerzo: respeta el modo (open/closed) */
+static inline void actualizarEsfuerzo(void)
+{
+	if (mode == MODE_OPEN) {
+		/* === LAZO ABIERTO: el DAC sigue la referencia (ref_min / ref_max) === */
+		VDAC8_SetValue(volt_to_dac(ref));
+		return;
+	}
+	
+	/* === LAZO CERRADO: controlador PID discreto === */
+	static float u = 0.0f, u_1 = 0.0f, u_2 = 0.0f;
+	static float e_1 = 0.0f, e_2 = 0.0f;
+	
+	/* Salida no saturada */
+	float u_unsat = (float)((-U1*u_1 + -U2*u_2 + K*(E0*e + E1*e_1 + E2*e_2))/U0);
+	
+	/* Saturación correcta (sobre u_unsat) */
+	float u_sat;
+	if (u_unsat > SAT_MAX)      u_sat = SAT_MAX;
+	else if (u_unsat < SAT_MIN) u_sat = SAT_MIN;
+	else                        u_sat = u_unsat;
+	
+	/* DAC: escribir esfuerzo saturado */
+	VDAC8_SetValue(volt_to_dac(u_sat));
+	
+	/* Correr estados (orden correcto) */
+	u_2 = u_1; u_1 = u_sat;
+	e_2 = e_1; e_1 = e;
+}
+
+/* ==== Helpers de parsing ==== */
+
+/* Recorta espacios a la derecha (CR/LF/espacios) */
+static void rstrip(char *s)
+{
+	size_t n = strlen(s);
+	while (n && (s[n-1]=='\r' || s[n-1]=='\n' || isspace((unsigned char)s[n-1])))
+	s[--n] = '\0';
+}
+
+static void to_lower_str(char *s)
+{
+	for (; *s; ++s) *s = (char)tolower((unsigned char)*s);
+}
+
+/* Procesa bytes RX por líneas (eco por línea) */
+static void pc_process_rx(void)
+{
+	int ch;
+	while ((ch = PC_GetChar()) != 0) {
+		if (ch == '\n' || ch == '\r') {
+			if (rx_len > 0) {
+				rx_buf[rx_len] = '\0';
+				PC_PutString(rx_buf); PC_PutString("\r\n"); /* eco de línea */
+				handle_command(rx_buf);
+				rx_len = 0;
+			}
+		} else {
+			if (rx_len < (RX_BUF_SZ-1)) {
+				rx_buf[rx_len++] = (char)ch;
+			} else {
+				rx_len = 0;
+				PC_PutString("ERR: line too long\r\n");
+			}
+		}
+	}
+}
+
+/* ==== Status command (sin floats en printf; usa mV) ==== */
+static void ref_status(void)
+{
+	long ref_min_mV = my_lroundf(ref_min * 1000.0f);
+	long ref_max_mV = my_lroundf(ref_max * 1000.0f);
+	long ref_mV     = my_lroundf(ref * 1000.0f);
+	unsigned per    = (unsigned)timer_ref_ReadPeriod();
+	
+	char msg[160];
+	snprintf(msg, sizeof(msg),
+	"STATUS:\r\n"
+	"  mode=%s\r\n"
+	"  ref_min=%ld mV\r\n"
+	"  ref_max=%ld mV\r\n"
+	"  ref=%ld mV\r\n"
+	"  ref_period=%u\r\n",
+	(mode == MODE_OPEN) ? "open" : "closed",
+	ref_min_mV, ref_max_mV, ref_mV, per);
+	PC_PutString(msg);
+}
+
+/* ==== Parser de comandos ==== */
+static void handle_command(const char *line_in)
+{
+	char line[RX_BUF_SZ];
+	strncpy(line, line_in, sizeof(line));
+	line[sizeof(line)-1] = '\0';
+	rstrip(line);
+	to_lower_str(line);
+	
+	/* Comandos sin valor */
+	if (strcmp(line, "ref_status") == 0 || strcmp(line, "status") == 0) {
+		ref_status(); return;
+	}
+	if (strcmp(line, "help") == 0 || strcmp(line, "?") == 0) {
+		PC_PutString("Commands:\r\n"
+		"  ref_max:<float 0..4.08>\r\n"
+		"  ref_min:<float 0..4.08>\r\n"
+		"  ref_period:<uint16 0..65535>\r\n"
+		"  mode:<open|closed|1|0>\r\n"
+		"  ref_status\r\n");
+		return;
+	}
+	
+	/* Clave:valor */
+	char *colon = strchr(line, ':');
+	if (!colon) { PC_PutString("ERR: expected key:value or ref_status\r\n"); return; }
+	*colon = '\0';
+	const char *key = line;
+	const char *val_str = colon + 1;
+	while (*val_str && isspace((unsigned char)*val_str)) val_str++;
+	
+	if (strcmp(key, "ref_max") == 0) {
+		float v = (float)atof(val_str);
+		set_ref_value((float*)&ref_max, v, "ref_max");
+	} else if (strcmp(key, "ref_min") == 0) {
+		float v = (float)atof(val_str);
+		set_ref_value((float*)&ref_min, v, "ref_min");
+	} else if (strcmp(key, "ref_period") == 0) {
+		long v = strtol(val_str, NULL, 0);
+		if (v < 0 || v > 65535) PC_PutString("ERR: ref_period out of range (0..65535)\r\n");
+		else set_ref_period((uint16_t)v);
+	} else if (strcmp(key, "mode") == 0) {
+		if (strcmp(val_str, "open") == 0 || strcmp(val_str, "1") == 0) {
+			mode = MODE_OPEN;  PC_PutString("OK: mode=open\r\n");
+		} else if (strcmp(val_str, "closed") == 0 || strcmp(val_str, "0") == 0) {
+			mode = MODE_CLOSED; PC_PutString("OK: mode=closed\r\n");
+		} else {
+			PC_PutString("ERR: mode must be open|closed|1|0\r\n");
+		}
+	} else {
+		PC_PutString("ERR: unknown key. Use ref_max, ref_min, ref_period, mode, ref_status\r\n");
+	}
+}
+
+/* Set de ref_* con validación y sección crítica */
+static void set_ref_value(float *target, float val, const char *name)
+{
+	if (val < SAT_MIN || val > SAT_MAX) {
+		char msg[64];
+		long lo = my_lroundf(SAT_MIN*1000.0f), hi = my_lroundf(SAT_MAX*1000.0f);
+		snprintf(msg, sizeof(msg), "ERR: %s out of range (%ld..%ld mV)\r\n", name, lo, hi);
+		PC_PutString(msg);
+		return;
+	}
+	
+	uint8 intr = CyEnterCriticalSection();
+	*target = val;
+	/* Si está activa esa referencia, actualizá ref inmediatamente */
+	ref = (ref_state_Read()) ? ref_max : ref_min;
+	CyExitCriticalSection(intr);
+	
+	char msg[64];
+	long v_mV = my_lroundf(val*1000.0f);
+	snprintf(msg, sizeof(msg), "OK: %s=%ld mV\r\n", name, v_mV);
+	PC_PutString(msg);
+}
+
+/* Cambia el periodo del timer de referencia de forma segura */
+static void set_ref_period(uint16_t period)
+{
+	timer_ref_Stop();
+	timer_ref_WritePeriod(period);
+	timer_ref_WriteCounter(period);
+	timer_ref_Start();
+	
+	char msg[64];
+	snprintf(msg, sizeof(msg), "OK: ref_period=%u\r\n", (unsigned)period);
+	PC_PutString(msg);
+}
+
+/* ==== main ==== */
+int main(void)
+{
+	CyGlobalIntEnable;
+	
+	/* HW init */
+	Opa_stage1_Start();
+	Opa_vdda_2_Start();
+	Opa_stage2_Start();
+	VADC_Start();
+	VDAC8_Start();
+	VDAC8_ref_Start();
+	
+	/* UART PC */
+	PC_Start();
+	PC_PutString("\r\nReady. Commands:\r\n");
+	PC_PutString("  ref_max:<float 0..4.08>\r\n");
+	PC_PutString("  ref_min:<float 0..4.08>\r\n");
+	PC_PutString("  ref_period:<uint16 0..65535>\r\n");
+	PC_PutString("  mode:<open|closed|1|0>\r\n");
+	PC_PutString("  ref_status\r\n");
+	
+	/* Timer / ISR de muestra */
+	muestra_disponible_StartEx(adquirirMuestra);
+	muestra_disponible_Enable();
+	timer_ref_Start();
+	
+	flag = '0';
+	
+	for (;;)
+	{
+		/* Procesar UART sin bloquear */
+		pc_process_rx();
+		
+		/* Procesar muestra si disponible */
+		if (flag == '1') {
+			flag = '0';
+			actualizarEsfuerzo();           /* respeta el modo */
+			muestra_disponible_Enable();    /* re-habilitar ISR */
+		}
+	}
+}
+
+\end{lstlisting}
