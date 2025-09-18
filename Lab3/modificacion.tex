@@ -154,6 +154,30 @@ Este error es considerablemente menor al obtenido con el primer compensador. Sin
 
 Por lo tanto, se concluye que este segundo diseño tampoco constituye una solución óptima.
 
-\subsubsection{El compensador debe permitir el seguimiento de una entrada rampa con un error en estado estable igual a $1/K_v$.}
+\subsubsection{El compensador debe permitir el seguimiento de una entrada rampa con un error en estado estable igual a $1/K_v$}
+
+Para cumplir con este requerimiento, es necesario diseñar un compensador que incorpore un polo en el origen. De esta forma, el sistema podrá alcanzar un error en estado estacionario finito frente a una entrada rampa.  
+
+Los márgenes iniciales obtenidos con este compensador se muestran en la figura~\ref{fig:margIniC2}.  
+
+\insertarfigura{./img/C2/margenInicio}{Diagrama de Bode con Margen de Ganancia inicial.}{fig:margIniC2}{1}
+
+Como criterio de diseño, se establece un margen de ganancia deseada es de \SI{10}{dB}. Por lo tanto, se debe determinar el valor de la ganancia $K$ que cumpla con esta condición.
+
+\insertarfigura{./img/C2/margenPosK}{Diagrama de Bode nuevo de margen de ganancia (GM).}{fig:margenPosK}{1}
+
+Con el nuevo margen de ganancia se obtienen los siguientes valores a partir de la figura~\ref{fig:margenPosK}:
+\begin{itemize}
+	\item \textbf{Ganancia:} $K = 158.932$
+	\item \textbf{Margen de ganancia:} $GM = \SI{10}{dB}$
+	\item \textbf{Margen de fase:} $PM = 22.56^\circ$
+	\item \textbf{Frecuencia de cruce de ganancia:} $\omega_{cg} = 160$
+	\item \textbf{Frecuencia de cruce de fase:} $\omega_{cp} = 85.7$
+\end{itemize}
+
+Se observa que el margen de fase obtenido es de $22.56^\circ$, por lo que para alcanzar el criterio de $60^\circ$ aún faltan aproximadamente $37.44^\circ$. En consecuencia, se incorpora un compensador de adelanto (Lead) con el objetivo de aportar la fase adicional requerida.
+
+\insertarfigura{./img/C2/margenConCompensador}{Diagrama de Bode del Compensador - Etapa Lead.}{fig:margenConCompensador2}{1}
+
 
 
