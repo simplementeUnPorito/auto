@@ -1,0 +1,9 @@
+\section{Selección de un tiempo de muestreo adecuado}
+
+La selección de los tiempos de muestreo se realizó a partir del criterio de Nyquist. Se determinó que el tiempo crítico es $T_{n} = 139 \, \text{ms}$. A partir de este valor, se estableció un margen que permite definir intervalos de muestreo aceptables para el diseño del controlador.\\
+Se tiene la siguiente ecuación, el tiempo de muestreo utilizado para este laboratorio será el mismo que el del laboratorio 2, $T = 1.25ms$, $a = \tfrac{1}{81\,000 \cdot 200 \cdot 10^{-9}}$ y $b = \tfrac{1}{15 \cdot 10^{3} \cdot 100 \cdot 10^{-9}}$, y considerando $K = 1$ se tienen ya calculados los valores de $\alpha$, $\beta$ y $\delta$:
+\begin{flalign*}
+	\delta &= \frac{K}{ab} \approx 24.3 \times 10^{-6} & \\
+	\beta &= \frac{K}{b^2-ab} \approx 2.48 \times 10^{-6} & \\
+	\alpha &= \frac{K}{a^2-ab} \approx -26.78 \times 10^{-6}.&
+\end{flalign*}
