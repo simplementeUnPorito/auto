@@ -1,0 +1,36 @@
+%Script para comparar el rendimiento del algoritmo PID discretizado por el
+%método de Euler y el continuo
+
+%Realizado por: Enrique A. Vargas
+%Fecha: 04/09/05
+
+close all;
+clear all;
+%Se define la planta. Se utiliza la planta del ejemplo 3.4 del Franklin
+numG = 360000;
+denG = conv([1 60],[1 600]);
+motor = tf(numG,denG);
+
+%Implementación del control analogico
+% C(s) = Kp*(Ti*Td*S^2 + Ti*S + 1)/(Ti*S)
+Kp = 5;
+Td = .0008;
+Ti = .003;
+numC=Kp*[Ti*Td Ti 1];
+denC=[Ti 0];
+controlador = tf(numC,denC);
+cloop_c =feedback(controlador*motor,1);
+t=0:.0002:.01;
+yc=step(cloop_c,t);
+figure(1)
+plot(t*1000,yc,'-');
+hold on
+title('Respuesta a un escalon unitario');
+xlabel('Tiempo (msec)');
+ylabel('Velocidad angular (rad/sec)');
+%pause
+
+%Se define el tiempo de muestreo el cual es función del ancho de banda 
+%tr = 1.8/Wn
+T = 0.03e-3;
+sim_pid_euler(motor, 0.03e-3, Kp, Ti, Td,1,0,0,5);
