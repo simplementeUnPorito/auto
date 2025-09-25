@@ -1,6 +1,6 @@
 \section{Diseño del controlador.}
 
-\subsection{Controlador con mínimo tiempo de establecimiento}
+\subsection{Con oscilaciones entre muestras.}
 
 Se diseñaron los controladores para los distintos tiempos de muestreo seleccionados, con el objetivo de alcanzar un tiempo de establecimiento mínimo. Este diseño parte de la expresión de la función de transferencia en lazo cerrado:
 
@@ -63,6 +63,18 @@ G(z) = \frac{0.97691 \, (z + 0.001965)}{z \, (z - 0.02117)}
 
 Se puede observar que, a medida que el muestreo es más lento, la respuesta del sistema mejora: la oscilación disminuye y la amplitud del esfuerzo de control se mantiene dentro de un rango aceptable (véase en las Figuras~\ref{fig:m1tn125} y~\ref{fig:m1tn2}).
 
+\subsection{Eliminando las oscilaciones entre muestras.}
 
+Teniendo las siguientes consideraciones para una señal escalón, una respuesta "ripple-free", se tiene que para cualquier valor de $l \ge n$, tenemos :
 
+\begin{itemize}
+	\item $e(kT) = 0$
+	\item $u(kT) = constant$
+\end{itemize}
 
+Para el loop de la funcion de transferencia $L(z) = C(z)G_{ZAS}(z) = N_L(z)/D_L(z)$, esto puede ser demostrado satisfaciendo las siguientes dos condiciones:
+\begin{itemize}
+	\item $N_L(z)+D_L(z)=z^l$
+	\item $D_l$ tiene una raíz en $z=1$, entonces el sistema con realimentacion unitaria sería tipo 1.
+	\item No se pueden cancelar los polos y ceros inestables entre $C(z)$ y $G_{ZAS}$ para la estabilidad del lazo cerrado.
+\end{itemize}
