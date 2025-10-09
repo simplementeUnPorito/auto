@@ -1851,4 +1851,57 @@ int main(void)
 	}
 }
 
-\end{lstlisting}
+\end{lstlisting}\onecolumn
+\appendices
+\section{Códigos de Matlab}
+
+% (opcional) índice de listados
+\lstlistoflistings
+
+% === Archivos dentro de ./Codigo/ ===
+\codigomatlab{./Codigo/comparar_intersample.m}
+{Comparación inter-muestra (postproceso).}
+{comparar_intersample}
+
+\codigomatlab{./Codigo/dioooooooooooos.m}
+{Utilidad varias (script auxiliar).}
+{dioooooooooooos}
+
+\codigomatlab{./Codigo/gen_ref_pulso_blocks.m}
+{Generación de referencia por pulsos (bloques).}
+{gen_ref_pulso_blocks}
+
+\codigomatlab{./Codigo/gen_ref_rampa.m}
+{Generación de referencia tipo rampa.}
+{gen_ref_rampa}
+
+\codigomatlab{./Codigo/guardar_resultados.m}
+{Rutina para guardado de resultados y figuras.}
+{guardar_resultados}
+
+\codigomatlab{./Codigo/hojaDeCalculos.m}
+{Hoja de cálculos utilizada para el diseño de compensadores.}
+{hojaDeCalculos}
+
+\codigomatlab{./Codigo/pruebasMeQuieroMatar.m}
+{Banco de pruebas y exploración de parámetros.}
+{pruebas_mqm}
+
+\codigomatlab{./Codigo/sim_lazo_discreto_sat.m}
+{Simulación del lazo discreto con saturación.}
+{sim_lazo_discreto_sat}
+
+\codigomatlab{./Codigo/ver_intersample.m}
+{Visualización del comportamiento inter-muestra.}
+{ver_intersample}
+
+\codigomatlab{./Codigo/ver_intersample_desde_u.m}
+{Inter-muestra reconstruida a partir de $u[k]$.}
+{ver_intersample_desde_u}
+
+\section{Código desarrollado para el PSoC}
+
+\lstinputlisting[style=cstyle,
+caption={Implementación en C para PSoC de los compensadores (lazo cerrado/abierto, saturación y UART).},
+label={c:psoc_main}]
+{./Codigo/main.c}

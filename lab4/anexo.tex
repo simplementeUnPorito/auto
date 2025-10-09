@@ -1,0 +1,664 @@
+\onecolumn
+\appendices
+\section{Códigos de Matlab}
+
+% --- Plantilla: pegá el contenido de cada archivo entre lstlisting ---
+% Sugerencia: si te queda DENSO, podés intercalar \clearpage entre archivos.
+
+\subsection{\texttt{comparar\_intersample.m}}
+\begin{lstlisting}[style=matlabstyle,caption={Comparación inter-muestra.}]
+	function comparar_intersample(S_all, T)
+	% COMPARAR_INTERSAMPLE - Compara esfuerzos y salidas continuas
+	% Uso:
+	%   comparar_intersample(S_all, T)
+	% Entradas:
+	%   S_all : cell array de structs devueltos por ver_intersample
+	%   T     : vector de Ts correspondientes
+	
+	estilos = {'-','--',':','-.'}; % distintos estilos
+	colores = lines(numel(T));     % paleta distinta para cada curva
+	leg = arrayfun(@(Ts) sprintf('T_s = %.4g ms', Ts*1e3), T, 'UniformOutput', false);
+	
+	figure('Name','Comparativa esfuerzos y respuestas continuas');
+	tiledlayout(2,1);
+	
+	% --- Subplot 1: esfuerzos ---
+	ax1 = nexttile; hold on; grid on; grid minor;
+	for k = 1:numel(T)
+	est = estilos{mod(k-1,numel(estilos))+1};
+	stairs(S_all{k}.tk*1e3, S_all{k}.uk, est, ...
+	'Color', colores(k,:), 'LineWidth', 1);
+	end
+	xlabel('milisegundos');
+	ylabel('Voltios');
+	title('Esfuerzos del controlador para distintos T_s');
+	legend(leg, 'Location', 'best');
+	
+	% --- Subplot 2: salidas continuas ---
+	ax2 = nexttile; hold on; grid on; grid minor;
+	for k = 1:numel(T)
+	est = estilos{mod(k-1,numel(estilos))+1};
+	plot(S_all{k}.tc*1e3, S_all{k}.yc, est, ...
+	'Color', colores(k,:), 'LineWidth', 1);
+	end
+	xlabel('milisegundos');
+	ylabel('Voltio');
+	title('Respuesta continua de G(s) con u_{ZOH}(t)');
+	legend(leg, 'Location', 'best');
+	
+	linkaxes([ax1 ax2],'x'); % sincroniza zoom en X
+	end
+\end{lstlisting}
+
+\subsection{\texttt{calculos_auxiliares.m}}
+\begin{lstlisting}[style=matlabstyle,caption={Utilidades auxiliares.}]
+	% Ejemplo simple de simulación con saturación
+	clear all
+	close all
+	% Planta continua: G(s) = 1/(s+1)
+	s = tf('s');
+	G = 1/((s+1));
+	
+	% Controlador discreto PI: C(z) = Kp + Ki*T/(z-1)
+	Kp = 1; Ki = 0.001; T = 0.01;
+	C = c2d(pid(Kp,Ki), T, 'tustin'); % discreto
+	
+	% Parámetros simulación
+	N = 500;
+	refd = ones(N,1);      % escalón
+	umin = -2; umax = 2;   % saturación
+	
+	% Discretizar planta
+	Gd = c2d(G,T,'zoh');
+	zpk( feedback(C*Gd,1))
+	% Obtener coeficientes
+	[Nc,Dc] = tfdata(C,'v');  Nc = Nc(:)'; Dc = Dc(:)';
+	[Nb,Db] = tfdata(Gd,'v'); Nb = Nb(:)'; Db = Db(:)';
+	
+	% Inicializar
+	yc = zeros(N,1);   % salida de planta
+	u  = zeros(N,1);   % señal aplicada
+	uc = zeros(N,1);   % señal de controlador (sin saturación)
+	e  = zeros(N,1);
+	
+	for k=1:N
+	e(k) = refd(k) - yc(k);
+	
+	% --- controlador discreto (uc) ---
+	uc_k = 0;
+	for i=0:length(Nc)-1
+	if k-i>=1, uc_k = uc_k + Nc(i+1)*e(k-i); end
+	end
+	for i=1:length(Dc)-1
+	if k-i>=1, uc_k = uc_k - Dc(i+1)*uc(k-i); end
+	end
+	uc(k) = uc_k;          % señal antes de saturación
+	u(k)  = min(max(uc_k,umin), umax);  % saturada
+	
+	% --- planta discreta ---
+	yk = 0;
+	for i=0:length(Nb)-1
+	if k-i>=1, yk = yk + Nb(i+1)*u(k-i); end
+	end
+	for i=1:length(Db)-1
+	if k-i>=1, yk = yk - Db(i+1)*yc(k-i); end
+	end
+	if k<N, yc(k+1)=yk; end
+	end
+	
+	% Gráficos
+	t = (0:N-1)*T;
+	subplot(3,1,1); plot(t,yc); ylabel('y[k]')
+	subplot(3,1,2); plot(t,u); ylabel('u[k]')
+	subplot(3,1,3); plot(t,e); ylabel('e[k]'); xlabel('t [s]')
+\end{lstlisting}
+
+\subsection{\texttt{gen\_ref\_pulso\_blocks.m}}
+\begin{lstlisting}[style=matlabstyle,caption={Generador de referencia por pulsos (bloques).}]
+	function [t, refd] = gen_ref_pulso_blocks(Ts_ref, T_total, ref_amp, pulse_amp, f_hz)
+	% Alterna bloques de alto/bajo alrededor de ref_amp con frecuencia f_hz.
+	% Alto = ref_amp + pulse_amp
+	% Bajo = ref_amp - pulse_amp
+	
+	N      = max(1, round(T_total / Ts_ref));     % total de muestras
+	t      = (0:N-1)' * Ts_ref;
+	Nblk   = max(1, round((1/(2*f_hz)) / Ts_ref));% muestras por medio periodo
+	
+	hi = ref_amp + pulse_amp;
+	lo = ref_amp - pulse_amp;
+	
+	pattern = [repmat(hi, Nblk, 1); repmat(lo, Nblk, 1)];
+	refd = repmat(pattern, ceil(N/(2*Nblk)), 1);
+	refd = refd(1:N);
+	end
+\end{lstlisting}
+
+\subsection{\texttt{gen\_ref\_rampa.m}}
+\begin{lstlisting}[style=matlabstyle,caption={Generador de referencia tipo rampa.}]
+	% === Pegar aquí el contenido de gen_ref_rampa.m ===
+\end{lstlisting}
+
+\subsection{\texttt{guardar\_resultados.m}}
+\begin{lstlisting}[style=matlabstyle,caption={Guardado de resultados y figuras.}]
+	%% ================== Guardar figuras e informe ==================
+	% Carpeta de salida
+	outDir = fullfile(pwd, 'resultados');
+	figDir = fullfile(outDir, 'figuras');
+	if ~exist(outDir, 'dir'), mkdir(outDir); end
+	if ~exist(figDir, 'dir'), mkdir(figDir); end
+	
+	% --- 1) Guardar TODAS las figuras abiertas (las que genera comparar_intersample y otras)
+	figs = findall(0, 'Type', 'figure');
+	tsStamp = datestr(now, 'yyyymmdd_HHMMSS');  % timestamp único
+	for i = 1:numel(figs)
+	try
+	set(figs(i), 'PaperPositionMode', 'auto');
+	fname = sprintf('fig_%02d_%s.png', i, tsStamp);
+	print(figs(i), fullfile(figDir, fname), '-dpng', '-r300');
+	catch ME
+	warning('No pude exportar la figura %d: %s', i, ME.message);
+	end
+	end
+	%%
+	
+	% --- 2) Armar archivo .txt con: Ts | Planta(G) | C_m1 | C_m2 (solo FT)
+	txtPath = fullfile(outDir, sprintf('resumen_control_%s.txt', tsStamp));
+	fid = fopen(txtPath, 'w');
+	if fid < 0
+	error('No pude crear el archivo de resumen en %s', txtPath);
+	end
+	
+	fprintf(fid, 'Resumen de control por periodo de muestreo\n');
+	fprintf(fid, 'Formato: Ts [s] | Planta G | C_m1 | C_m2\n');
+	fprintf(fid, '---------------------------------------------------------------\n');
+	
+	% String "limpio" de G continua (única para todas las filas)
+	
+	Nrows = min([numel(T), numel(C_all_m1), numel(C_all_m2)]);
+	for k = 1:Nrows
+	Ts_k   = T(k);
+	G_show = tf2str_z(Gd_all_m2{k});
+	C1_show = tf2str_z(C_all_m1{k});
+	C2_show = tf2str_z(C_all_m2{k});
+	fprintf(fid, '%.12g | %s | %s | %s\n', Ts_k, G_show, C1_show, C2_show);
+	end
+	fclose(fid);
+	
+	% Guarda también el workspace por si querés reusar
+	save(fullfile(outDir, sprintf('workspace_%s.mat', tsStamp)), ...
+	'T','G','C_all_m1','C_all_m2','Gd_all_m1','Gd_all_m2');
+	fprintf('Listo.\nResumen: %s\n', txtPath);
+	
+	function s = tf2str_simple(sys)
+	% Devuelve "(num)/(den)" en una línea.
+	% - Si es continuo: variable 's'
+	% - Si es discreto: variable 'z^-1' + sample time
+	[num, den, Ts] = tfdata(sys, 'v');
+	if isct(sys)
+	s = sprintf('(%s)/(%s)', poly2str(num,'s'), poly2str(den,'s'));
+	else
+	s = sprintf('(%s)/(%s); Ts=%.10g', poly2str(num,'z^-1'), poly2str(den,'z^-1'), Ts);
+	end
+	s = regexprep(s, '\s+', ' '); % compactar espacios
+	end
+	function s = tf2str_z(sys)
+	% Escribe la FT discreta en variable 'z' (no z^-1)
+	assert(~isct(sys),'Solo discreto');
+	[num, den, ~] = tfdata(sys,'v');  % coef. en z^-1 descendentes
+	% Convertimos a polinomios en z multiplicando por z^-N y revirtiendo:
+	num_z = fliplr(num); den_z = fliplr(den);
+	s = sprintf('(%s)/(%s);', poly2str(num_z,'z'), poly2str(den_z,'z'));
+	s = regexprep(s, '\s+', ' ');
+	end
+\end{lstlisting}
+
+\subsection{\texttt{hojaDeCalculos.m}}
+\begin{lstlisting}[style=matlabstyle,caption={Hoja de cálculos para el diseño de los compensadores.}]
+	close all
+	clear all
+	
+	addpath('..\Lab1\');
+	addpath('..\Lab2\');
+	addpath('..\Lab3\');
+	
+	%% Definicion de parametros
+	R_1 = 15e3;
+	R_3 = 15e3;
+	C_2 = 100e-9;
+	
+	R_2 = 82e3;
+	R_4 = 82e3;
+	C_1 = 0.22e-6;
+	
+	%% Generar funcion de transferencia d
+	numStage = [-R_3/R_1 -R_4/R_2];
+	denStage = { [C_2*R_3 1], [C_1*R_4 1] };
+	
+	% Usamos celdas para guardar los tf de cada stage
+	Gstage = cell(1,2);
+	G = 1;
+	for i = 1:2
+	Gstage{i} = tf(numStage(i), denStage{i});
+	G = G*Gstage{i};
+	end
+	
+	%% Analizamos en el tiempo
+	[tr, ts, wn] = plot_step_info(G);
+	disp('Planta continua G(s):')
+	G
+	zpk(G)
+	
+	
+	%% ================== Barrido sobre un vector de T ==================
+	% Vector de periodos de muestreo a probar (ejemplo: usar T1, T2 y más)
+	Tn = 2*pi/wn;
+	T = [1.25e-3 Tn/32 Tn/16 Tn/8 Tn/4 Tn/2];   % <-- ajustá a gusto
+	
+	
+	% Parámetros de la simulación para ver_intersample
+	Tsim = Tn; 
+	Nups = 40;   % sobremuestreo del ZOH (submuestras por periodo)
+	
+	% Resultados de cada Ts
+	S_all_m1 = cell(1, numel(T));
+	C_all_m1 = cell(1, numel(T));
+	Gd_all_m1 = cell(1, numel(T));
+	for k = 1:numel(T)
+	Ts = T(k);
+	
+	% Discretizar la planta con ZOH a Ts
+	Gd_k = c2d(G, Ts, 'zoh');
+	
+	% Método 1 (oscilaciones entre muestras): F = z^-1 ; C = F/(Gd*(1-F))
+	z_k = tf([1 0], 1, Ts);
+	C_k = 1/(Gd_k)*1/(z_k-1);
+	
+	% Simulación intersample (usa tu función ver_intersample)
+	S_k = ver_intersample(G, C_k, round(Tsim/T(k)), Nups);  %#ok<NASGU>
+	
+	% Guardar
+	S_all_m1{k}  = S_k;
+	C_all_m1{k}  = C_k;
+	Gd_all_m1{k} = Gd_k;
+	end
+	
+	comparar_intersample(S_all_m1, T);
+	
+	
+	% %% no funciona
+	% % parámetros
+	% C = C_all_m1{1};
+	% Gd = Gd_all_m1{1};
+	% Ts_ref  = C.Ts;     % 0.5 ms entre muestras de referencia
+	% 
+	% % 1) pulso montado
+	% f = 1/(Ts*300);
+	% Tfin = 3/f;
+	% [t, refd] = gen_ref_pulso_blocks(Ts,Tfin,2.05,0.5,f); umin=0; umax=5;
+	% figure;
+	% plot(t,refd);
+	% [yd,ud,ucd,ed,t] = sim_lazo_discreto_sat(Gd,C,refd,umin,umax);
+	% 
+	% figure;
+	% subplot(3,1,1); stairs(t,yd); grid on; ylabel('y[k]');hold on;stairs(t,refd)
+	% subplot(3,1,2); stairs(t,ud,'-');hold on; stairs( t,ucd,'--'); grid on; ylabel('u[k]'); legend('u','uc')
+	% subplot(3,1,3); stairs(t,ed); grid on; ylabel('e[k]'); xlabel('t [s]')
+	% 
+	% 
+	% Nups = 40;           % submuestras por periodo (p.ej. 40)
+	% Muse = 0;            % 0 => usar todo u[k]
+	% S = ver_intersample_desde_u(G, Ts, ud, Muse, Nups);
+	
+	
+	%% ================== Metodo 2 (orden 1 del numerador A) ==================
+	S_all_m2 = cell(1, numel(T));
+	C_all_m2 = cell(1, numel(T));
+	Gd_all_m2 = cell(1, numel(T));
+	for k = 1:numel(T)
+	Ts = T(k);
+	
+	% Planta discreta
+	Gd_k = c2d(G, Ts, 'zoh');
+	
+	% === A(z): orden 1 (A = a1 z + a0). En z^{-1} MATLAB da [a0 a1].
+	Azinv = Gd_k.Numerator{1};
+	if numel(Azinv) < 2
+	error('El numerador de Gd_k no es de orden 1.');
+	end
+	a0 = Azinv(3); 
+	a1 = Azinv(2);
+	
+	% === K y b0 (¡correctos!)
+	denom = a1 + a0;
+	if abs(denom) < 1e-12
+	error('a1 + a0 = 0 -> no hay solución con l=2 y (z-1)B.');
+	end
+	K  = 1/denom;
+	b0 = a0/denom;
+	
+	% === B(z) = z + b0 (en variable z, mayor->menor)
+	Bz = [1, b0];
+	
+	% === D(z): quita polos en z=1 del denominador de Gd
+	p = zpk(Gd_k).P{1};
+	has_pole_at_1 = any(abs(p - 1) < 1e-6);
+	p_no1 = p(abs(p - 1) >= 1e-6);
+	Dz = poly(p_no1);              % en z (mayor->menor)
+	if max(abs(imag(Dz))) < 1e-12, Dz = real(Dz); end
+	
+	% === Denominador del controlador según tenga o no polo en z=1
+	if has_pole_at_1
+	% Caso Eq. (6.54): C(z) = K*D(z) / (z + b0)
+	denC_z = Bz;
+	else
+	% Caso Eq. (6.51): C(z) = K*D(z) / [(z-1)(z + b0)]
+	denC_z = conv([1 -1], Bz);
+	end
+	
+	C_k = tf(K * Dz, denC_z, Ts);
+	
+	% Simulación inter-muestra
+	S_k = ver_intersample(G, C_k, round(Tsim/Ts), Nups);
+	
+	% Guardar
+	S_all_m2{k}  = S_k;
+	C_all_m2{k}  = C_k;
+	Gd_all_m2{k}  = Gd_k;
+	end
+	
+	comparar_intersample(S_all_m2, T);
+	
+	
+	
+	% %% no funciona
+	% % parámetros
+	% C = C_all_m2{1};
+	% Gd = Gd_all_m2{1};
+	% Ts_ref  = C.Ts;     % 0.5 ms entre muestras de referencia
+	% 
+	% % 1) pulso montado
+	% f = 1/(Ts*300);
+	% Tfin = 3/f;
+	% [t, refd] = gen_ref_pulso_blocks(Ts,Tfin,2.05,0.5,f); umin=-300; umax=500;
+	% figure;
+	% plot(t,refd);
+	% [yd,ud,ucd,ed,t] = sim_lazo_discreto_sat(Gd,C,refd,umin,umax);
+	% 
+	% figure;
+	% subplot(3,1,1); stairs(t,yd); grid on; ylabel('y[k]');hold on;stairs(t,refd)
+	% subplot(3,1,2); stairs(t,ud,'-');hold on; stairs( t,ucd,'--'); grid on; ylabel('u[k]'); legend('u','uc')
+	% subplot(3,1,3); stairs(t,ed); grid on; ylabel('e[k]'); xlabel('t [s]')
+	% 
+	% 
+	% Nups = 40;           % submuestras por periodo (p.ej. 40)
+	% Muse = 0;            % 0 => usar todo u[k]
+	% S = ver_intersample_desde_u(G, Ts, ud, Muse, Nups);
+\end{lstlisting}
+
+\subsection{\texttt{pruebasMeQuieroMatar.m}}
+\begin{lstlisting}[style=matlabstyle,caption={Banco de pruebas y exploración de parámetros.}]
+	% === Pegar aquí el contenido de pruebasMeQuieroMatar.m ===
+\end{lstlisting}
+
+\subsection{\texttt{sim\_lazo\_discreto\_sat.m}}
+\begin{lstlisting}[style=matlabstyle,caption={Simulación de lazo discreto con saturación.}]
+	function [yd, ud, ucd, ed, t] = sim_lazo_discreto_sat(Gd, Cd, refd, umin, umax)
+	% SIM_LAZO_DISCRETO_SAT
+	% Simula un lazo discreto con controlador Cd y planta Gd (ambos tf discretos),
+	% separando la señal de control antes de saturación (uc) y la aplicada (u).
+	%
+	% Entradas:
+	%   Gd   : planta discreta (tf) en z, causal
+	%   Cd   : controlador discreto (tf) en z, causal
+	%   refd : referencia discreta r[k] (vector fila o columna)
+	%   umin, umax : límites de saturación del esfuerzo
+	%
+	% Salidas:
+	%   yd  : salida de la planta y[k] (mismo largo que refd)
+	%   ud  : esfuerzo aplicado u[k] (saturado)
+	%   ucd : esfuerzo del controlador sin saturar u_c[k]
+	%   ed  : error e[k] = r[k] - y[k]
+	%   t   : tiempo discreto (k*Ts)
+	
+	Ts = 0; try, Ts = Cd.Ts; catch, end
+	if isempty(Ts) || Ts <= 0, error('Cd debe tener Ts > 0.'); end
+	
+	% ===== Coeficientes en z^{-1} y normalización a(0)=1 =====
+	[Nc, Dc] = tfdata(Cd, 'v');  Nc = Nc(:).'; Dc = Dc(:).';
+	[Nb, Db] = tfdata(Gd, 'v');  Nb = Nb(:).'; Db = Db(:).';
+	
+	if abs(Dc(1)) < 1e-12, error('Controlador impropio/no causal: Dc(1)=0'); end
+	if abs(Db(1)) < 1e-12, error('Planta discreta impropia/no causal: Db(1)=0'); end
+	
+	% Normalizar para que los denominadores empiecen en 1
+	Nc = Nc / Dc(1);   Dc = Dc / Dc(1);
+	Nb = Nb / Db(1);   Db = Db / Db(1);
+	
+	% ===== Preparar señales =====
+	refd = refd(:);           % columna
+	N = numel(refd);
+	t = (0:N-1).' * Ts;
+	
+	% y con un paso extra para causalidad explícita (y[k+1])
+	y  = zeros(N+1,1);
+	ed = zeros(N,1);
+	ucd = zeros(N,1);   % señal del controlador (sin saturación)
+	ud  = zeros(N,1);   % señal aplicada (saturada)
+	
+	% ===== Bucle causal =====
+	% Ecuaciones:
+	%   Dc(q^-1) * uc[k] = Nc(q^-1) * e[k]
+	%   Db(q^-1) * y[k]  = Nb(q^-1) * u[k]
+	%
+	% Ojo: acá actualizamos y(k+1) para respetar el retardo de ZOH.
+	
+	for k = 1:N
+	% error con la salida disponible del mismo índice (y[k])
+	ed(k) = refd(k) - y(k);
+	
+	% ---- Controlador (sin saturación): uc[k] ----
+	uc_k = 0.0;
+	
+	% término por e[k-i]
+	for i = 0:length(Nc)-1
+	if k-i >= 1
+	uc_k = uc_k + Nc(i+1) * ed(k-i);
+	end
+	end
+	
+	% realimentación por uc[k-i], i >= 1
+	for i = 1:length(Dc)-1
+	if k-i >= 1
+	uc_k = uc_k - Dc(i+1) * ucd(k-i);
+	end
+	end
+	
+	ucd(k) = uc_k;
+	
+	% ---- Saturación y esfuerzo aplicado ----
+	ud(k) = min(max(uc_k, umin), umax);
+	
+	% ---- Planta: y[k+1] con u[k-i] e y[k-i] ----
+	y_next = 0.0;
+	
+	% parte directa por u[k-i]
+	for i = 0:length(Nb)-1
+	if k-i >= 1
+	y_next = y_next + Nb(i+1) * ud(k-i);
+	end
+	end
+	
+	% realimentación por y[k-i], i >= 1
+	for i = 1:length(Db)-1
+	if k-i >= 1
+	y_next = y_next - Db(i+1) * y(k-i+1);  % nota: y es (k+1)
+	end
+	end
+	
+	% avanzar estado de la planta
+	y(k+1) = y_next;
+	end
+	
+	% Salida alineada con refd
+	yd = y(1:N);
+	end
+\end{lstlisting}
+
+\subsection{\texttt{ver\_intersample.m}}
+\begin{lstlisting}[style=matlabstyle,caption={Visualización del comportamiento inter-muestra.}]
+	function S = ver_intersample(G, C, M, N)
+	% VER_INTERSAMPLE - Visualiza oscilaciones entre-muestras con ZOH explícito
+	% Uso:
+	%   S = ver_intersample(G, C, M, N)
+	% Entradas:
+	%   G : planta continua (tf/ss continuo)
+	%   C : controlador digital (tf/ss discreto, con Ts > 0)
+	%   M : 0 => simular hasta t = SettlingTime(G)
+	%       >0 => simular M*Ts
+	%   N : factor de sobremuestreo del ZOH (submuestras por periodo, ej. 30)
+	
+	Ts = getTsStrict(C);
+	if Ts <= 0
+	error('El controlador C debe ser discreto con Ts > 0.');
+	end
+	
+	% Discretizar la planta
+	Gd = c2d(G, Ts, 'zoh');
+	
+	% Lazos cerrados
+	Gcl = feedback(C*Gd, 1);  % r->y[k]
+	Ucl = feedback(C, Gd);    % r->u[k]
+	
+	Tfinal = M*Ts;
+	
+	K = max(1, floor(Tfinal/Ts));
+	tk = (0:K).' * Ts;
+	
+	% Respuestas discretas
+	[yk, ~] = step(Gcl, tk);
+	rk = ones(size(yk));
+	ek = rk - yk;
+	uk = lsim(C, ek, tk);
+	
+	% ZOH explícito
+	[tc, uc] = zoh_stretch(uk, Ts, N);
+	yc = lsim(G, uc, tc);
+	
+	% ====== SUBPLOTS (x en ms) ======
+	figure('Name','Intersample analysis');
+	tiledlayout(2,1);
+	
+	% y_c(t) y y[k]
+	nexttile;
+	plot(tc*1e3, yc, 'LineWidth',1.2); grid on; hold on; grid minor;
+	stairs(tk*1e3, yk, 'k.');
+	xlabel('milisegundos'); ylabel('Voltios');
+	title(sprintf('Respuesta de la planta controlada al escalón T_s = %.4g ms',Ts*1e3));
+	legend('y_c(t)','y[k]','Location','best');
+	
+	% u[k]
+	nexttile;
+	stairs(tk*1e3, uk, 'LineWidth',1.5); grid on; grid minor;
+	xlabel('milisegundos'); ylabel('Voltios');
+	title('Esfuerzo del controlador para el escalón');
+	legend('u[k]','Location','best');
+	
+	% Salida estructurada
+	S = struct('Ts', Ts, 'Tfinal', tk(end), ...
+	'tk', tk, 'yk', yk, 'uk', uk, 'ek', ek, ...
+	'tc', tc, 'uc', uc, 'yc', yc, ...
+	'Gd', Gd, 'Gcl', Gcl, 'Ucl', Ucl);
+	end
+	
+	% Helpers
+	function Ts = getTsStrict(sys)
+	Ts = 0;
+	try, Ts = sys.Ts; catch, end
+	if isempty(Ts), Ts = 0; end
+	end
+	
+	function [t_hi, u_hi] = zoh_stretch(u_k, T, M)
+	if size(u_k,2) > 1, u_k = u_k(:); end
+	u_hi = repelem(u_k, M);
+	t_hi = (0:numel(u_hi)-1).' * (T/M);
+	end
+\end{lstlisting}
+
+\subsection{\texttt{ver\_intersample\_desde\_u.m}}
+\begin{lstlisting}[style=matlabstyle,caption={Reconstrucción inter-muestra desde $u[k]$.}]
+	function S = ver_intersample_desde_u(G, Ts, ud, M, N)
+	% VER_INTERSAMPLE_DESDE_U - Simula inter-muestra con G(s) y un esfuerzo u[k] dado.
+	% Uso:
+	%   S = ver_intersample_desde_u(G, Ts, ud, M, N)
+	% Entradas:
+	%   G  : planta continua (tf/ss continuo)
+	%   Ts : periodo de muestreo del esfuerzo u[k]
+	%   ud : vector de esfuerzo discreto u[k] (fila o columna)
+	%   M  : (opcional) nº de muestras a usar
+	%        0 o [] => usar todo ud
+	%        >0     => usar las primeras M muestras
+	%   N  : (opcional) sobremuestreo del ZOH (submuestras por periodo, ej. 30; default 30)
+	%
+	% Salida (struct):
+	%   S.Ts, S.tk, S.uk, S.yk       : señales discretas (k*Ts)
+	%   S.tc, S.uc, S.yc             : señales continuas (ZOH + lsim(G))
+	%   (y figura con y_c(t) y y[k], y u[k])
+	
+	if nargin < 5 || isempty(N), N = 30; end
+	if nargin < 4 || isempty(M), M = 0;  end
+	if Ts <= 0, error('Ts debe ser > 0.'); end
+	
+	% --- Acomodar u[k] y recorte opcional ---
+	uk = ud(:);                      % columna
+	if M > 0
+	M = min(M, numel(uk));
+	uk = uk(1:M);
+	end
+	
+	K  = numel(uk) - 1;              % última muestra = k=K
+	tk = (0:K).' * Ts;
+	
+	% --- Reconstrucción inter-muestra por ZOH explícito ---
+	[tc, uc] = zoh_stretch(uk, Ts, N);    % uc(t) pieza-constante
+	yc       = lsim(G, uc, tc);           % salida continua
+	
+	% Muestras de la salida continua exactamente en k*Ts
+	yk = yc(1:N:end);   % cada N submuestras corresponde a un instante k*Ts
+	% (Por construcción, length(yk) == length(uk) == length(tk))
+	
+	% --- Plots (eje en ms) ---
+	figure('Name','Intersample desde u[k]');
+	tiledlayout(2,1);
+	
+	% y_c(t) y y[k]
+	nexttile; hold on; grid on; grid minor;
+	plot(tc*1e3, yc, 'LineWidth', 1.2);
+	stairs(tk*1e3, yk, 'k.', 'LineWidth', 1.0);
+	xlabel('t [ms]'); ylabel('y');
+	title(sprintf('Salida continua y_c(t) y muestras y[k]  (T_s = %.4g ms)', Ts*1e3));
+	legend('y_c(t)','y[k]','Location','best');
+	
+	% u[k]
+	nexttile; hold on; grid on; grid minor;
+	stairs(tk*1e3, uk, 'LineWidth', 1.2);
+	xlabel('t [ms]'); ylabel('u[k]');
+	title('Esfuerzo aplicado');
+	
+	% --- Salida estructurada ---
+	S = struct('Ts', Ts, ...
+	'tk', tk, 'uk', uk, 'yk', yk, ...
+	'tc', tc, 'uc', uc, 'yc', yc);
+	end
+	
+	% ===== Helper: ZOH explícito =====
+	function [t_hi, u_hi] = zoh_stretch(u_k, T, M)
+	% Repite cada muestra M veces (ZOH) y arma el vector de tiempo continuo
+	if size(u_k,2) > 1, u_k = u_k(:); end
+	u_hi = repelem(u_k, M);
+	t_hi = (0:numel(u_hi)-1).' * (T/M);
+	end
+	
+	
+	
+\end{lstlisting}
+

@@ -6,6 +6,8 @@
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 
+\usepackage[numbers]{natbib}
+\bibliographystyle{IEEEtranN} 
 
 % ======= Matemática y tipografía =======
 \usepackage{amsmath, amssymb, amsfonts}
@@ -203,10 +205,27 @@
 		\hspace*{2.3em}Asunción, Paraguay}
 }
 
+
+
+
+
+
+
 \begin{document}
 	\maketitle
 	
 	% ======= Contenido =======
 	\input{intro.tex}
 	\input{desarrollo.tex}
+
+	\newpage	
+	\input{impPrac}	
+	
+	\input{conclusiones}
+	\bibliographystyle{IEEEtranN}
+	\bibliography{referencias}
+	\newpage
+	\input{anexo}
+
+	
 \end{document}
