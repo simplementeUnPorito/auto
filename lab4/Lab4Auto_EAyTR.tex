@@ -106,6 +106,10 @@
 \newcommand{\ESS}{\mathrm{ESS}}
 \newcommand{\Gz}{G(z)}
 \newcommand{\Gs}{G(s)}
+\lstset{
+	mathescape=false,  % asegura que $ no abre modo matemático dentro del listing
+	upquote=true       % comillas rectas en verbatim
+}
 
 % ======= COMPARAR FIGURAS =======
 \newcommand{\compararfigsC}[8]{%
@@ -190,10 +194,10 @@
 	\input{impPrac}	
 	
 	\input{conclusiones}
-	\bibliographystyle{IEEEtranN}
-	\bibliography{referencias}
+	
 	\newpage
 	\input{anexo}
-
+	\bibliographystyle{IEEEtranN}
+	\bibliography{referencias}
 	
 \end{document}
