@@ -94,17 +94,17 @@ C(z) = K\,\frac{(z+a)(z+b)}{(z-1)(z+b_0)}
 
 A continuación, se presentan los resultados obtenidos para distintos tiempos de muestreo, observándose la evolución del comportamiento del sistema controlado.
 
-\insertarfigura{./Img/M2/sim/M2_Ts_125.png}{Controlador con tiempo de muestreo $T_s = 1.25\,\text{ms}$.}{fig:m1tn125}{1}
+\insertarfigura{./Img/M2/sim/M2_Ts_125.png}{Controlador con tiempo de muestreo $T_s = 1.25\,\text{ms}$.}{fig:m2tn125}{1}
 
-\insertarfigura{./Img/M2/sim/M2_Ts_026.png}{Controlador con tiempo de muestreo $T_s = 0.2608\,\text{ms}$.}{fig:m1tn32}{1}
+\insertarfigura{./Img/M2/sim/M2_Ts_026.png}{Controlador con tiempo de muestreo $T_s = 0.2608\,\text{ms}$.}{fig:m2tn32}{1}
 
-\insertarfigura{./Img/M2/sim/M2_Ts_0521.png}{Controlador con tiempo de muestreo $T_s = 0.5216\,\text{ms}$.}{fig:m1tn16}{1}
+\insertarfigura{./Img/M2/sim/M2_Ts_0521.png}{Controlador con tiempo de muestreo $T_s = 0.5216\,\text{ms}$.}{fig:m2tn16}{1}
 
-\insertarfigura{./Img/M2/sim/M2_Ts_1043.png}{Controlador con tiempo de muestreo $T_s = 1.043\,\text{ms}$.}{fig:m1tn8}{1}
+\insertarfigura{./Img/M2/sim/M2_Ts_1043.png}{Controlador con tiempo de muestreo $T_s = 1.043\,\text{ms}$.}{fig:m2tn8}{1}
 
-\insertarfigura{./Img/M2/sim/M2_Ts_2087.png}{Controlador con tiempo de muestreo $T_s = 2.087\,\text{ms}$.}{fig:m1tn4}{1}
+\insertarfigura{./Img/M2/sim/M2_Ts_2087.png}{Controlador con tiempo de muestreo $T_s = 2.087\,\text{ms}$.}{fig:m2tn4}{1}
 
-\insertarfigura{./Img/M2/sim/M2_Ts_4173.png}{Controlador con tiempo de muestreo $T_s = 4.173\,\text{ms}$.}{fig:m1tn2}{1}
+\insertarfigura{./Img/M2/sim/M2_Ts_4173.png}{Controlador con tiempo de muestreo $T_s = 4.173\,\text{ms}$.}{fig:m2tn2}{1}
 
 \vspace{0.5em}
 Se observa una mejora significativa en la reducción de las oscilaciones entre muestras. Sin embargo, a medida que el tiempo de muestreo disminuye, el esfuerzo de control aumenta considerablemente, alcanzando valores que el microcontrolador PSoC no podría manejar de manera estable. Por tanto, para la implementación práctica se selecciona el tiempo de muestreo que permite una respuesta adecuada sin saturar el actuador ni comprometer la estabilidad del sistema.
