@@ -1,28 +1,24 @@
-% !TeX program = pdflatex
+% ================== BORRADOR PUERCO EN FORMATO IEEE ==================
 \documentclass[conference]{IEEEtran}
 \pagestyle{plain}
-
 % ======= Idioma y codificación =======
 \usepackage[spanish, es-nodecimaldot]{babel}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 
-% ======= Bibliografía (IEEE + natbib numérico) =======
-\usepackage[numbers]{natbib}
-\bibliographystyle{IEEEtranN}
 
 % ======= Matemática y tipografía =======
 \usepackage{amsmath, amssymb, amsfonts}
-\usepackage{microtype}
-\usepackage{float}           % (déjalo una sola vez)
+\usepackage{microtype}  % ayuda a evitar overfull hbox
+\usepackage{float}
 
 % ======= Números y unidades =======
 \usepackage{siunitx}
 \sisetup{
-	output-decimal-marker = {,}, % coma decimal
-	group-separator = {.},
+	output-decimal-marker = {,},  % coma decimal
+	group-separator = {.},        % separador de miles con punto
 	group-minimum-digits = 4,
-	per-mode = symbol,
+	per-mode = symbol,            %  m/s en vez de \per
 	round-mode = places,
 	round-precision = 3,
 	table-number-alignment = center
@@ -30,11 +26,11 @@
 
 % ======= Gráficos y floats =======
 \usepackage{graphicx}
-% \usepackage{subcaption}   % <-- QUITAR esto en IEEEtran
-\usepackage[caption=false,font=footnotesize]{subfig} % <-- USAR ESTO
+\usepackage{float}      % para [H]
+\usepackage{subcaption} % subfiguras
 \usepackage{booktabs}
-\usepackage{cuted}
-\usepackage{balance}
+\usepackage{cuted}      % para figure* / strip si hace falta
+\usepackage{balance}    % balancear columnas al final
 
 % ======= Listas =======
 \usepackage{enumitem}
@@ -43,9 +39,9 @@
 % ======= Colores (para listings) =======
 \usepackage{xcolor}
 
-% ======= LISTINGS =======
+% ======= LISTINGS (UTF-8 real) =======
 \usepackage{listings}
-\usepackage{listingsutf8}    % ok con pdfLaTeX
+\usepackage{listingsutf8}
 \lstset{
 	inputencoding=utf8,
 	extendedchars=true,
@@ -54,6 +50,7 @@
 	frame=single, numbers=left, numberstyle=\tiny, numbersep=6pt,
 	xleftmargin=1em,
 	captionpos=b,
+	% Mapeo de caracteres españoles y símbolo º
 	literate=
 	{á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'\i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
 	{Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
@@ -63,7 +60,7 @@
 	{º}{{$^\circ$}}1
 }
 
-% Lenguajes
+% Lenguaje y estilo para MATLAB
 \lstdefinelanguage{Matlab}{
 	morekeywords={break,case,catch,continue,else,elseif,end,for,function,global,if,otherwise,persistent,return,switch,try,while},
 	sensitive=true,
@@ -86,6 +83,7 @@
 	linewidth=\columnwidth
 }
 
+% (Opcional) estilo para C/PSoC si lo necesitás
 \lstdefinestyle{cstyle}{
 	language=C,
 	inputencoding=utf8,
@@ -106,14 +104,10 @@
 \newcommand{\ESS}{\mathrm{ESS}}
 \newcommand{\Gz}{G(z)}
 \newcommand{\Gs}{G(s)}
-\lstset{
-	mathescape=false,  % asegura que $ no abre modo matemático dentro del listing
-	upquote=true       % comillas rectas en verbatim
-}
 
-% ======= COMPARAR FIGURAS =======
+% ======= COMPARAR FIGURAS ========
 \newcommand{\compararfigsC}[8]{%
-	\begin{figure}[H]
+	\begin{figure}[H] % <-- H en vez de !t
 		\centering
 		\subfloat[#2\label{#3}]{%
 			\includegraphics[width=0.49\columnwidth]{#1}}
@@ -125,7 +119,8 @@
 	\end{figure}%
 }
 
-% Macro para figura simple
+% Macro para insertar figuras centradas con ancho ajustable
+% Uso: \insertarfigura{ruta}{leyenda}{etiqueta}{escala 0..1}
 \newcommand{\insertarfigura}[4]{%
 	\begin{figure}[H]
 		\centering
@@ -135,8 +130,8 @@
 	\end{figure}
 }
 
-% Macro figura a dos columnas
-\newcommand{\insertarfigurawide}[5][]{%
+% Macro: \insertarfigurawide{ruta}{caption}{label}{scale}
+\NewDocumentCommand{\insertarfigurawide}{O{!htb} m m m m}{%
 	\begin{figure*}[#1]
 		\centering
 		\includegraphics[width=#5\textwidth]{#2}
@@ -149,8 +144,39 @@
 \usepackage[unicode,hidelinks]{hyperref}
 
 
+% ==== Codificación y fuentes (XeLaTeX/LuaLaTeX) ====
+\usepackage{fontspec}
+\defaultfontfeatures{Ligatures=TeX}
+\setmainfont{Latin Modern Roman} % o la que uses
+\usepackage{listings}
+\usepackage{listingsutf8}
+
+% PREÁMBULO (si no lo tenés)
+\usepackage{adjustbox}
+\usepackage{makecell}
+\usepackage{booktabs}
+\lstset{
+	inputencoding=utf8,
+	extendedchars=true,
+	breaklines=true,
+	breakatwhitespace=true,
+	columns=fullflexible
+}
+% Mapeo de Unicode frecuentes en los listados:
+\lstset{literate=
+	{á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1 {ñ}{{\~n}}1
+	{Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1 {Ñ}{{\~N}}1
+	{°}{{\textdegree}}1 {º}{{\textordmasculine}}1 {µ}{{\textmu}}1
+	{Ω}{{$\Omega$}}1 {ω}{{$\omega$}}1 {σ}{{$\sigma$}}1 {φ}{{$\varphi$}}1
+	{·}{{$\cdot$}}1 {±}{{$\pm$}}1
+	{–}{{\textendash}}1 {—}{{\textemdash}}1
+	{“}{{\textquotedblleft}}1 {”}{{\textquotedblright}}1
+	{…}{{\ldots}}1
+}
+
+
 % ======= Metadatos =======
-\title{Práctica de Laboratorio 4: Diseño de controladores por síntesis directa.}
+\title{Trabajo Práctico Final: Control de altura PID.}
 
 \author{
 	\IEEEauthorblockN{Elías Álvarez}
@@ -177,27 +203,9 @@
 		\hspace*{2.3em}Asunción, Paraguay}
 }
 
-
-
-
-
-
-
 \begin{document}
 	\maketitle
 	
 	% ======= Contenido =======
-	\input{intro.tex}
-	\input{desarrollo.tex}
 
-	\newpage	
-	\input{impPrac}	
-	
-	\input{conclusiones}
-	
-	\newpage
-	\input{anexo}
-	\bibliographystyle{IEEEtranN}
-	\bibliography{referencias}
-	
 \end{document}

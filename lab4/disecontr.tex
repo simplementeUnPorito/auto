@@ -1,0 +1,154 @@
+\onecolumn
+\section{Diseño del controlador.}
+
+\subsection{Con oscilaciones entre muestras.}
+
+Se diseñaron los controladores para los distintos tiempos de muestreo seleccionados, con el objetivo de alcanzar un tiempo de establecimiento mínimo. Este diseño parte de la expresión de la función de transferencia en lazo cerrado:
+
+\begin{equation}
+	G_{cl}(z) = \frac{C(z) \, G_{ZAS}(z)}{1 + C(z) \, G_{ZAS}(z)}
+	\label{eq:closedloop}
+\end{equation}
+
+Despejando la ecuación \eqref{eq:closedloop} en función del controlador $C(z)$, se obtiene:
+
+\begin{equation}
+	C(z) = \frac{1}{G_{ZAS}(z)} \cdot \frac{G_{cl}(z)}{1 - G_{cl}(z)}
+	\label{eq:controladorsynt}
+\end{equation}
+
+En particular, para el diseño de un controlador \emph{con oscilaciones intra-muestra}, simplemente se considera que la función de transferencia en lazo cerrado es $G_{cl}(z) = z^{-1}$. Sustituyendo en \eqref{eq:controladorsynt}, la expresión del controlador resulta:
+
+\begin{equation}
+	C(z) = \frac{1}{G_{ZAS}(z)} \cdot \frac{1}{z - 1}
+	\label{eq:control1}
+\end{equation}
+
+Con los tiempos de muestreo seleccionados, se calculan a continuación los controladores correspondientes con el fin de analizar y comparar su desempeño.
+
+
+\insertarfigura{./Img/M1/sim/M1_Ts_125.png}{Controlador con tiempo de muestreo $T=1.25\, ms$.}{fig:m1tn125}{1}
+
+\insertarfigura{./Img/M1/sim/M1_Ts_Tn026.png}{Controlador con tiempo de muestreo $T=0.2608\, ms$.}{fig:m1tn32}{1}
+
+\insertarfigura{./Img/M1/sim/M1_Ts_Tn052.png}{Controlador con tiempo de muestreo $T=0.5216\, ms$.}{fig:m1tn16}{1}
+
+\insertarfigura{./Img/M1/sim/M1_Ts_Tn1043.png}{Controlador con tiempo de muestreo $T=0.1043\, ms$.}{fig:m1tn8}{1}
+
+\insertarfigura{./Img/M1/sim/M1_Ts_Tn2087.png}{Controlador con tiempo de muestreo $T=2.087\, ms$.}{fig:m1tn4}{1}
+
+\insertarfigura{./Img/M1/sim/M1_Ts_Tn4173.png}{Controlador con tiempo de muestreo $T=4.173\, s$.}{fig:m1tn2}{1}
+
+Se puede observar que, a medida que el muestreo es más lento, la respuesta del sistema mejora: la oscilación disminuye y la amplitud del esfuerzo de control se mantiene dentro de un rango aceptable (véase en las Figuras~\ref{fig:m1tn125} y~\ref{fig:m1tn2}).
+
+
+\subsection{Eliminando las oscilaciones entre muestras}
+
+Para una señal escalón, una respuesta \textit{ripple-free} cumple que, para cualquier $l \ge n$:
+\begin{itemize}
+	\item $e(kT) = 0$
+	\item $u(kT) = \text{constante}$
+\end{itemize}
+
+Suponiendo un proceso sin polos ni ceros fuera del círculo unitario y que tampoco presenta un polo en $z=1$, el controlador puede expresarse como:
+\[
+G_{ZAS}(z) = \frac{a_{n-1}z^{n-1} + \cdots + a_0}{D(z)}
+\]
+
+De esta forma, el compensador se define como:
+\[
+C(z) = K\,\frac{D(z)}{(z-1)\,\bigl(z^{n-1} + b_{n-2}z^{n-2} + \cdots + b_0\bigr)}
+\]
+
+Los coeficientes $K$, $b_{n-1}, \ldots, b_0$ y $a_{n-1}, \ldots, a_0$ están determinados por la siguiente relación:
+\[
+K\bigl(a_{n-1}z^{n-1} + \cdots + a_0\bigr)
++ (z - 1)\bigl(z^{n-1} + \cdots + b_0\bigr)
+= z^{\,l}, \qquad l \ge n
+\]
+
+Esta formulación corresponde al diseño de un controlador \textit{deadbeat ripple-free}, el cual garantiza que la señal de control no presente oscilaciones entre muestras y que el error en régimen permanente se anule ante una entrada tipo escalón~\citep{FadaliVisioli2020}.
+
+\vspace{0.5em}
+Para el caso de la planta analizada (ec.~\eqref{eq:DiscZ}), considerando un sistema de orden dos, se obtiene:
+\[
+K(az + b) + (z - 1)(z + b_0) = z^2
+\]
+
+De donde se determinan los parámetros $K$ y $b_0$:
+\[
+\left\{
+\begin{aligned}
+	b_0 &= \frac{a_0}{a_0 + a_1} = 0.4917 \\[6pt]
+	K   &= \frac{1}{a_0 + a_1} = 105.0833
+\end{aligned}
+\right.
+\]
+
+Así, el controlador resultante adopta la forma:
+\[
+C(z) = K\,\frac{(z+a)(z+b)}{(z-1)(z+b_0)}
+\]
+
+\subsection*{Resultados de simulación}
+
+A continuación, se presentan los resultados obtenidos para distintos tiempos de muestreo, observándose la evolución del comportamiento del sistema controlado.
+
+\insertarfigura{./Img/M2/sim/M2_Ts_125.png}{Controlador con tiempo de muestreo $T_s = 1.25\,\text{ms}$.}{fig:m2tn125}{1}
+
+\insertarfigura{./Img/M2/sim/M2_Ts_026.png}{Controlador con tiempo de muestreo $T_s = 0.2608\,\text{ms}$.}{fig:m2tn32}{1}
+
+\insertarfigura{./Img/M2/sim/M2_Ts_0521.png}{Controlador con tiempo de muestreo $T_s = 0.5216\,\text{ms}$.}{fig:m2tn16}{1}
+
+\insertarfigura{./Img/M2/sim/M2_Ts_1043.png}{Controlador con tiempo de muestreo $T_s = 1.043\,\text{ms}$.}{fig:m2tn8}{1}
+
+\insertarfigura{./Img/M2/sim/M2_Ts_2087.png}{Controlador con tiempo de muestreo $T_s = 2.087\,\text{ms}$.}{fig:m2tn4}{1}
+
+\insertarfigura{./Img/M2/sim/M2_Ts_4173.png}{Controlador con tiempo de muestreo $T_s = 4.173\,\text{ms}$.}{fig:m2tn2}{1}
+
+\vspace{0.5em}
+Se observa una mejora significativa en la reducción de las oscilaciones entre muestras. Sin embargo, a medida que el tiempo de muestreo disminuye, el esfuerzo de control aumenta considerablemente, alcanzando valores que el microcontrolador PSoC no podría manejar de manera estable. Por tanto, para la implementación práctica se selecciona el tiempo de muestreo que permite una respuesta adecuada sin saturar el actuador ni comprometer la estabilidad del sistema.
+
+\begin{table}[H]
+	\centering
+	\caption{Comparación de controladores diseñados para distintos tiempos de muestreo}
+	\begin{tabular}{c|c|c|c}
+		\hline
+		\textbf{$T_s$ [s]} &
+		\textbf{Planta $G(z)$} &
+		\textbf{Compensador método 1 $C_1(z)$} &
+		\textbf{Compensador método 2 $C_2(z)$} \\ \hline
+		
+		0.00125 &
+		$\displaystyle \frac{0.022394 z^2 + 0.02747 z}{0.54158 z^2 - 1.4916 z + 1}$ &
+		$\displaystyle \frac{0.54158 z^2 - 1.4916 z + 1}{-0.022394 z^2 - 0.0050763 z + 0.02747}$ &
+		$\displaystyle \frac{10.861 z^2 - 29.9141 z + 20.0544}{-0.4491 z^2 - 0.5509 z + 1}$ \\ \hline
+		
+		0.0002608 &
+		$\displaystyle \frac{0.0013411 z^2 + 0.0013996 z}{0.87989 z^2 - 1.8771 z + 1}$ &
+		$\displaystyle \frac{0.87989 z^2 - 1.8771 z + 1}{-0.0013411 z^2 - 5.8441\times10^{-5} z + 0.0013996}$ &
+		$\displaystyle \frac{321.0458 z^2 - 684.9162 z + 364.8718}{-0.48934 z^2 - 0.51066 z + 1}$ \\ \hline
+		
+		0.0005216 &
+		$\displaystyle \frac{0.004929 z^2 + 0.0053679 z}{0.7742 z^2 - 1.7639 z + 1}$ &
+		$\displaystyle \frac{0.7742 z^2 - 1.7639 z + 1}{-0.004929 z^2 - 0.0004389 z + 0.0053679}$ &
+		$\displaystyle \frac{75.1881 z^2 - 171.3039 z + 97.1171}{-0.47869 z^2 - 0.52131 z + 1}$ \\ \hline
+		
+		0.0010433 &
+		$\displaystyle \frac{0.016666 z^2 + 0.019765 z}{0.59939 z^2 - 1.5629 z + 1}$ &
+		$\displaystyle \frac{0.59939 z^2 - 1.5629 z + 1}{-0.016666 z^2 - 0.0030992 z + 0.019765}$ &
+		$\displaystyle \frac{16.4526 z^2 - 42.9003 z + 27.449}{-0.45747 z^2 - 0.54253 z + 1}$ \\ \hline
+		
+		0.0020866 &
+		$\displaystyle \frac{0.047884 z^2 + 0.067322 z}{0.35926 z^2 - 1.2439 z + 1}$ &
+		$\displaystyle \frac{0.35926 z^2 - 1.2439 z + 1}{-0.047884 z^2 - 0.019439 z + 0.067322}$ &
+		$\displaystyle \frac{3.1184 z^2 - 10.7972 z + 8.6801}{-0.41564 z^2 - 0.58436 z + 1}$ \\ \hline
+		
+		0.0041731 &
+		$\displaystyle \frac{0.10095 z^2 + 0.19895 z}{0.12907 z^2 - 0.82877 z + 1}$ &
+		$\displaystyle \frac{0.12907 z^2 - 0.82877 z + 1}{-0.10095 z^2 - 0.097996 z + 0.19895}$ &
+		$\displaystyle \frac{0.43038 z^2 - 2.7635 z + 3.3344}{-0.33662 z^2 - 0.66338 z + 1}$ \\ \hline
+		
+	\end{tabular}
+\end{table}
+
