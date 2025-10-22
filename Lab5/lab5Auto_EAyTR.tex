@@ -1,0 +1,190 @@
+% !TeX program = pdflatex
+\documentclass[conference]{IEEEtran}
+\pagestyle{plain}
+
+% ======= Idioma y codificación =======
+\usepackage[spanish, es-nodecimaldot]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+% ======= Bibliografía (IEEE + natbib numérico) =======
+\usepackage[numbers]{natbib}
+\bibliographystyle{IEEEtranN}
+
+% ======= Matemática y tipografía =======
+\usepackage{amsmath, amssymb, amsfonts}
+\usepackage{microtype}
+\usepackage{float}           % (déjalo una sola vez)
+
+% ======= Números y unidades =======
+\usepackage{siunitx}
+\sisetup{
+	output-decimal-marker = {,}, % coma decimal
+	group-separator = {.},
+	group-minimum-digits = 4,
+	per-mode = symbol,
+	round-mode = places,
+	round-precision = 3,
+	table-number-alignment = center
+}
+
+% ======= Gráficos y floats =======
+\usepackage{graphicx}
+% \usepackage{subcaption}   % <-- QUITAR esto en IEEEtran
+\usepackage[caption=false,font=footnotesize]{subfig} % <-- USAR ESTO
+\usepackage{booktabs}
+\usepackage{cuted}
+\usepackage{balance}
+
+% ======= Listas =======
+\usepackage{enumitem}
+\setlist{leftmargin=*, itemsep=2pt, topsep=4pt}
+
+% ======= Colores (para listings) =======
+\usepackage{xcolor}
+
+% ======= LISTINGS =======
+\usepackage{listings}
+\usepackage{listingsutf8}    % ok con pdfLaTeX
+\lstset{
+	inputencoding=utf8,
+	extendedchars=true,
+	basicstyle=\ttfamily\small,
+	breaklines=true, columns=fullflexible, keepspaces=true,
+	frame=single, numbers=left, numberstyle=\tiny, numbersep=6pt,
+	xleftmargin=1em,
+	captionpos=b,
+	literate=
+	{á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'\i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+	{Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+	{ñ}{{\~n}}1 {Ñ}{{\~N}}1
+	{ü}{{\"u}}1 {Ü}{{\"U}}1
+	{¿}{{\textquestiondown}}1 {¡}{{\textexclamdown}}1
+	{º}{{$^\circ$}}1
+}
+
+% Lenguajes
+\lstdefinelanguage{Matlab}{
+	morekeywords={break,case,catch,continue,else,elseif,end,for,function,global,if,otherwise,persistent,return,switch,try,while},
+	sensitive=true,
+	morecomment=[l]\%,
+	morestring=[m]'
+}
+\lstdefinestyle{matlabstyle}{
+	language=Matlab,
+	basicstyle=\ttfamily\small,
+	keywordstyle=\bfseries\color{blue!70!black},
+	commentstyle=\itshape\color{green!40!black},
+	stringstyle=\color{red!60!black},
+	numbers=left, numberstyle=\tiny, numbersep=6pt,
+	frame=single, framerule=0.4pt,
+	columns=fullflexible, keepspaces=true,
+	showstringspaces=false,
+	breaklines=true,
+	tabsize=4,
+	captionpos=b,
+	linewidth=\columnwidth
+}
+
+\lstdefinestyle{cstyle}{
+	language=C,
+	inputencoding=utf8,
+	basicstyle=\ttfamily\small,
+	keywordstyle=\color{blue}\bfseries,
+	stringstyle=\color{red!60!black},
+	commentstyle=\color{green!40!black}\itshape,
+	numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=8pt,
+	showstringspaces=false, breaklines=true, columns=fullflexible, keepspaces=true,
+	frame=single, rulecolor=\color{black!20},
+	linewidth=\columnwidth, xleftmargin=1em
+}
+
+% ======= Macros rápidas =======
+\newcommand{\zetaD}{\zeta}
+\newcommand{\wn}{\omega_n}
+\newcommand{\Ts}{T_s}
+\newcommand{\ESS}{\mathrm{ESS}}
+\newcommand{\Gz}{G(z)}
+\newcommand{\Gs}{G(s)}
+\lstset{
+	mathescape=false,  % asegura que $ no abre modo matemático dentro del listing
+	upquote=true       % comillas rectas en verbatim
+}
+
+% ======= COMPARAR FIGURAS =======
+\newcommand{\compararfigsC}[8]{%
+	\begin{figure}[H]
+		\centering
+		\subfloat[#2\label{#3}]{%
+			\includegraphics[width=0.49\columnwidth]{#1}}
+		\hspace{0.3em}
+		\subfloat[#5\label{#6}]{%
+			\includegraphics[width=0.49\columnwidth]{#4}}
+		\caption{#7}
+		\label{#8}
+	\end{figure}%
+}
+
+% Macro para figura simple
+\newcommand{\insertarfigura}[4]{%
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=#4\linewidth]{#1}
+		\caption{#2}
+		\label{#3}
+	\end{figure}
+}
+
+% Macro figura a dos columnas
+\newcommand{\insertarfigurawide}[5][]{%
+	\begin{figure*}[#1]
+		\centering
+		\includegraphics[width=#5\textwidth]{#2}
+		\caption{#3}
+		\label{#4}
+	\end{figure*}%
+}
+
+% ======= Hyperref al final del preámbulo =======
+\usepackage[unicode,hidelinks]{hyperref}
+
+
+% ======= Metadatos =======
+\title{Práctica de Laboratorio 5: Ubicación Arbitraria de Polos.}
+
+\author{
+	\IEEEauthorblockN{Elías Álvarez}
+	\IEEEauthorblockA{Carrera de Ing. Electrónica \\ 
+		Universidad Católica Nuestra Señora de la Asunción \\
+		Asunción, Paraguay \\
+		Email: elias.alvarez@universidadcatolica.edu.py}
+	\and
+	\IEEEauthorblockN{Tania Romero}
+	\IEEEauthorblockA{Carrera de Ing. Electrónica \\
+		Universidad Católica Nuestra Señora de la Asunción \\
+		Asunción, Paraguay \\
+		Email: tania.romero@universidadcatolica.edu.py}
+	\and
+	\IEEEauthorblockN{\hspace*{2.3em}Docente: Lic. Montserrat González}
+	\IEEEauthorblockA{
+		\hspace*{2.3em}Facultad de Ingeniería \\
+		\hspace*{2.3em}Universidad Católica Nuestra Señora de la Asunción \\
+		\hspace*{2.3em}Asunción, Paraguay}
+	\and
+	\IEEEauthorblockN{\hspace*{2.3em}Docente: PhD. Enrique Vargas}
+	\IEEEauthorblockA{\hspace*{2.3em}Facultad de Ingeniería \\  % ← empuja a la derecha
+		\hspace*{2.3em}Universidad Católica Nuestra Señora de la Asunción \\
+		\hspace*{2.3em}Asunción, Paraguay}
+}
+
+
+
+
+
+
+
+\begin{document}
+	\maketitle
+	
+	
+\end{document}
