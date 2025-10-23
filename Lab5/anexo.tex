@@ -1,0 +1,54 @@
+% ======================= APÉNDICE =======================
+\clearpage
+\onecolumn
+\appendix
+\section{Códigos fuente}
+
+\subsection{Código en C}
+
+\lstinputlisting[
+style=cstyle,
+caption={\texttt{main.c}: bucle principal, adquisición y lógica de control.},
+label={lst:main_c}
+]{c/main.c}
+
+\lstinputlisting[
+style=cstyle,
+caption={\texttt{mat.c}: operaciones matriciales usadas por el controlador digital.},
+label={lst:mat_c}
+]{c/mat.c}
+
+\lstinputlisting[
+style=cstyle,
+caption={\texttt{mat.h}: estructuras y prototipos de funciones.},
+label={lst:mat_h}
+]{c/mat.h}
+
+\subsection{Código en Matlab}
+
+\lstinputlisting[
+style=matlabstyle,
+caption={\texttt{HojaDeCalculos.m}: cálculo de parámetros y generación de figuras.},
+label={lst:hojadecalculos}
+]{matlab/HojaDeCalculos.m}
+
+\lstinputlisting[
+style=matlabstyle,
+caption={\texttt{modeladoSS.m}: modelado en espacio de estados y discretización.},
+label={lst:modeladoSS}
+]{matlab/modeladoSS.m}
+
+\lstinputlisting[
+style=matlabstyle,
+caption={\texttt{sanityCheck.m}: chequeos de consistencia.},
+label={lst:sanityCheck}
+]{matlab/sanityCheck.m}
+
+\lstinputlisting[
+style=matlabstyle,
+caption={\texttt{ss\_sym\_digital.m}: simulación discreta con realimentación de estados.},
+label={lst:ss_sym_digital}
+]{matlab/ss_sym_digital.m}
+
+% \balance
+% \bibliography{refs}
