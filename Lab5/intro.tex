@@ -15,3 +15,31 @@ Finalmente, se comparan los resultados obtenidos mediante simulación en \texttt
 	\item Considerar distintos métodos para el ajuste de los parámetros del controlador y analizar los resultados obtenidos.
 	\item Diseñar el sistema de control en \texttt{MATLAB} e implementar la ecuación en diferencia correspondiente en el \texttt{PSoC}.
 \end{itemize}
+
+
+
+\documentclass{standalone}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning}
+
+\begin{document}
+	\begin{tikzpicture}[
+		block/.style = {draw, rectangle, minimum height=1cm, minimum width=2cm, align=center},
+		sum/.style = {draw, circle, inner sep=0pt, minimum size=6mm},
+		>={Latex}
+		]
+		% Bloques
+		\node[block] (plant) {Planta};
+		\node[block, left=of plant, xshift=-1.5cm] (controller) {Controlador};
+		\node[sum, left=of controller, xshift=-1cm] (sum) {$\sum$};
+		\node[left=of sum] (ref) {$r(t)$};
+		\node[right=of plant] (output) {$y(t)$};
+		
+		% Conexiones
+		\draw[->] (ref) -- (sum);
+		\draw[->] (sum) -- node[above] {$e(t)$} (controller);
+		\draw[->] (controller) -- node[above] {$u(t)$} (plant);
+		\draw[->] (plant) -- (output);
+		\draw[->] (output) |- ++(0,-1) -| node[pos=0.25, below] {$-$} (sum.south);
+	\end{tikzpicture}
+\end{document}
