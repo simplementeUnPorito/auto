@@ -1,0 +1,68 @@
+\section{Resultados}
+
+\subsection{Comparación simulación vs. experimento}
+
+La comparación entre la simulación y las mediciones experimentales se presenta en las Figuras~\ref{fig:comp1} y~\ref{fig:comp2}. 
+En ambos casos se grafican, para las señales $x_1$, $x_2(=y)$ y $u$, la traza experimental frente a la simulada y, en paneles adyacentes, el error correspondiente. 
+Las figuras fueron generadas directamente desde el script de \textit{Matlab} que remuestrea (por ZOH) las señales simuladas a la grilla temporal del osciloscopio, asegurando una comparación punto a punto usando la misma referencia.
+
+
+[INSERTAR IMAGEN]
+%\insertarfigura{matlab/comp1.png}
+%{Comparación simulación vs.\ experimento — Caso~1. Métricas detalladas (RMSE y errores máximos) indicadas en cada panel.}
+%{fig:comp1}{0.98}
+
+[INSERTAR IMAGEN]
+%\insertarfigura{matlab/comp2.png}
+%{Comparación simulación vs.\ experimento — Caso~2. Métricas detalladas (RMSE y errores máximos) indicadas en cada panel.}
+%{fig:comp2}{0.98}
+
+\subsection{Métricas cuantitativas}
+
+A continuación se resumen las métricas principales para cada señal: \textbf{RMSE absoluto}, \textbf{RMSE porcentual}, \textbf{error máximo absoluto} y \textbf{error máximo porcentual}. 
+La Tabla~\ref{tab:metrics_exp1} corresponde al \textit{Caso 1 (Exp1)} y la Tabla~\ref{tab:metrics_exp2} queda preparada para el \textit{Caso 2 (Exp2)}.
+
+\begin{table}[H]
+	\centering
+	\caption{Métricas de comparación — Caso 1 (Exp1).}
+	\label{tab:metrics_exp1}
+	\begin{tabular}{l
+			S[table-format=1.6]
+			S[table-format=2.3]
+			S[table-format=1.6]
+			S[table-format=3.3]}
+		\toprule
+		\textbf{Señal} & \textbf{RMSE\_abs} & \textbf{RMSE\_\%} & \textbf{ErrMax\_abs} & \textbf{ErrMax\_\%} \\
+		\midrule
+		X1 & 0.054706 & 15.542 & 0.25854 & 73.451 \\
+		X2 & 0.056899 & 15.466 & 0.30790 & 83.691 \\
+		U  & 0.298060 & 28.241 & 1.36910 & 129.72 \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\begin{table}[H]
+	\centering
+	\caption{Métricas de comparación — Caso 2 (Exp2).}
+	\label{tab:metrics_exp2}
+	\begin{tabular}{l
+			S[table-format=1.3,table-omit-exponent]
+			S[table-format=1.3,table-omit-exponent]
+			S[table-format=1.3,table-omit-exponent]
+			S[table-format=1.3,table-omit-exponent]}
+		\toprule
+		\textbf{Señal} & \textbf{RMSE\_abs} & \textbf{RMSE\_\%} & \textbf{ErrMax\_abs} & \textbf{ErrMax\_\%} \\
+		\midrule
+		X1 & {-} & {-} & {-} & {-} \\
+		X2 & {-} & {-} & {-} & {-} \\
+		U  & {-} & {-} & {-} & {-} \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\subsection{Discusión y conclusiones}
+
+Se observa que la respuesta de la planta sigue la forma esperada: el \textit{rising time} es muy similar al de la simulación y la señal permanece dentro de los valores previstos. 
+El error medio se concentra alrededor de cero salvo en las zonas próximas a la saturación del actuador, donde aumentan las discrepancias, atribuibles a no linealidades de la planta y a las limitaciones del DAC. 
+Además, el esfuerzo medido se aprecia como una \emph{versión achatada} del esfuerzo simulado, consistente con la compresión que introduce la saturación y el rango dinámico reducido del hardware. 
+En conjunto, los resultados confirman que los controladores \emph{implementables} reproducen la dinámica cualitativa diseñada, a costa de trabajar en un rango de amplitudes menor.
