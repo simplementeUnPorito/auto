@@ -1,0 +1,80 @@
+\section{Implementación del Sistema}
+
+Durante la etapa de implementación no se intentó replicar directamente los controladores diseñados en \textit{Matlab} con las especificaciones originales, 
+ya que se determinó que dichos parámetros no eran implementables con el hardware disponible. 
+Los valores de ganancia requeridos generaban esfuerzos imposibles de aplicar sin saturar el DAC, 
+por lo que incluso antes de probar en el PSoC se optó por \textbf{relajar las especificaciones} 
+y diseñar controladores implementables que preservaran el comportamiento cualitativo del sistema.
+
+En otras palabras, se mantuvo el mismo enfoque de control por realimentación de estados, 
+pero con polos menos agresivos y ganancias adaptadas al rango físico del actuador. 
+Aun así, los controladores “relajados” solamente pudieron trabajar con referencias muy pequeñas 
+($0{,}4$~V para el Caso~1 y $0{,}3$~V para el Caso~2); 
+valores mayores producían saturación inmediata y lo único observable en el osciloscopio era ruido amplificado.
+
+El sistema digital completo se muestra en la Figura~\ref{fig:circuito_digital}. 
+Allí se incluyen los convertidores \textsc{ADC SAR}, 
+el circuito de sincronización con dos flip-flops tipo~D para detectar el fin de conversión de ambos canales, 
+y un módulo \textsc{UART} utilizado para enviar comandos al PSoC. 
+A través de este canal se podían modificar en tiempo real la frecuencia del temporizador, 
+abrir o cerrar el lazo, y cambiar la amplitud de referencia, 
+lo cual facilitó enormemente las pruebas experimentales.
+
+[AÑADIR FOTO CIRCUITO]
+%\insertarfigura{exp/circuitoDigital.png}
+%{Circuito digital implementado en el PSoC, con los módulos SAR, flip-flops de sincronización y UART para control.}
+%{fig:circuito_digital}{0.9}
+
+La planta analógica se muestra en la Figura~\ref{fig:circuito_analogico}. 
+Junto a ella se encuentra el DAC principal, que actúa como actuador aplicando los esfuerzos de control calculados. 
+Además, se incorporó un segundo DAC destinado a generar la referencia en voltios; 
+si bien esta referencia se define digitalmente, resultó útil disponer de su equivalente analógico para visualizarla en el osciloscopio durante las pruebas.
+
+
+[AÑADIR FOTO CIRCUITO]
+%\insertarfigura{exp/circuitoAnalogico.png}
+%{Circuito analógico correspondiente a la planta física utilizada en el experimento.}
+%{fig:circuito_analogico}{0.9}
+
+La referencia digital se generó mediante un temporizador configurable 
+y un registro tipo~T, definiendo el valor de referencia como $\mathrm{refA}/2$ 
+cuando el bit lógico leído era~1 y $-\mathrm{refA}/2$ cuando era~0. 
+De esta forma se obtuvo una señal cuadrada de amplitud controlada, 
+útil para evaluar las respuestas transitorias del sistema.
+
+Es importante destacar que todos los cálculos del controlador se realizaron 
+desacoplando la componente de \textsc{DC}, 
+ya que al no hacerlo se amplifica la componente continua en la etapa de salida 
+y se produce saturación mucho más rápida.
+
+En el firmware, para facilitar el traslado del diseño desde \textit{Matlab} a lenguaje~C, 
+se implementó la librería \texttt{mat.c}. 
+En ella se definieron los tipos de datos y funciones necesarios para realizar las operaciones matriciales requeridas en el cálculo del esfuerzo de control, 
+utilizando únicamente las ganancias $K$ y $N_{\mathrm{var}}$.
+
+Una vez calculado el esfuerzo de control (en valor alterno), 
+se le sumó $V_{\mathrm{DD}}/2$ para montarlo sobre el nivel medio del DAC 
+y mantener compatibilidad con el circuito analógico. 
+De esta manera se logró que las mediciones en el osciloscopio 
+fuesen consistentes con las simulaciones en \textit{Matlab}.
+
+\insertarfigura{exp/openLoop.png}
+{Respuesta experimental del sistema en lazo abierto.}
+{fig:openloop}{0.85}
+
+Las frecuencias de muestreo efectivas fueron de aproximadamente 
+$418{,}5$~Hz para el Caso~1 y $313{,}9$~Hz para el Caso~2. 
+Las Figuras~\ref{fig:exp1} y~\ref{fig:exp2} muestran las respuestas observadas experimentalmente.
+
+\insertarfigura{exp/Exp1.png}
+{Respuesta experimental correspondiente al Caso~1 ($f_s \approx 418{,}5$~Hz).}
+{fig:exp1}{0.85}
+
+\insertarfigura{exp/Exp2.png}
+{Respuesta experimental correspondiente al Caso~2 ($f_s \approx 313{,}9$~Hz).}
+{fig:exp2}{0.85}
+
+Aunque las señales obtenidas presentan cierto nivel de ruido —algo esperable dada su baja amplitud—, 
+se lograron implementar controladores funcionales y estables dentro de las limitaciones del hardware disponible. 
+Las respuestas observadas mantienen la forma y tendencia previstas en las simulaciones, 
+aunque restringidas a un rango reducido de amplitudes.
