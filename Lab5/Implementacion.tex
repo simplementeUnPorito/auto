@@ -9,7 +9,12 @@ ya que se determinó que dichos parámetros no eran implementables con el hardwa
 Los valores de ganancia requeridos generaban esfuerzos imposibles de aplicar sin saturar el DAC, 
 por lo que incluso antes de probar en el PSoC se optó por \textbf{relajar las especificaciones} 
 y diseñar controladores implementables que preservaran el comportamiento cualitativo del sistema.
-
+\insertarfigura{matlab/Sim1}
+{Respuesta experimental correspondiente al Caso~1 ($f_s \approx 418{,}5$~Hz).}
+{fig:sim1_implementada}{0.9}
+\insertarfigura{matlab/Sim2}
+{Respuesta experimental correspondiente al Caso~2 ($f_s \approx 313{,}9$~Hz).}
+{fig:sim2_implementada}{0.9}
 En otras palabras, se mantuvo el mismo enfoque de control por realimentación de estados, 
 pero con polos menos agresivos y ganancias adaptadas al rango físico del actuador. 
 Aun así, los controladores “relajados” solamente pudieron trabajar con referencias muy pequeñas 
