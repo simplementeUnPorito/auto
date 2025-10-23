@@ -1,21 +1,202 @@
 \section{Desarrollo}
 
 \subsection{Modelado del Sistema}
-\subsubsection{Obtener las matrices del sistema $F$, $G$, $H$ y $J$}
-Las matrices F, G, H y J son las matrices que se obtienen antes de la discretización
 
+\subsubsection{Obtención de las matrices del sistema $F$, $G$, $H$ y $J$}
+
+Para el modelado del sistema se parte del circuito mostrado en la Figura~\ref{fig:circuit_planta}, a partir del cual se determinan las ecuaciones de estado mediante el análisis de los lazos de realimentación y las relaciones de tensión en los componentes.
+
+\insertarfigura{Otros/circuit.png}{Circuito de la planta.}{fig:circuit_planta}{1}
+
+El sistema se describe mediante las siguientes ecuaciones en espacio de estados:
+
+\begin{equation}
+	\dot{x}(t) = F\,x(t) + G\,V_i(t)
+	\label{eq:1}
+\end{equation}
+
+\begin{equation}
+	y(t) = H\,x(t) + J\,V_i(t)
+	\label{eq:2}
+\end{equation}
+
+Para obtener las expresiones de las variables de estado, se parte del equivalente del paralelo entre un resistor y un capacitor:
+\[
+R \parallel \frac{1}{sC} = \frac{R}{1 + sRC}
+\]
+
+Considerando que ambos amplificadores operacionales se encuentran en configuración no inversora, se obtienen las siguientes relaciones:
+
+\[
+V_a = \frac{-R_2}{1 + sR_2C_1}\frac{V_i}{R_1}
+\quad \Rightarrow \quad
+sV_a = -\frac{1}{R_1C_1}V_i - \frac{1}{R_2C_1}V_a
+\]
+
+\[
+V_o = -\frac{R_4}{1 + sR_4C_2}\frac{V_a}{R_3}
+\quad \Rightarrow \quad
+sV_o = -\frac{1}{R_3C_2}V_a - \frac{1}{R_4C_2}V_o
+\]
+
+Definiendo como variables de estado $x_1(t) = V_a$ y $x_2(t) = V_o$, las ecuaciones anteriores se expresan en forma matricial como:
+
+\[
+\begin{bmatrix}
+	\dot{x}_1(t) \\[4pt]
+	\dot{x}_2(t)
+\end{bmatrix}
+=
+\begin{bmatrix}
+	-\dfrac{1}{R_2C_1} & 0 \\[4pt]
+	-\dfrac{1}{R_3C_2} & -\dfrac{1}{R_4C_2}
+\end{bmatrix}
+\begin{bmatrix}
+	x_1(t) \\[4pt]
+	x_2(t)
+\end{bmatrix}
++
+\begin{bmatrix}
+	-\dfrac{1}{R_1C_1} \\[4pt]
+	0
+\end{bmatrix}
+V_i(t)
+\]
+
+y la ecuación de salida queda definida como:
+
+\[
+y(t) =
+\begin{bmatrix}
+	0 & 1
+\end{bmatrix}
+\begin{bmatrix}
+	x_1(t) \\[4pt]
+	x_2(t)
+\end{bmatrix}
++ 0\cdot V_i(t)
+\]
+
+Sustituyendo los valores de los componentes 
+$C_1 = 211.1\times10^{-9}\,\text{F}$, 
+$R_1 = 80.55\times10^{3}\,\Omega$, 
+$R_2 = 81.09\times10^{3}\,\Omega$, 
+$C_2 = 103.07\times10^{-9}\,\text{F}$, 
+$R_3 = 14.878\times10^{3}\,\Omega$ y 
+$R_4 = 14.76\times10^{3}\,\Omega$, 
+se obtienen las siguientes matrices numéricas:
+
+\[
+F =
+\begin{bmatrix}
+	-58.42 & 0 \\[4pt]
+	-652.11 & -657.37
+\end{bmatrix}, \quad
+G =
+\begin{bmatrix}
+	-58.81 \\[4pt]
+	0
+\end{bmatrix}, \quad
+H =
+\begin{bmatrix}
+	0 & 1
+\end{bmatrix}
+\]
+\[
+y \quad
+J = 0
+\]
 \subsubsection{Mostrar el diagrama de bloques del sistema}
+
 
 \subsection{Discretización del Sistema}
 
 \subsubsection{Elegir el tiempo de muestreo igual a $T_s = 1~\text{ms}$}
+Para la discretización del sistema se tienen que llegar a las siguientes expresiones:
+\begin{equation}
+	X(k+1) = A\,X(k) + B\,u(k)
+	\label{eq:3}
+\end{equation}
 
+\begin{equation}
+	Y(k) = C\,X(k) + D\,u(k)
+	\label{eq:4}
+\end{equation}
+
+Usando las matrices, calculadas anteriormente se pueden obtener las matrices digitalizadas de la siguiente manera: 
+\[
+A=e^{FT_s}, \quad B=F^{-1}(e^{FT_s}-I)G, \quad C = H \quad y \quad D = J
+\]
 \subsubsection{Obtener las matrices discretas del sistema $A$, $B$, $C$ y $D$}
+Las matrices discretizadas son las siguientes:
+\[
+A =
+\begin{bmatrix}
+	0.943 & 0 \\[4pt]
+	-0.462 & 0.518
+\end{bmatrix}, \quad
+B =
+\begin{bmatrix}
+	-0.0571 \\[4pt]
+	0.0152
+\end{bmatrix}, \quad
+C =
+\begin{bmatrix}
+	0 & 1
+\end{bmatrix}
+\]
+\[
+y \quad
+D = 0
+\]
 
 \subsubsection{Mostrar el diagrama de bloques del sistema discretizado}
 
 \subsubsection{Verificar la controlabilidad y la observabilidad del sistema}
+La matriz de controlabilidad se obtiene de la siguiente manera:
+\[
+	x(n)-A^{n}x(0)=\sum_{n-1}^{i=0}A^{n-i-1}Bu(i)
+\]
+Llegando a la siguiente expresión:
+\[
+	x(n)-A^{n}x(0)=
+	\begin{bmatrix}
+		A^{n-1}B & A^{n-2} &... & AB & B
+	\end{bmatrix}
+	\begin{bmatrix}
+		u(0) \\
+		u(1) \\
+		. \\
+		u(n-1)
+	\end{bmatrix}
+\]
 
+La matriz de controlabilidad es:
+\[
+	\begin{bmatrix}
+		A^{n-1}B & A^{n-2} &... & AB & B
+	\end{bmatrix}
+\]
+Matriz resultante:
+\[
+\begin{bmatrix}
+	-0.05344 & 0 \\
+	0.03435 & 0.01527
+\end{bmatrix}
+\]
+El rango resultante de la matriz es $n = 2$
+Para la matriz de observabilidad la expresión inicial es:
+\[
+	Y(n-1)-\sum_{n-2}^{i = 0}-\sum_{n-2}^{i = 0}Bu(i) = CA^{n-1}X(0)
+\]
+resultando en la matriz de observabilidad en :
+\[
+\begin{bmatrix}
+	CA^{-1} \\
+	: \\
+	CA^{-n} 
+\end{bmatrix}
+\]
 \subsubsection{Comparar los resultados obtenidos con las simulaciones realizadas en \texttt{MATLAB}}
 
 

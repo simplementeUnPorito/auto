@@ -18,24 +18,3 @@ Finalmente, se comparan los resultados obtenidos mediante simulación en \texttt
 
 
 
-\begin{figure}[!t]
-	\centering
-	\begin{tikzpicture}[
-		block/.style={draw,rectangle,minimum height=1cm,minimum width=2cm,align=center},
-		sum/.style={draw,circle,inner sep=0pt,minimum size=6mm},
-		>={Latex}
-		]
-		\node[block] (plant) {Planta};
-		\node[block, left=of plant, xshift=-1.5cm] (controller) {Controlador};
-		\node[sum, left=of controller, xshift=-1cm] (sum) {$\sum$};
-		\node[left=of sum] (ref) {$r(t)$};
-		\node[right=of plant] (output) {$y(t)$};
-		\draw[->] (ref) -- (sum);
-		\draw[->] (sum) -- node[above] {$e(t)$} (controller);
-		\draw[->] (controller) -- node[above] {$u(t)$} (plant);
-		\draw[->] (plant) -- (output);
-		\draw[->] (output) |- ++(0,-1) -| node[pos=0.25, below] {$-$} (sum.south);
-	\end{tikzpicture}
-	\caption{Diagrama de bloques del sistema de control.}
-	\label{fig:diagrama_control}
-\end{figure}
