@@ -38,7 +38,7 @@ Tn = 1/fn;
 
 
 %% Parametros
-Ts = [Tn/2,Tn/1.5]; 
+Ts = [Tn/2,Tn/1.5]; %[1e-3,1e-3];%
 wn_obj = 4*abs(max(zpk(Gc).P{1}));
 zita_obj = 0.7;
 poloObj = @(zita,wn,Ts) exp(Ts*wn*(-zita+1j*sqrt(1-zita^2)));
@@ -72,13 +72,13 @@ end
 
 
 %%
-A = [0.5,0.4];
+A = [0.4,0.3];
 r = cell(2);
 r = { A(1)/2.*[-ones(1,50), ones(1,50)], ...
       A(2)/2.*[-ones(1,100), ones(1,100)] };
-
+VDDA2=2.5;
 for i = 1:length(sysCL)
-    sysi = ss(sysCL{i});
+    sysi = sysCL{i};
 
     % === REFERENCIA de esta iteración, como columna ===
     ri = r{i}(:);
@@ -86,10 +86,7 @@ for i = 1:length(sysCL)
     % === Simulación ===
     [X, Y, U] = ss_sym_digital(sysi, ri, K{i}, K0{i}, [0;0],0);
 
-    % (si querés offset DC)
-    X = 2.024 + X;
-    Y = 2.024 + Y;
-    U = 2.024 + U;
+ 
 
     % === Tiempo consistente con la referencia usada ===
     N  = numel(ri);
@@ -106,8 +103,8 @@ for i = 1:length(sysCL)
 
     % y & r
     ax = nexttile(tl); hold(ax,'on');
-    stairs(ax, t, Y(:), 'LineWidth', 1.6);             % y como vector
-    stairs(ax, t, 2.024 + ri, '--', 'LineWidth', 1.2); % r alineada a t
+    stairs(ax, t, VDDA2+Y(:), 'LineWidth', 1.6);             % y como vector
+    stairs(ax, t, VDDA2 + ri, '--', 'LineWidth', 1.2); % r alineada a t
     grid(ax,'on'); grid(ax,'minor'); ylabel(ax,'y, r');
     legend(ax, {'y','r'}, 'Location','best');
     title(ax, sprintf('CL #%d — Salida y referencia', i));
@@ -115,14 +112,14 @@ for i = 1:length(sysCL)
     % estados
     for k = 1:n
         axk = nexttile(tl);
-        stairs(axk, t, X(:,k), 'LineWidth', 1.4);
+        stairs(axk, t, VDDA2+X(:,k), 'LineWidth', 1.4);
         grid(axk,'on'); grid(axk,'minor'); ylabel(axk, sprintf('x_%d',k));
         if k==1, title(axk, 'Estados'); end
     end
 
     % u
     axu = nexttile(tl);
-    stairs(axu, t, U(:), 'LineWidth', 1.3);
+    stairs(axu, t, VDDA2+U(:), 'LineWidth', 1.3);
     grid(axu,'on'); grid(axu,'minor'); ylabel(axu,'u'); xlabel(axu,'Tiempo [s]');
     title(axu,'Esfuerzo de control');
 
@@ -147,3 +144,182 @@ for i = 1:length(sysCL)
         title(rightAx, sprintf('Polos/Ceros (manual) — fs=%.4g Hz', 1/sysi.Ts));
     end
 end
+
+
+%% === COMPARACIÓN CON RESULTADOS EXPERIMENTALES ===
+exp_files = {'./Exp1.csv', './Exp2.csv'};
+Ts_exp = 199.99999495E-6;   
+VDDA2 = 2.5;                        % para coherencia con simulación
+% Tabla vacía robusta
+varNames = {'Caso','Ts_sim','Ts_exp','RMSE_y','RMSE_u','MeanErr_y','MeanErr_u'};
+varTypes = repmat({'double'}, 1, numel(varNames));
+comparacion = table('Size',[0 numel(varNames)], ...
+    'VariableTypes',varTypes, 'VariableNames',varNames);
+
+for i = 1:length(exp_files)
+    fprintf('=== Caso %d ===\n', i);
+
+    % --- Cargar CSV (sin depender de nombres de columnas) ---
+    % Si tus CSV tienen cabecera, readmatrix igual la ignora y traga los números.
+    M = readmatrix(exp_files{i});
+
+    % Columnas: E=5 (U), K=11 (X1), Q=17 (X2=Y), W=23 (ref)
+    Uexp  = M(:,5);
+    X1exp = M(:,11);          %#ok<NASGU> % lo cargas por si querés guardarlo
+    X2exp = M(:,17);          % salida/estado 2
+    Rexp  = M(:,23);
+
+    % Limpiar NaN de final si los hay
+    good  = all(~isnan([Uexp, X2exp, Rexp]), 2);
+    Uexp  = Uexp(good);
+    X1exp = X1exp(good);
+    X2exp = X2exp(good);
+    Rexp  = Rexp(good);
+    Uexp = Uexp - mean(Uexp, 'omitnan');
+    X1exp = X1exp- mean(X1exp, 'omitnan');
+    X2exp = X2exp- mean(X2exp, 'omitnan');
+    Rexp  = Rexp- mean(Rexp, 'omitnan');
+         % --- Tiempo experimental (grilla original del osciloscopio) ---
+    Nexp  = numel(Uexp);
+    t_exp = (0:Nexp-1)' * Ts_exp;
+
+    % --- Grilla de simulación (impuesta por el modelo) ---
+    sysi   = sysCL{i};
+    Tfin   = t_exp(end);
+    Ns_sim = floor(Tfin / sysi.Ts) + 1;
+    t_sim  = (0:Ns_sim-1)' * sysi.Ts;
+
+        % --- Referencia para el modelo en grilla t_sim ---
+    % Ya centrada: arriba hiciste Rexp = Rexp - mean(Rexp)
+    r0    = Rexp;  % ya sin DC
+    r_sim = interp1(t_exp(:), r0(:), t_sim(:), 'previous', 'extrap');
+
+    % --- Simulación con la MISMA referencia (a Ts = sysi.Ts) ---
+    [Xsim, Ysim, Usim] = ss_sym_digital(sysi, r_sim, K{i}, K0{i}, [0;0], 0);
+
+    % === Normalizar formas y longitudes ===
+    t_sim = t_sim(:);
+    Xsim  = Xsim(:,:);         % Nx2
+    Ysim  = Ysim(:);           % Nx1
+    Usim  = Usim(:);           % Nx1
+    Rsim  = r_sim(:);          % <- DEFINIR Rsim AQUÍ (misma longitud que t_sim)
+
+    % Asegurar longitudes consistentes (recorte al mínimo común)
+    Lsim  = min([numel(t_sim), size(Xsim,1), numel(Ysim), numel(Usim), numel(Rsim)]);
+    t_sim = t_sim(1:Lsim);
+    Xsim  = Xsim(1:Lsim,:);
+    Ysim  = Ysim(1:Lsim);
+    Usim  = Usim(1:Lsim);
+    Rsim  = Rsim(1:Lsim);
+
+    % --- Re-muestrear SIMULADAS a la grilla experimental t_exp ---
+    % ZOH: 'previous' para no inventar energía
+    X1sim_exp = interp1(t_sim, Xsim(:,1), t_exp, 'previous', 'extrap');
+    Ysim_exp  = interp1(t_sim, Ysim,      t_exp, 'previous', 'extrap');
+    Usim_exp  = interp1(t_sim, Usim,      t_exp, 'previous', 'extrap');
+    Rsim_exp  = interp1(t_sim, Rsim,      t_exp, 'previous', 'extrap');
+
+
+    % --- Alinear longitudes por seguridad (todo sobre t_exp) ---
+    L = min([length(t_exp), length(X1exp), length(X2exp), length(Uexp), ...
+             length(X1sim_exp), length(Ysim_exp), length(Usim_exp), length(Rsim_exp), length(Rexp)]);
+    t_cmp     = t_exp(1:L);
+    X1exp_cmp = X1exp(1:L);   Yexp_cmp = X2exp(1:L);   Uexp_cmp = Uexp(1:L);   Rexp_cmp = Rexp(1:L);
+    X1sim_cmp = X1sim_exp(1:L); Ysim_cmp = Ysim_exp(1:L); Usim_cmp = Usim_exp(1:L); Rsim_cmp = Rsim_exp(1:L);
+
+    % ------------ ERRORES (vectores) ------------
+    % Absolutos
+    err_x1_abs = X1exp_cmp - X1sim_cmp;
+    err_y_abs  = Yexp_cmp  - Ysim_cmp;
+    err_u_abs  = Uexp_cmp  - Usim_cmp;
+
+    % Porcentuales (normalizamos por max|exp| para no explotar cerca de 0)
+    den_x1 = max(abs(X1exp_cmp)); if den_x1 < 1e-9, den_x1 = 1e-9; end
+    den_y  = max(abs(Yexp_cmp));  if den_y  < 1e-9, den_y  = 1e-9; end
+    den_u  = max(abs(Uexp_cmp));  if den_u  < 1e-9, den_u  = 1e-9; end
+
+    err_x1_pct = 100 * err_x1_abs / den_x1;
+    err_y_pct  = 100 * err_y_abs  / den_y;
+    err_u_pct  = 100 * err_u_abs  / den_u;
+
+    % Máximos
+    err_x1_abs_max = max(abs(err_x1_abs));
+    err_y_abs_max  = max(abs(err_y_abs));
+    err_u_abs_max  = max(abs(err_u_abs));
+
+    err_x1_pct_max = max(abs(err_x1_pct));
+    err_y_pct_max  = max(abs(err_y_pct));
+    err_u_pct_max  = max(abs(err_u_pct));
+
+        % ===== RMSE (abs y %) =====
+    RMSE_x1_abs = sqrt(mean(err_x1_abs.^2));
+    RMSE_y_abs  = sqrt(mean(err_y_abs.^2));
+    RMSE_u_abs  = sqrt(mean(err_u_abs.^2));
+
+    RMSE_x1_pct = sqrt(mean(err_x1_pct.^2));
+    RMSE_y_pct  = sqrt(mean(err_y_pct.^2));
+    RMSE_u_pct  = sqrt(mean(err_u_pct.^2));
+
+    % ===== Tabla 3x4 (filas: X1,X2,U | cols: RMSE_abs, RMSE_pct, ErrMax_abs, ErrMax_pct) =====
+    MetricsNames = {'RMSE_abs','RMSE_pct','ErrMax_abs','ErrMax_pct'};
+    ResultCase = table( ...
+        [RMSE_x1_abs; RMSE_y_abs; RMSE_u_abs], ...
+        [RMSE_x1_pct; RMSE_y_pct; RMSE_u_pct], ...
+        [err_x1_abs_max; err_y_abs_max; err_u_abs_max], ...
+        [err_x1_pct_max; err_y_pct_max; err_u_pct_max], ...
+        'VariableNames', MetricsNames, ...
+        'RowNames', {'X1','X2','U'} );
+
+    % Guardamos en struct por si querés usar luego:
+    resultados_por_caso(i).tabla = ResultCase; %#ok<SAGROW>
+    resultados_por_caso(i).t    = t_cmp;
+    resultados_por_caso(i).X1exp_cmp = X1exp_cmp; resultados_por_caso(i).X1sim_cmp = X1sim_cmp; 
+    resultados_por_caso(i).Yexp_cmp  = Yexp_cmp;  resultados_por_caso(i).Ysim_cmp  = Ysim_cmp;
+    resultados_por_caso(i).Uexp_cmp  = Uexp_cmp;  resultados_por_caso(i).Usim_cmp  = Usim_cmp;
+    resultados_por_caso(i).Rexp_cmp  = Rexp_cmp;  resultados_por_caso(i).Rsim_cmp  = Rsim_cmp;
+
+    % (opcional) exportar la tabla del caso i a CSV con nombres de fila:
+    writetable(ResultCase, sprintf('./Comparacion_Metricas_Caso%d.csv', i), 'WriteRowNames', true);
+    disp(ResultCase);
+
+        % ------------ FIGURA: 3 filas x 2 columnas (sobre t_cmp=t_exp recortado) ------------
+    figure('Name', sprintf('Caso %d — Señales y errores (grilla experimental)', i), 'Color', 'w');
+    tl = tiledlayout(3,2,'TileSpacing','compact','Padding','compact');
+
+    % --- Fila 1: X1 ---
+    nexttile; hold on;
+    plot(t_cmp, X1exp_cmp, 'k', 'LineWidth', 1.3);
+    plot(t_cmp, X1sim_cmp, '--', 'LineWidth', 1.2);
+    legend('X1_{exp}','X1_{sim}','Location','best'); grid on; ylabel('X1 [V]');
+    title(sprintf('X1 (exp vs sim) — RMSE=%.3e, RMSE%%=%.2f%%', RMSE_x1_abs, RMSE_x1_pct));
+
+    nexttile;
+    plot(t_cmp, err_x1_abs, 'LineWidth', 1); grid on; ylabel('e_{X1} [V]');
+    title(sprintf('Error X1 — max|e|=%.3e, max|e|%%=%.2f%%', err_x1_abs_max, err_x1_pct_max));
+
+    % --- Fila 2: X2 = Y (con referencia) ---
+    nexttile; hold on;
+    plot(t_cmp, Yexp_cmp, 'k', 'LineWidth', 1.3);
+    plot(t_cmp, Ysim_cmp, '--', 'LineWidth', 1.2);
+    plot(t_cmp, Rexp_cmp, ':',  'LineWidth', 1.0);
+    legend('Y_{exp}','Y_{sim}','r','Location','best'); grid on; ylabel('Y [V]');
+    title(sprintf('X2/Y (exp vs sim) — RMSE=%.3e, RMSE%%=%.2f%%', RMSE_y_abs, RMSE_y_pct));
+
+    nexttile;
+    plot(t_cmp, err_y_abs, 'LineWidth', 1); grid on; ylabel('e_{Y} [V]');
+    title(sprintf('Error Y — max|e|=%.3e, max|e|%%=%.2f%%', err_y_abs_max, err_y_pct_max));
+
+    % --- Fila 3: U ---
+    nexttile; hold on;
+    plot(t_cmp, Uexp_cmp, 'k', 'LineWidth', 1.3);
+    plot(t_cmp, Usim_cmp, '--', 'LineWidth', 1.2);
+    legend('U_{exp}','U_{sim}','Location','best'); grid on; ylabel('U [V]'); xlabel('Tiempo [s]');
+    title(sprintf('U (exp vs sim) — RMSE=%.3e, RMSE%%=%.2f%%', RMSE_u_abs, RMSE_u_pct));
+
+    nexttile;
+    plot(t_cmp, err_u_abs, 'LineWidth', 1); grid on; ylabel('e_{U} [V]'); xlabel('Tiempo [s]');
+    title(sprintf('Error U — max|e|=%.3e, max|e|%%=%.2f%%', err_u_abs_max, err_u_pct_max));
+
+end
+
+writetable(comparacion, './Comparacion_Resultados.csv');
