@@ -102,17 +102,22 @@ H =
 	0 & 1
 \end{bmatrix}
 \]
-\[
-y \quad
-J = 0
-\]
+\begin{equation}
+	y \quad
+	J = 0
+	\label{eq:J}
+\end{equation}
 \subsubsection{Mostrar el diagrama de bloques del sistema}
 
 
 \subsection{Discretización del Sistema}
+\insertarfigura{Otros/Diagramas1.png}{Diagrama de bloques del sistema continuo.}{fig:diag_continuo}{1}
 
-\subsubsection{Elegir el tiempo de muestreo igual a $T_s = 1~\text{ms}$}
-Para la discretización del sistema se tienen que llegar a las siguientes expresiones:
+\subsubsection{Elección del tiempo de muestreo $T_s = 1~\text{ms}$}
+
+Para la discretización del sistema continuo descrito por las ecuaciones~(\ref{eq:1}) y~(\ref{eq:2}), se busca obtener un modelo equivalente en tiempo discreto que relacione las variables de estado y la señal de entrada en instantes de muestreo definidos.  
+Las ecuaciones del sistema discreto se expresan como:
+
 \begin{equation}
 	X(k+1) = A\,X(k) + B\,u(k)
 	\label{eq:3}
@@ -123,81 +128,176 @@ Para la discretización del sistema se tienen que llegar a las siguientes expres
 	\label{eq:4}
 \end{equation}
 
-Usando las matrices, calculadas anteriormente se pueden obtener las matrices digitalizadas de la siguiente manera: 
+Usando las matrices continuas $F$, $G$, $H$ y $J$ obtenidas previamente, las matrices discretas se determinan mediante las siguientes expresiones:
+
 \[
-A=e^{FT_s}, \quad B=F^{-1}(e^{FT_s}-I)G, \quad C = H \quad y \quad D = J
+A = \mathrm{e}^{F T_s}, \qquad 
+B = F^{-1}\!\left(\mathrm{e}^{F T_s} - I\right)G, \qquad 
+C = H \qquad 
 \]
-\subsubsection{Obtener las matrices discretas del sistema $A$, $B$, $C$ y $D$}
-Las matrices discretizadas son las siguientes:
+
+\[
+ \& \quad D = J
+\]
+\subsubsection{Obtención de las matrices discretas $A$, $B$, $C$ y $D$}
+
+Con un tiempo de muestreo $T_s = 1~\text{ms}$, se obtienen las siguientes matrices discretizadas:
+
 \[
 A =
 \begin{bmatrix}
 	0.943 & 0 \\[4pt]
 	-0.462 & 0.518
-\end{bmatrix}, \quad
+\end{bmatrix}, \qquad
 B =
 \begin{bmatrix}
 	-0.0571 \\[4pt]
 	0.0152
+\end{bmatrix}, 
+\]
+\begin{equation}
+	C =
+	\begin{bmatrix}
+		0 & 1
+	\end{bmatrix}, \qquad \& \qquad
+	D = 0
+	\label{eq:d}
+\end{equation}
+
+Estas matrices representan el modelo digital equivalente del sistema continuo, y serán utilizadas posteriormente para el diseño del controlador e implementación en el \texttt{PSoC}.
+
+\subsubsection{Diagrama de bloques del sistema discretizado}
+
+En la Figura~\ref{fig:diag_discreto} se presenta el diagrama de bloques correspondiente al sistema discretizado, donde se observa la relación entre las variables de estado, la entrada $u(k)$ y la salida $Y(k)$.
+
+\insertarfigura{Otros/Diagramas2.png}{Diagrama de bloques del sistema discretizado.}{fig:diag_discreto}{1}
+
+
+\subsubsection{Verificación de la controlabilidad y observabilidad del sistema}
+
+La matriz de controlabilidad se obtiene a partir de la siguiente relación general:
+
+\[
+x(n) - A^{n}x(0) = \sum_{i=0}^{n-1} A^{n-i-1}B\,u(i)
+\]
+
+lo que lleva a la siguiente forma matricial:
+
+\[
+x(n) - A^{n}x(0) =
+\begin{bmatrix}
+	A^{n-1}B & A^{n-2}B & \cdots & AB & B
+\end{bmatrix}
+\begin{bmatrix}
+	u(0) \\[2pt]
+	u(1) \\[2pt]
+	\vdots \\[2pt]
+	u(n-1)
+\end{bmatrix}
+\]
+
+De esta expresión, se define la matriz de controlabilidad como:
+
+\[
+\mathcal{C} =
+\begin{bmatrix}
+	B & AB
+\end{bmatrix}
+\]
+
+Para el sistema analizado, la matriz resultante es:
+
+\[
+\mathcal{C} =
+\begin{bmatrix}
+	-0.05344 & -0.05713 \\[4pt]
+	0.03435 & 0.01527
+\end{bmatrix}
+\]
+
+El rango de esta matriz es $n = 2$, lo que indica que el sistema es completamente controlable.
+
+\bigskip
+La matriz de observabilidad se obtiene a partir de la expresión general:
+
+\[
+Y(n-1) = 
+\begin{bmatrix}
+	C \\[4pt]
+	CA \\[4pt]
+	\vdots \\[4pt]
+	CA^{n-1}
+\end{bmatrix}
+X(0)
+\]
+
+Por lo tanto, la matriz de observabilidad queda definida como:
+
+\[
+\mathcal{O} =
+\begin{bmatrix}
+	C \\[4pt]
+	CA
+\end{bmatrix}
+\]
+
+Sustituyendo los valores del sistema:
+
+\[
+\mathcal{O} =
+\begin{bmatrix}
+	0 & 1 \\[4pt]
+	-0.462 & 0.518
+\end{bmatrix}
+\]
+
+El rango de la matriz de observabilidad también resulta ser $n = 2$.\\  
+Por lo tanto, se concluye que el sistema es **completamente controlable y observable**, cumpliendo con las condiciones necesarias para el diseño de control mediante realimentación de estados.
+
+\subsubsection{Comparar los resultados obtenidos con las simulaciones realizadas en \texttt{MATLAB}}
+\textbf{Resultados de las matrices continuas:}
+\[
+F =
+\begin{bmatrix}
+	-58.42 & 0 \\[4pt]
+	-652.10 & -657.30
+\end{bmatrix}, \quad
+G =
+\begin{bmatrix}
+	-58.81 \\[4pt]
+	0
+\end{bmatrix}, \quad
+H =
+\begin{bmatrix}
+	0 & 1
+\end{bmatrix}
+\]
+
+\[
+	\& \quad
+	J = [\,0\,]
+\]
+
+\textbf{Resultados de las matrices discretas:}
+\[
+A =
+\begin{bmatrix}
+	0.9433 & 0 \\[4pt]
+	-0.4628 & 0.5182
+\end{bmatrix}, \quad
+B =
+\begin{bmatrix}
+	-0.05712 \\[4pt]
+	0.01527
 \end{bmatrix}, \quad
 C =
 \begin{bmatrix}
 	0 & 1
 \end{bmatrix}
 \]
-\[
-y \quad
-D = 0
-\]
 
-\subsubsection{Mostrar el diagrama de bloques del sistema discretizado}
-
-\subsubsection{Verificar la controlabilidad y la observabilidad del sistema}
-La matriz de controlabilidad se obtiene de la siguiente manera:
 \[
-	x(n)-A^{n}x(0)=\sum_{n-1}^{i=0}A^{n-i-1}Bu(i)
+	\& \quad
+	D = [\,0\,]
 \]
-Llegando a la siguiente expresión:
-\[
-	x(n)-A^{n}x(0)=
-	\begin{bmatrix}
-		A^{n-1}B & A^{n-2} &... & AB & B
-	\end{bmatrix}
-	\begin{bmatrix}
-		u(0) \\
-		u(1) \\
-		. \\
-		u(n-1)
-	\end{bmatrix}
-\]
-
-La matriz de controlabilidad es:
-\[
-	\begin{bmatrix}
-		A^{n-1}B & A^{n-2} &... & AB & B
-	\end{bmatrix}
-\]
-Matriz resultante:
-\[
-\begin{bmatrix}
-	-0.05344 & 0 \\
-	0.03435 & 0.01527
-\end{bmatrix}
-\]
-El rango resultante de la matriz es $n = 2$
-Para la matriz de observabilidad la expresión inicial es:
-\[
-	Y(n-1)-\sum_{n-2}^{i = 0}-\sum_{n-2}^{i = 0}Bu(i) = CA^{n-1}X(0)
-\]
-resultando en la matriz de observabilidad en :
-\[
-\begin{bmatrix}
-	CA^{-1} \\
-	: \\
-	CA^{-n} 
-\end{bmatrix}
-\]
-\subsubsection{Comparar los resultados obtenidos con las simulaciones realizadas en \texttt{MATLAB}}
-
-
-
+Se observa que los resultados de las matrices obtenidas son congruentes con los valores calculados en las ecuaciones~(\ref{eq:J}) y~(\ref{eq:d}), verificando la coherencia entre el modelo teórico y los resultados obtenidos mediante \texttt{MATLAB}.
