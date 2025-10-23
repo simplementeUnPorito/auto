@@ -23,6 +23,6 @@ function [X, Y, U] = ss_sym_digital(sys, ref, K, K0, x0,sigma)
     U(N) = K0*ref(N) - K*X(:,N);
     Y(N) = C*X(:,N) + D*U(N);
 
-    % para plot cómodo (N×n)
+    % para plot cómodo (Nxn)
     X = X.'; Y = Y(:); U = U(:);
 end
