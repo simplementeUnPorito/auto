@@ -1,3 +1,7 @@
+
+\insertarfigurawide{Otros/circuitoDigital.png}
+{Circuito digital implementado en el PSoC, con los módulos SAR, flip-flops de sincronización y UART para control.}
+{fig:circuito_digital}{1}
 \section{Implementación del Sistema}
 
 Durante la etapa de implementación no se intentó replicar directamente los controladores diseñados en \textit{Matlab} con las especificaciones originales, 
@@ -11,7 +15,9 @@ pero con polos menos agresivos y ganancias adaptadas al rango físico del actuad
 Aun así, los controladores “relajados” solamente pudieron trabajar con referencias muy pequeñas 
 ($0{,}4$~V para el Caso~1 y $0{,}3$~V para el Caso~2); 
 valores mayores producían saturación inmediata y lo único observable en el osciloscopio era ruido amplificado.
-
+\insertarfigura{Otros/practica.jpg}
+{Fotografía de la práctica.}
+{fig:practica}{0.9}
 El sistema digital completo se muestra en la Figura~\ref{fig:circuito_digital}. 
 Allí se incluyen los convertidores \textsc{ADC SAR}, 
 el circuito de sincronización con dos flip-flops tipo~D para detectar el fin de conversión de ambos canales, 
@@ -20,10 +26,8 @@ A través de este canal se podían modificar en tiempo real la frecuencia del te
 abrir o cerrar el lazo, y cambiar la amplitud de referencia, 
 lo cual facilitó enormemente las pruebas experimentales.
 
-[AÑADIR FOTO CIRCUITO]
-%\insertarfigura{exp/circuitoDigital.png}
-%{Circuito digital implementado en el PSoC, con los módulos SAR, flip-flops de sincronización y UART para control.}
-%{fig:circuito_digital}{0.9}
+
+
 
 La planta analógica se muestra en la Figura~\ref{fig:circuito_analogico}. 
 Junto a ella se encuentra el DAC principal, que actúa como actuador aplicando los esfuerzos de control calculados. 
@@ -31,10 +35,10 @@ Además, se incorporó un segundo DAC destinado a generar la referencia en volti
 si bien esta referencia se define digitalmente, resultó útil disponer de su equivalente analógico para visualizarla en el osciloscopio durante las pruebas.
 
 
-[AÑADIR FOTO CIRCUITO]
-%\insertarfigura{exp/circuitoAnalogico.png}
-%{Circuito analógico correspondiente a la planta física utilizada en el experimento.}
-%{fig:circuito_analogico}{0.9}
+
+\insertarfigura{Otros/circuitoAnalogico.png}
+{Circuito analógico correspondiente a la planta física utilizada en el experimento.}
+{fig:circuito_analogico}{0.9}
 
 La referencia digital se generó mediante un temporizador configurable 
 y un registro tipo~T, definiendo el valor de referencia como $\mathrm{refA}/2$ 
@@ -78,3 +82,4 @@ Aunque las señales obtenidas presentan cierto nivel de ruido —algo esperable 
 se lograron implementar controladores funcionales y estables dentro de las limitaciones del hardware disponible. 
 Las respuestas observadas mantienen la forma y tendencia previstas en las simulaciones, 
 aunque restringidas a un rango reducido de amplitudes.
+
