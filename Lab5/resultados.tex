@@ -1,21 +1,21 @@
 \section{Resultados}
+\insertarfigurawide{matlab/comp1.png}
+{Comparación simulación vs.\ experimento — Caso~1. Métricas detalladas (RMSE y errores máximos) indicadas en cada panel.}
+{fig:comp1}{1}
 
+
+[INSERTAR FIGURA]
+%\insertarfigurawide{matlab/comp2.png}
+%{Comparación simulación vs.\ experimento — Caso~2. Métricas detalladas (RMSE y errores máximos) indicadas en cada panel.}
+%{fig:comp2}{1}
 \subsection{Comparación simulación vs. experimento}
 
 La comparación entre la simulación y las mediciones experimentales se presenta en las Figuras~\ref{fig:comp1} y~\ref{fig:comp2}. 
 En ambos casos se grafican, para las señales $x_1$, $x_2(=y)$ y $u$, la traza experimental frente a la simulada y, en paneles adyacentes, el error correspondiente. 
-Las figuras fueron generadas directamente desde el script de \textit{Matlab} que remuestrea (por ZOH) las señales simuladas a la grilla temporal del osciloscopio, asegurando una comparación punto a punto usando la misma referencia.
+Las figuras fueron generadas directamente desde el script de \textit{Matlab} que remuestrea (por ZOH) las señales simuladas a la grilla temporal del osciloscopio, asegurando una comparación punto a punto usando la misma referencia. 
+De esta forma se garantiza que los resultados reflejen únicamente las diferencias reales entre el modelo teórico y la implementación física.
 
 
-[INSERTAR IMAGEN]
-%\insertarfigura{matlab/comp1.png}
-%{Comparación simulación vs.\ experimento — Caso~1. Métricas detalladas (RMSE y errores máximos) indicadas en cada panel.}
-%{fig:comp1}{0.98}
-
-[INSERTAR IMAGEN]
-%\insertarfigura{matlab/comp2.png}
-%{Comparación simulación vs.\ experimento — Caso~2. Métricas detalladas (RMSE y errores máximos) indicadas en cada panel.}
-%{fig:comp2}{0.98}
 
 \subsection{Métricas cuantitativas}
 
@@ -64,5 +64,8 @@ La Tabla~\ref{tab:metrics_exp1} corresponde al \textit{Caso 1 (Exp1)} y la Tabla
 
 Se observa que la respuesta de la planta sigue la forma esperada: el \textit{rising time} es muy similar al de la simulación y la señal permanece dentro de los valores previstos. 
 El error medio se concentra alrededor de cero salvo en las zonas próximas a la saturación del actuador, donde aumentan las discrepancias, atribuibles a no linealidades de la planta y a las limitaciones del DAC. 
-Además, el esfuerzo medido se aprecia como una \emph{versión achatada} del esfuerzo simulado, consistente con la compresión que introduce la saturación y el rango dinámico reducido del hardware. 
-En conjunto, los resultados confirman que los controladores \emph{implementables} reproducen la dinámica cualitativa diseñada, a costa de trabajar en un rango de amplitudes menor.
+Además, el esfuerzo medido se aprecia como una \emph{versión achatada} del esfuerzo simulado, consistente con la compresión que introduce la saturación y el rango dinámico reducido del hardware.
+
+Es importante notar que las simulaciones no consideran efectos de muestreo imperfecto, ruido en las mediciones ni perturbaciones eléctricas presentes en la práctica. 
+Dado que las señales medidas tienen amplitudes muy pequeñas, incluso un nivel bajo de ruido produce diferencias visibles, lo cual explica parte de las discrepancias observadas entre el modelo y el comportamiento real. 
+En conjunto, los resultados confirman que los controladores \emph{implementables} reproducen la dinámica cualitativa diseñada, con un nivel de error razonable para el contexto experimental y dentro de los márgenes esperados para este tipo de implementación física.
