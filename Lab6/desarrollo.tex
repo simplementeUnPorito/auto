@@ -1,3 +1,219 @@
+
 \section{Desarrollo}
 
-\subsection{Seleccionar un tiempo de muestreo adecuado utilizando los criterios expuestos en clase.}
+
+Considerando la planta analógica esquematizada en la Fig.~\ref{fig:planta_planta}, se procedió a diseñar compensadores digitales utilizando en forma conjunta la técnica de \emph{ubicación arbitraria de polos} y el empleo de \emph{estimadores de estado} en tiempo discreto, tal como lo exige la consigna de la Práctica 6. En esta sección se documentan las decisiones de diseño, los cálculos realizados en \texttt{MATLAB} (código completo en el Apéndice, ver Código~\ref{lst:hojadecalculos}) y la comparación entre las dos arquitecturas de estimador: el \textbf{estimador de predicción} y el \textbf{estimador actual}.
+
+\subsection{Selección del tiempo de muestreo}
+
+El primer paso fue fijar un tiempo de muestreo $T_s$ que permita capturar la dinámica más rápida de la planta. Para ello se partió del modelo continuo obtenido a partir de los valores medidos de resistencias y capacitores:
+\begin{align*}
+	C_1 &= \SI{211.1e-9}{\farad}, & C_2 &= \SI{103.07e-9}{\farad},\\
+	R_1 &= \SI{47e3}{\ohm},       & R_2 &= \SI{81.09e3}{\ohm},\\
+	R_3 &= \SI{6.8e3}{\ohm},      & R_4 &= \SI{14.760e3}{\ohm}.
+\end{align*}
+
+Con estos valores se definieron las constantes de tiempo y las ganancias
+\[
+\tau_1 = R_2 C_1,\qquad \tau_2 = R_4 C_2,\qquad
+k_1 = -\frac{R_2}{R_1},\qquad k_2 = -\frac{R_4}{R_3},
+\]
+y se armó el modelo continuo en espacio de estados:
+\[
+F =
+\begin{bmatrix}
+	-\dfrac{1}{\tau_1} & 0 \\
+	\dfrac{k_2}{\tau_2} & -\dfrac{1}{\tau_2}
+\end{bmatrix},\quad
+G =
+\begin{bmatrix}
+	\dfrac{k_1}{\tau_1} \\[4pt]
+	0
+\end{bmatrix},\quad
+H = \begin{bmatrix} 0 & 1 \end{bmatrix},\quad
+J = 0,
+\]
+que coincide con la planta analógica real.
+
+El cálculo en \texttt{MATLAB} se hizo con el siguiente fragmento (el código completo está en el Apéndice, Código~\ref{lst:hojadecalculos}):
+
+\begin{lstlisting}[style=matlabstyle,caption={Cálculo de $T_s$ a partir del polo continuo más rápido.},label={lst:seleccion_Ts}]
+	clear all; clc; close all;
+	
+	% --- Planta continua (modelo medido) ---
+	C2 = 103.07e-9;  C1 = 211.1e-9;
+	R3 = 6.8e3;      R4 = 14.760e3;
+	R1 = 47e3;       R2 = 81.09e3;
+	
+	tau1 = R2*C1;           k1 = -R2/R1;
+	tau2 = R4*C2;           k2 = -R4/R3;
+	
+	F = [ -1/tau1,     0;
+	k2/tau2, -1/tau2 ];
+	G = [ k1/tau1; 0 ];
+	H = [0 1];  J = 0;
+	
+	sysC = ss(F,G,H,J);
+	Gc   = tf(sysC);
+	
+	% Ts base vía polo más rápido continuo
+	fn = max(abs(zpk(Gc).P{1})) / pi;
+	Tn = 1/fn;
+	Ts = Tn/4;   % 4 muestras por la dinámica más rápida
+	
+	% Discretización
+	sysD = c2d(sysC, Ts, 'zoh');
+	[A,B,C,D] = ssdata(sysD);
+	
+	% Controlabilidad / observabilidad
+	Co = ctrb(A,B);
+	Ob = obsv(A,C);
+	rCo = rank(Co); rOb = rank(Ob);
+\end{lstlisting}
+
+La lógica fue:
+\begin{enumerate}
+	\item obtener los polos continuos de la planta;
+	\item tomar el polo de mayor módulo (el más rápido);
+	\item definir el período asociado $T_n = 1/f_n$;
+	\item fijar el tiempo de muestreo como
+	\[
+	T_s = \frac{T_n}{4},
+	\]
+	es decir, cuatro muestras sobre la parte más rápida de la dinámica.
+\end{enumerate}
+Con ese $T_s$ se discretizó la planta y se verificó que
+\[
+\operatorname{rango}(\mathrm{ctrb}(A,B)) = \operatorname{rango}(\mathrm{obsv}(A,C)) = 2,
+\]
+por lo que el diseño por ubicación de polos y el diseño de observadores son viables en discreto.
+
+\insertarfigurawide{img/circuit.png}{Planta analógica discretizada para el laboratorio.}{fig:planta_planta}{0.8}
+
+\subsection{Diseño del controlador por realimentación de estados}
+
+Con el modelo discreto $(A,B,C,D,T_s)$ se diseñó primero el lazo de control. Se eligió la pareja compleja
+\[
+p_{\text{ctrl}} = 0{,}8 \pm j\,0{,}2
+\]
+porque:
+\begin{itemize}
+	\item queda más lenta que un diseño agresivo, por lo que el esfuerzo de control no se dispara;
+	\item está dentro del círculo unidad y asegura un régimen aceptable;
+	\item está en una zona intermedia respecto de los polos discretizados de la planta.
+\end{itemize}
+La ganancia de realimentación se obtuvo con Ackermann:
+
+\begin{lstlisting}[style=matlabstyle,caption={Cálculo de $K$ y del prefiltro $N_{\text{bar}}$.},label={lst:control_K}]
+	% Polos de control deseados
+	p_ctrl = [0.8 + 1j*0.2; 0.8 - 1j*0.2];
+	
+	% Ganancia de realimentación de estados
+	K = acker(A,B,p_ctrl);
+	
+	% Prefiltro para que y_ss = r (caso SISO y D=0)
+	[~,~,Nbar] = refi(A,B,C,K);
+\end{lstlisting}
+
+La ley de control que se implementó fue entonces
+\[
+u[k] = N_{\text{bar}}\,r[k] - K\,\hat{x}[k],
+\]
+donde \(\hat{x}[k]\) es el \emph{estado estimado}. Esto es así porque en esta planta sólo se mide la salida
+\[
+y[k] = C\,x[k] = x_2[k],
+\]
+y con esa única medición se debe reconstruir el vector completo de estado \(x[k]\); por lo tanto, el estimador no es opcional.
+
+
+\subsection{Diseño de los dos estimadores de estado}
+
+
+A partir de la única medición de la salida \(y[k]\) se debe llegar a reconstruir el vector de estado completo \(x[k] = [x_1\;x_2]^\top\); por eso el estimador es una parte fundamental del diseño. Se implementaron las dos variantes que se piden en el laboratorio:
+
+\begin{enumerate}
+	\item \textbf{Estimador de predicción}:
+	\[
+	\hat{x}[k+1] = A\,\hat{x}[k] + B\,u[k] + L_{\text{pred}}\,(y[k] - C\,\hat{x}[k]).
+	\]
+	\item \textbf{Estimador actual} (con la predicción \(z[k+1]\) que usás en tu código):
+	\[
+	\begin{aligned}
+		z[k+1] &= A\,\hat{x}[k] + B\,u[k],\\
+		\hat{x}[k+1] &= z[k+1] + L_{\text{act}}\,(y[k+1] - C\,z[k+1]).
+	\end{aligned}
+	\]
+\end{enumerate}
+
+Para comparar el efecto de la dinámica del observador se usaron dos ubicaciones en el plano-$z$:
+
+\begin{itemize}
+	\item caso 1 (moderado): \(p_{\text{obs}} = 0{,}4 \pm j\,0{,}4\);
+	\item caso 2 (rápido): \(p_{\text{obs}} = 0{,}2 \pm j\,0{,}2\).
+\end{itemize}
+
+Las ganancias se obtuvieron por dualidad:
+
+\begin{lstlisting}[style=matlabstyle,caption={Ganancias de los dos estimadores.},label={lst:ganancias_obs}]
+	% Polos del observador (cambiar 0.4+0.4j <-> 0.2+0.2j según el caso)
+	p_obs = [0.2+1j*0.2, 0.2-1j*0.2];
+	
+	% Estimador de PREDICCIÓN: corrige con y[k]
+	L_pred = acker(A', C', p_obs).';
+	
+	% Estimador ACTUAL: corrige con y[k+1], usa C*A
+	L_act  = acker(A', (C*A)', p_obs).';
+\end{lstlisting}
+
+La condición buscada fue que los polos del observador queden más cerca del origen que los polos del lazo cerrado \(A - BK\), de modo que el error de estimación desaparezca en pocas muestras y la dinámica dominante siga siendo la de los polos que se ubicaron para la planta.
+
+
+\subsection{Simulación comparativa}
+
+Con $K$, $N_{\text{bar}}$, $L_{\text{pred}}$ y $L_{\text{act}}$ se corrieron dos simulaciones sobre el mismo modelo discreto $(A,B,C,D,T_s)$: una con \texttt{sim\_predictor} y otra con \texttt{sim\_current}. En ambas se usó:
+\begin{itemize}
+	\item la misma referencia alternada;
+	\item las mismas condiciones iniciales no nulas para $x[0]$ y $\hat{x}[0]$;
+	\item y el mismo horizonte de tiempo.
+\end{itemize}
+
+\begin{lstlisting}[style=matlabstyle,caption={Simulación de ambas arquitecturas.},label={lst:simulaciones}]
+	simPred = sim_predictor(A,B,C,D, K, L_pred, Nbar, Ts, Tsim, x0, xh0, r);
+	simPred.title = "Estimador de prediccion";
+	
+	simCurr = sim_current(A,B,C,D, K, L_act,  Nbar, Ts, Tsim, x0, xh0, r);
+	simCurr.title = "Estimador actual";
+\end{lstlisting}
+
+
+% ====== Comparación para polos del observador en 0.4 +/- 0.4j ======
+\compararfigsCwide
+{img/predictor04.png}{Predicción, $p_{\mathrm{obs}}=0{,}4\pm j0{,}4$}{fig:pred_04}
+{img/actual04.png}{Actual, $p_{\mathrm{obs}}=0{,}4\pm j0{,}4$}{fig:act_04}
+{Comparación de respuestas para estimador de predicción y actual con polos de observador moderados.}
+{fig:comp_04}
+{1}
+
+% ====== Comparación para polos del observador en 0.2 +/- 0.2j ======
+\compararfigsCwide
+{img/estimador_predictivo.png}{Predicción, $p_{\mathrm{obs}}=0{,}2\pm j0{,}2$}{fig:pred_02}
+{img/estimador_actual.png}{Actual, $p_{\mathrm{obs}}=0{,}2\pm j0{,}2$}{fig:act_02}
+{Comparación de respuestas para estimador de predicción y actual con polos de observador rápidos.}
+{fig:comp_02}
+{1}
+
+\subsection{Discusión de resultados}
+
+De las cuatro simulaciones se observa que:
+\begin{enumerate}
+	\item Para una misma ubicación de polos del observador, el estimador actual converge en menos muestras que el estimador de predicción.
+	\item Al acelerar los polos del observador (de $0{,}4\pm j0{,}4$ a $0{,}2\pm j0{,}2$), ambos estimadores se vuelven muy rápidos y la diferencia entre sus trayectorias de estado se reduce.
+	\item Como la ley de control es la misma en todos los casos,
+	\[
+	u[k] = N_{\text{bar}} r[k] - K \hat{x}[k],
+	\]
+	la salida en lazo cerrado termina siendo prácticamente igual una vez que el estimador alcanza al estado real.
+	\item La elección de polos del controlador en $0{,}8\pm j0{,}2$ permitió que las diferencias que se ven en las figuras se deban al observador y no a una saturación del actuador.
+\end{enumerate}
+\balance
+\clearpage

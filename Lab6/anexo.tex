@@ -1,0 +1,128 @@
+% ======================= APÉNDICE =======================
+\clearpage
+\onecolumn
+\appendix
+\section{Códigos fuente}
+
+En este anexo se incluyen los archivos en C utilizados en el PSoC para implementar
+los dos esquemas de control (estimador de predicci\'on y estimador actual), as\'i como
+las librer\'ias de apoyo y los scripts de \texttt{MATLAB}.
+
+% ========== 1) Códigos principales ==========
+
+\subsection{C\'odigo en C — Estimador predictivo}
+\IfFileExists{c/predict/main.c}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{main.c}: bucle principal, adquisici\'on y l\'ogica de control con estimador predictivo.},
+	label={lst:main_c_predict}
+	]{c/predict/main.c}
+}{\textbf{(No se encontr\'o el archivo \texttt{c/predict/main.c} al compilar.)}}
+
+\subsection{C\'odigo en C — Estimador actual}
+\IfFileExists{c/current/main.c}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{main.c}: bucle principal, adquisici\'on y l\'ogica de control con estimador actual.},
+	label={lst:main_c_current}
+	]{c/current/main.c}
+}{\textbf{(No se encontr\'o el archivo \texttt{c/current/main.c} al compilar.)}}
+
+\subsection{C\'odigo en C — Versi\'on simplificada (debug)}
+\IfFileExists{c/predict_simple/main.c}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{main.c}: versi\'on simplificada del estimador de predicci\'on.},
+	label={lst:main_c_predict_simple}
+	]{c/predict_simple/main.c}
+}{\textbf{(No se encontr\'o el archivo \texttt{c/predict_simple/main.c} al compilar.)}}
+
+% ========== 2) Librerías comunes ==========
+
+\subsection{Librer\'ias del proyecto}
+
+\IfFileExists{c/Libraries/config.h}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{config.h}: par\'ametros globales del sistema.},
+	label={lst:config_h}
+	]{c/Libraries/config.h}
+}{\textbf{(No se encontr\'o \texttt{c/Libraries/config.h}.)}}
+
+\IfFileExists{c/Libraries/control.c}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{control.c}: c\'alculo de la ley de control.},
+	label={lst:control_c}
+	]{c/Libraries/control.c}
+}{\textbf{(No se encontr\'o \texttt{c/Libraries/control.c}.)}}
+
+\IfFileExists{c/Libraries/control.h}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{control.h}: prototipos y estructuras del m\'odulo de control.},
+	label={lst:control_h}
+	]{c/Libraries/control.h}
+}{\textbf{(No se encontr\'o \texttt{c/Libraries/control.h}.)}}
+
+\IfFileExists{c/Libraries/io.c}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{io.c}: funciones de entrada/salida (ADC, DAC, UART).},
+	label={lst:io_c}
+	]{c/Libraries/io.c}
+}{\textbf{(No se encontr\'o \texttt{c/Libraries/io.c}.)}}
+
+\IfFileExists{c/Libraries/io.h}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{io.h}: prototipos de E/S.},
+	label={lst:io_h}
+	]{c/Libraries/io.h}
+}{\textbf{(No se encontr\'o \texttt{c/Libraries/io.h}.)}}
+
+\IfFileExists{c/Libraries/mat.c}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{mat.c}: operaciones matriciales.},
+	label={lst:mat_c}
+	]{c/Libraries/mat.c}
+}{\textbf{(No se encontr\'o \texttt{c/Libraries/mat.c}.)}}
+
+\IfFileExists{c/Libraries/mat.h}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{mat.h}: definici\'on de \texttt{Mat} y prototipos.},
+	label={lst:mat_h}
+	]{c/Libraries/mat.h}
+}{\textbf{(No se encontr\'o \texttt{c/Libraries/mat.h}.)}}
+
+\IfFileExists{c/Libraries/serial.c}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{serial.c}: funciones de comunicaci\'on serie.},
+	label={lst:serial_c}
+	]{c/Libraries/serial.c}
+}{\textbf{(No se encontr\'o \texttt{c/Libraries/serial.c}.)}}
+
+\IfFileExists{c/Libraries/serial.h}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{serial.h}: prototipos del m\'odulo serie.},
+	label={lst:serial_h}
+	]{c/Libraries/serial.h}
+}{\textbf{(No se encontr\'o \texttt{c/Libraries/serial.h}.)}}
+
+% ========== 3) MATLAB ==========
+
+\subsection{C\'odigo en \texttt{MATLAB}}
+
+\IfFileExists{matlab/HojaDeCalculos.m}{%
+	\lstinputlisting[
+	style=matlabstyle,
+	caption={\texttt{HojaDeCalculos.m}: c\'alculo de par\'ametros y generaci\'on de figuras.},
+	label={lst:hojadecalculos}
+	]{matlab/HojaDeCalculos.m}
+}{\textbf{(No se encontr\'o \texttt{matlab/HojaDeCalculos.m}.)}}
+
+

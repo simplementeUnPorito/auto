@@ -1,0 +1,75 @@
+\balance
+\newpage
+\section{Implementación}
+
+En esta sección se documenta la implementación en el PSoC de los dos esquemas diseñados en \texttt{MATLAB}: el controlador con \emph{estimador de predicción} y el controlador con \emph{estimador actual}, ambos usando los polos del observador en
+\[
+p_{\text{obs}} = 0{,}2 \pm j\,0{,}2.
+\]
+Los códigos fuente completos están en el Apéndice:
+\begin{itemize}
+	\item controlador con estimador de predicción: Código~\ref{lst:main_c_predict};
+	\item controlador con estimador actual: Código~\ref{lst:main_c_current};
+	\item versión reducida para depurar tiempos: Código~\ref{lst:main_c_predict_simple}.
+\end{itemize}
+
+\subsection{Implementación del estimador de predicción}
+
+La primera implementación que se probó en hardware fue la del estimador que corrige en el mismo instante $k$. El proyecto de PSoC quedó armado así:
+
+\begin{itemize}
+	\item \textbf{Página 1}: planta + DAC para inyectar el esfuerzo, como en los labs anteriores.
+	\item \textbf{Página 2}: toda la “circuitería de servicio”: generación/carga de la referencia por UART (amplitud y período del tren de pulsos), ADC para medir la salida y el pin de la ISR conectado al \textit{End of Conversion} del ADC.
+\end{itemize}
+
+\compararfigsC
+{img/esquemap1.png}{PSoC: planta y DAC (pág.~1).}{fig:psoc_pred_p1}
+{img/esquemap2_p.png}{PSoC: ref, UART, ADC e ISR (pág.~2).}{fig:psoc_pred_p2}
+{Implementación en PSoC del controlador con estimador de predicción.}
+{fig:psoc_pred}
+
+El código correspondiente es el Código~\ref{lst:main_c_predict}. La lógica es la misma que en la simulación:
+1) leer $y[k]$ del ADC,
+2) calcular $u[k] = N_{\text{bar}} r[k] - K \hat{x}[k]$,
+3) actualizar $\hat{x}[k{+}1] = A\hat{x}[k] + B u[k] + L_{\text{pred}}(y[k] - C\hat{x}[k])$,
+4) escribir $u[k]$ en el DAC.
+
+En el prototipado funcionó, pero la forma de la respuesta no coincidía con la de la simulación: el esfuerzo tenia una forma diferente y la salida tenía sobreimpulso y un pequeño rizado. Eso se ve en la Fig.~\ref{fig:predictor_feo}.
+
+
+
+La causa fue el \textbf{retardo real} del lazo de interrupción: el cálculo del estimador + el cálculo del control estaban demasiado cerca del siguiente muestreo, así que en vez de aplicar el control en $T_s$ se estaba aplicando “un poquito después”, y eso la simulación no lo contemplaba.
+\insertarfigura{img/predictor_feo.JPG}
+{Respuesta experimental del esquema con estimador de predicción con errores.}
+{fig:predictor_feo}{0.7}
+\subsection{Implementación del estimador actual}
+
+Como el predictor no quedó igual al modelo, se intentó el esquema con \emph{estimador actual}. En este caso solo cambió la segunda página del PSoC (la de la lógica), porque la planta y el DAC quedaron igual.
+
+\insertarfigura{img/esquemap2_a.png}
+{PSoC: esquema modificado para el estimador actual (pág.~2).}
+{fig:psoc_curr_p2}{0.7}
+
+El código usado es  ~\ref{lst:main_c_current}. A diferencia del predictor, la secuencia en la ISR es:
+1) formar la predicción $z[k{+}1] = A\hat{x}[k] + B u[k]$,
+2) aplicar el esfuerzo al DAC,
+3) medir la nueva salida,
+4) corregir $\hat{x}[k{+}1] = z[k{+}1] + L_{\text{act}}(y[k{+}1] - C z[k{+}1])$.
+
+Esta versión, al principio, \textbf{no funcionó siquiera}: La salida oscilaba entre los valores extremos del DAC. Eso nos llevó a revisar tiempos de ejecución con el depurador.
+
+\subsection{Retardo medido y reloj}
+
+Las pausas en la ISR y los mensajes por serie mostraron que el tiempo desde el \textit{End of Conversion} hasta que el DAC actualizaba era comparable con $T_s$. En esas condiciones, la suposición del diseño (“el control se aplica en el mismo instante de muestreo”) deja de ser válida.
+
+Para reducir ese retardo se decidió \textbf{subir la frecuencia del \emph{master clock}} del PSoC. Con más clock, el mismo código C ocupó menos porcentaje del período y las dos versiones (predictor y actual) empezaron a parecerse más al caso ideal.
+
+\compararfigsC
+{img/predictor.JPG}{Predictor con clock aumentado.}{fig:pred_clock}
+{img/actual.JPG}{Actual con clock aumentado.}{fig:curr_clock}
+{Respuestas experimentales después de aumentar el clock del PSoC.}
+{fig:resp_clock}
+
+Se ve que, con el clock más rápido, el sobreimpulso baja y el esfuerzo de control se acerca más al de la simulación. O sea: el problema principal no era “qué estimador usar” sino \textbf{cuánto tarda el micro en hacer las cuentas}.
+
+\balance\clearpage

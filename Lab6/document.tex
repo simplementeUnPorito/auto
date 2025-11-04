@@ -76,6 +76,30 @@
 	{µ}{{\textmu}}1
 }
 
+
+
+% ==== estilo robusto para archivos C con caracteres raros ====
+\lstdefinestyle{cstyle-robusto}{%
+	style=cstyle,
+	inputencoding=latin1,
+	extendedchars=true,
+	% mapeos de los que te están rompiendo:
+	literate=
+	{±}{{+/-}}1
+	{→}{{->}}1
+	{⇒}{{=>}}1
+	{ˆ}{{^}}1
+	{â}{{^}}1
+	{á}{{\'a}}1
+	{é}{{\'e}}1
+	{í}{{\'\i}}1
+	{ó}{{\'o}}1
+	{ú}{{\'u}}1
+	{ñ}{{\~n}}1
+	{Ñ}{{\~N}}1
+}
+
+
 % Lenguaje Matlab (una sola definición)
 \lstdefinelanguage{Matlab}{
 	morekeywords={break,case,catch,continue,else,elseif,end,for,function,global,if,otherwise,persistent,return,switch,try,while,classdef,properties,methods},
@@ -157,6 +181,19 @@
 	\end{figure*}%
 }
 
+
+\newcommand{\compararfigsCwide}[9]{%
+	\begin{figure*}[!t]
+		\centering
+		\subfloat[#2\label{#3}]{%
+			\includegraphics[width=#9\textwidth]{#1}}
+		\hspace{0.3em}
+		\subfloat[#5\label{#6}]{%
+			\includegraphics[width=#9\textwidth]{#4}}
+		\caption{#7}
+		\label{#8}
+	\end{figure*}%
+}
 % ======= Hyperref al final del preámbulo =======
 \usepackage[unicode,hidelinks]{hyperref}
 
@@ -191,5 +228,7 @@
 	\maketitle
 	\input{intro.tex}
 	\input{desarrollo.tex}
-	
+	\input{implementacion.tex}
+	\input{resultados.tex}
+	\input{anexo.tex}
 \end{document}

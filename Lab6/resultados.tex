@@ -1,0 +1,66 @@
+% =========================================================
+\newpage
+\section{Resultados}
+
+En las figuras anteriores se aprecia que la implementación con un tiempo de muestreo insuficiente difiere notablemente de la respuesta esperada, mientras que tanto el observador \textit{predictivo} como el \textit{actual} logran un desempeño similar al de la simulación, aunque con un sobreimpulso mayor al teórico. 
+Las discrepancias se explican principalmente por las tolerancias de los componentes pasivos, pequeñas desviaciones en las ganancias reales del sistema y efectos de cuantización de los conversores DAC/ADC.
+
+
+
+\begin{table}[!t]
+	\centering
+	\caption{Comparación experimental y simulada del desempeño.}
+	\label{tab:desempeno_exp}
+	\begin{tabular}{
+			l
+			S
+			S}
+		\toprule
+		\textbf{Caso} & {$t_s$ [ms]} & {OS [\%]} \\
+		\midrule
+		Predictor (Sim)        & 7.00  & 4.6  \\
+		Predictor (clock bajo) & 3.58  & <10 \\
+		Predictor (clock alto) & 6.52  & 18.6  \\
+		Actual (Sim)           & 7.00  & 4.6  \\
+		Actual (clock alto)    & 5.94  & $\approx10$ \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+La tabla~\ref{tab:desempeno_exp} resume los valores medidos y simulados. 
+Se observa que con el \emph{clock} bajo la respuesta dista mucho de la esperada, evidenciando la importancia del período de que se cumplan los supuestos en el diseño. 
+En cambio, con el \emph{clock} alto, ambas variantes del observador mantienen una dinámica coherente con lo diseñado, aunque con un sobreimpulso mayor al simulado. 
+El incremento del OS puede atribuirse a las tolerancias de resistencias y capacitores, a la dispersión de los polos reales respecto a los teóricos y a las no idealidades del hardware. 
+
+En conjunto, los resultados confirman que ambos esquemas de estimador son implementables y que \textbf{la elección adecuada del $T_s$ y del reloj interno del PSoC es tan determinante como la ubicación de polos} para lograr un control estable y preciso.
+\balance
+
+
+
+\onecolumn
+
+\compararfigsC
+{img/predictor_feo.JPG}{Estimador de predicción (clock original).}{fig:resp_pred_clk0}
+{img/predictor.JPG}{Estimador predicción (clock aumentado).}{fig:resp_act_clk0}
+{Respuestas experimentales cambiando el clock.}
+{fig:cmp1}
+
+
+
+\compararfigsC
+{img/predictor.JPG}{Estimador de predicción (clock aumentado).}{fig:resp_pred_clk1}
+{img/actual.JPG}{Estimador actual (clock aumentado).}{fig:resp_act_clk1}
+{Respuestas experimentales con el clock aumentado.}
+{fig:cmp2}
+
+\compararfigsC
+{img/predictor.JPG}{Estimador de predicción (clock aumentado).}{fig:resp_pred_clk1}
+{img/estimador_predictivo.png}{Estimador de predicción (simulación).}{fig:resp_act_clk1}
+{Respuesta experimental con el clock aumentado vs simulación.}
+{fig:cmp3}
+
+\compararfigsC
+{img/actual.JPG}{Estimador de actual (clock aumentado).}{fig:resp_pred_clk1}
+{img/estimador_actual.png}{Estimador de actual (simulación).}{fig:resp_act_clk1}
+{Respuesta experimental con el clock aumentado vs simulación.}
+{fig:cmp4}
