@@ -1,0 +1,42 @@
+% ======================= APÉNDICE =======================
+\clearpage
+\onecolumn
+\appendix
+\section{Códigos fuente}
+
+En este anexo se incluyen los archivos utilizados para el diseño y la implementación:
+(i) la hoja de cálculos y simulación en \texttt{MATLAB}, y
+(ii) los dos \texttt{main.c} del PSoC para los esquemas \emph{predictivo} y \emph{actual}.
+El código completo se referencia a continuación.
+
+% ========== 1) MATLAB ==========
+\subsection{Hoja de cálculos y simulaciones (\texttt{MATLAB})}
+
+\IfFileExists{matlab/HojaDeCalculos.m}{%
+	\lstinputlisting[
+	style=matlabstyle,
+	caption={\texttt{HojaDeCalculos.m}: cálculo de parámetros, diseño (K, N\_bar, L, K\_1, K\_2) y generación de gráficos (respuestas y mapas de polos).},
+	label={lst:hojadecalculos}
+	]{matlab/HojaDeCalculos.m}
+}{\textbf{(No se encontró \texttt{matlab/HojaDeCalculos.m}.)}}
+
+% ========== 2) PSoC — C ==========
+\subsection{PSoC — Estimador predictivo (\texttt{C})}
+
+\IfFileExists{c/main_pred.c}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{main\_pred.c}: bucle principal, ISR de adquisición y ley de control con estimador \emph{predictivo}; orden de actualización: medir $\rightarrow$ controlar $\rightarrow$ estimar.},
+	label={lst:main_pred}
+	]{c/main_pred.c}
+}{\textbf{(No se encontró \texttt{c/main\_pred.c}.)}}
+
+\subsection{PSoC — Estimador actual (\texttt{C})}
+
+\IfFileExists{c/main_curr.c}{%
+	\lstinputlisting[
+	style=cstyle-robusto,
+	caption={\texttt{main\_curr.c}: bucle principal, ISR de adquisición y ley de control con estimador \emph{actual}; orden de actualización: predecir $z_k$ $\rightarrow$ controlar $\rightarrow$ medir $y_{k+1}$ $\rightarrow$ corregir.},
+	label={lst:main_curr}
+	]{c/main_curr.c}
+}{\textbf{(No se encontró \texttt{c/main\_curr.c}.)}}

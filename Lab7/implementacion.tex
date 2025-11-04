@@ -1,0 +1,23 @@
+
+\section{Implementación}
+
+En este laboratorio se reutilizaron los proyectos del Lab~6 (\emph{predictivo} y \emph{actual}) manteniendo la misma estructura de hardware en el PSoC.  
+La única modificación fue la incorporación del integrador en el código C, lo que permitió que ambos esquemas trabajaran ahora en lazo cerrado con acción integral.
+
+\[
+v_{k+1} = v_k + (r_k - y_k),
+\qquad
+u_k = K_1 v_{k+1} - K_2 \hat{x}_k.
+\]
+
+Los bloques físicos (planta, DAC, ADC, UART e ISR de adquisición) se mantuvieron idénticos al laboratorio anterior, por lo que la adaptación fue directa y sin cambios en el diagrama del sistema.
+
+\compararfigsC
+{placeholder.png}{Implementación del controlador predictivo con integrador.}{fig:impl_pred}
+{placeholder.png}{Implementación del controlador actual con integrador.}{fig:impl_curr}
+{Implementaciones en PSoC de los esquemas con acción integral.}
+{fig:impl_psoc}
+
+Ambos códigos —\texttt{main\_pred.c} y \texttt{main\_curr.c}— se ejecutaron correctamente en la placa, mostrando un seguimiento más robusto y una reducción del error estacionario frente a perturbaciones.
+
+\balance

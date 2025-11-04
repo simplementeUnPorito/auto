@@ -1,0 +1,252 @@
+% !TeX program = pdflatex
+\documentclass[conference]{IEEEtran}
+
+% ======= Idioma y codificación =======
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish, es-nodecimaldot]{babel}
+\usepackage{microtype}
+
+% ======= Matemática =======
+\usepackage{amsmath, amssymb, amsfonts}
+
+% ======= Colores y gráficos =======
+\usepackage{xcolor}
+\usepackage{graphicx}
+% \usepackage{subcaption} % <-- NO usar en IEEEtran
+\usepackage[caption=false,font=footnotesize]{subfig} % correcto con IEEEtran
+\usepackage{float}
+\usepackage{booktabs}
+
+% ======= Números y unidades =======
+\usepackage{siunitx}
+\sisetup{
+	output-decimal-marker = {,}, % coma decimal
+	group-separator = {.},
+	group-minimum-digits = 4,
+	per-mode = symbol,
+	round-mode = places,
+	round-precision = 3,
+	table-number-alignment = center
+}
+
+% ======= Maquetación 2 col. especial / balance =======
+\usepackage{cuted}
+\usepackage{balance}
+
+% ======= Listas =======
+\usepackage{enumitem}
+\setlist{leftmargin=*, itemsep=2pt, topsep=4pt}
+
+% ======= Bibliografía (IEEE + natbib numérico) =======
+\usepackage[numbers]{natbib}
+\bibliographystyle{IEEEtranN}
+
+% ======= Listados de código (cargar paquetes ANTES de \lstset) =======
+\usepackage{listings}
+\usepackage{listingsutf8}
+
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning}
+
+% Config global de listings: aceptar UTF-8 y caer a Latin1 si el archivo no es UTF-8 puro
+\lstset{
+	inputencoding=utf8/latin1,
+	extendedchars=true,
+	upquote=true,
+	breaklines=true,
+	columns=fullflexible,
+	keepspaces=true,
+	frame=single,
+	numbers=left, numberstyle=\tiny, numbersep=6pt,
+	xleftmargin=1em,
+	captionpos=b,
+	% Mapeos para Unicode y símbolos frecuentes en tus .c/.m (pdfLaTeX)
+	literate=
+	{á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'\i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+	{Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+	{ñ}{{\~n}}1 {Ñ}{{\~N}}1
+	{ü}{{\"u}}1 {Ü}{{\"U}}1
+	{¿}{{\textquestiondown}}1 {¡}{{\textexclamdown}}1
+	{º}{{$^\circ$}}1
+	{“}{{``}}1 {”}{{''}}1 {‘}{{`}}1 {’}{{'}}1
+	{—}{{---}}1 {–}{{--}}1
+	{→}{{\textrightarrow}}1
+	{≈}{{$\approx$}}1
+	{µ}{{\textmu}}1
+}
+
+% ==== estilo robusto para archivos C con caracteres raros ====
+\lstdefinestyle{cstyle-robusto}{%
+	style=cstyle,
+	inputencoding=latin1,
+	extendedchars=true,
+	% mapeos de los que te están rompiendo:
+	literate=
+	{±}{{+/-}}1
+	{→}{{->}}1
+	{⇒}{{=>}}1
+	{ˆ}{{^}}1
+	{â}{{^}}1
+	{á}{{\'a}}1
+	{é}{{\'e}}1
+	{í}{{\'\i}}1
+	{ó}{{\'o}}1
+	{ú}{{\'u}}1
+	{ñ}{{\~n}}1
+	{Ñ}{{\~N}}1
+}
+
+% Lenguaje Matlab (una sola definición)
+\lstdefinelanguage{Matlab}{
+	morekeywords={break,case,catch,continue,else,elseif,end,for,function,global,if,otherwise,persistent,return,switch,try,while,classdef,properties,methods},
+	sensitive=true,
+	morecomment=[l]\%,
+	morecomment=[s]{\%\{}{\%\}},
+	morestring=[m]',
+}
+
+% Estilos por lenguaje
+\lstdefinestyle{cstyle}{
+	language=C,
+	inputencoding=utf8,
+	basicstyle=\ttfamily\small,
+	keywordstyle=\color{blue}\bfseries,
+	stringstyle=\color{red!60!black},
+	commentstyle=\color{green!40!black}\itshape,
+	numbers=left, numberstyle=\tiny, stepnumber=1, numbersep=8pt,
+	showstringspaces=false, breaklines=true, columns=fullflexible, keepspaces=true,
+	frame=single, rulecolor=\color{black!20},
+	linewidth=\columnwidth, xleftmargin=1em
+}
+
+\lstdefinestyle{matlabstyle}{
+	language=Matlab,
+	inputencoding=utf8,
+	basicstyle=\ttfamily\small,
+	keywordstyle=\bfseries\color{blue!70!black},
+	commentstyle=\itshape\color{green!40!black},
+	stringstyle=\color{red!60!black},
+	numbers=left, numberstyle=\tiny, numbersep=6pt,
+	frame=single, framerule=0.4pt,
+	columns=fullflexible, keepspaces=true,
+	showstringspaces=false,
+	breaklines=true,
+	tabsize=4,
+	captionpos=b,
+	linewidth=\columnwidth,
+	xleftmargin=1em
+}
+
+% ======= Macros rápidas =======
+\newcommand{\zetaD}{\zeta}
+\newcommand{\wn}{\omega_n}
+\newcommand{\Ts}{T_s}
+\newcommand{\ESS}{\mathrm{ESS}}
+\newcommand{\Gz}{G(z)}
+\newcommand{\Gs}{G(s)}
+\newcommand{\Nbar}{N_{\mathrm{bar}}}   % <-- útil para seguimiento
+\newcommand{\Ki}{K_i}                  % <-- ganancia integral (esp. de estados)
+\newcommand{\Aaug}{A_{\mathrm{aug}}}   % <-- matrices aumentadas
+\newcommand{\Baug}{B_{\mathrm{aug}}}
+\newcommand{\Caug}{C_{\mathrm{aug}}}
+
+% ======= Macros de figuras =======
+\newcommand{\compararfigsC}[8]{%
+	\begin{figure}[!t]
+		\centering
+		\subfloat[#2\label{#3}]{%
+			\includegraphics[width=0.49\columnwidth]{#1}}
+		\hspace{0.3em}
+		\subfloat[#5\label{#6}]{%
+			\includegraphics[width=0.49\columnwidth]{#4}}
+		\caption{#7}
+		\label{#8}
+	\end{figure}%
+}
+
+\newcommand{\insertarfigura}[4]{%
+	\begin{figure}[!t]
+		\centering
+		\includegraphics[width=#4\linewidth]{#1}
+		\caption{#2}
+		\label{#3}
+	\end{figure}
+}
+
+\newcommand{\insertarfigurawide}[5][]{%
+	\begin{figure*}[#1]
+		\centering
+		\includegraphics[width=#5\textwidth]{#2}
+		\caption{#3}
+		\label{#4}
+	\end{figure*}%
+}
+
+\newcommand{\compararfigsCwide}[9]{%
+	\begin{figure*}[!t]
+		\centering
+		\subfloat[#2\label{#3}]{%
+			\includegraphics[width=#9\textwidth]{#1}}
+		\hspace{0.3em}
+		\subfloat[#5\label{#6}]{%
+			\includegraphics[width=#9\textwidth]{#4}}
+		\caption{#7}
+		\label{#8}
+	\end{figure*}%
+}
+
+% ======= Hyperref al final del preámbulo =======
+\usepackage[unicode,hidelinks]{hyperref}
+
+% ======= Metadatos =======
+\title{Práctica de Laboratorio 7: Sistemas de seguimiento — Control integral en el espacio de estados}
+
+\author{
+	\IEEEauthorblockN{Elías Álvarez}
+	\IEEEauthorblockA{Carrera de Ing. Electrónica\\
+		Universidad Católica Nuestra Señora de la Asunción\\
+		Asunción, Paraguay\\
+		Email: elias.alvarez@universidadcatolica.edu.py}
+	\and
+	\IEEEauthorblockN{Tania Romero}
+	\IEEEauthorblockA{Carrera de Ing. Electrónica\\
+		Universidad Católica Nuestra Señora de la Asunción\\
+		Asunción, Paraguay\\
+		Email: tania.romero@universidadcatolica.edu.py}
+	\and
+	\IEEEauthorblockN{\hspace*{2.3em}Docente: Lic. Montserrat González}
+	\IEEEauthorblockA{\hspace*{2.3em}Facultad de Ingeniería\\
+		\hspace*{2.3em}Universidad Católica Nuestra Señora de la Asunción\\
+		\hspace*{2.3em}Asunción, Paraguay}
+	\and
+	\IEEEauthorblockN{\hspace*{2.3em}Docente: PhD. Enrique Vargas}
+	\IEEEauthorblockA{\hspace*{2.3em}Facultad de Ingeniería\\
+		\hspace*{2.3em}Universidad Católica Nuestra Señora de la Asunción\\
+		\hspace*{2.3em}Asunción, Paraguay}
+}
+
+\begin{document}
+	\maketitle
+	
+	% ======= (Opcional) Resumen de una columna a dos =======
+	% \begin{strip}
+		% \begin{abstract}
+			%     En esta práctica se diseña e implementa un controlador digital con realimentación de estados y acción integral
+			%     para seguimiento de referencia con error estacionario nulo. Se evalúan dos variantes (dinámica del integrador rápida y moderada),
+			%     se comparan resultados de simulación y experimentales en PSoC, y se discuten compromisos entre desempeño y esfuerzo de control.
+			% \end{abstract}
+		% \end{strip}
+	
+	% ======= Contenido (creá estos archivos .tex) =======
+	\input{intro.tex}            % contexto, objetivos, criterios de Ts, referencias (Ogata 6.7; Franklin 8.5)
+	\input{calculos.tex} 
+	\input{implementacion.tex}   % detalles PSoC, mapeos, temporización, antialias, cuantización, saturaciones
+	\input{resultados.tex}       % simulación vs experimental: métricas (tr, OS, ESS, RMSE), esfuerzo de control, figuras
+	\input{anexo.tex}            % códigos C/Matlab, tablas de coeficientes, parámetros medidos
+	
+	% ======= Bibliografía (opcional, si usás refs.bib) =======
+	% \balance
+	% \bibliography{refs}
+	
+\end{document}

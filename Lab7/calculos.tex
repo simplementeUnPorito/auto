@@ -1,0 +1,146 @@
+\section{Cálculos y metodología de diseño}
+
+En esta sección se describe, a nivel conceptual y paso a paso, el flujo de diseño implementado en el script de \texttt{MATLAB}. El código completo se incluye en el \textbf{Anexo}.
+
+\subsection{Modelo continuo y parámetros físicos}
+
+A partir de los valores medidos de resistencias y capacitores se construye el modelo continuo en espacio de estados. Se definen las constantes de tiempo y ganancias:
+\[
+\tau_1 = R_2 C_1,\qquad \tau_2 = R_4 C_2,\qquad
+k_1 = -\frac{R_2}{R_1},\qquad k_2 = -\frac{R_4}{R_3}.
+\]
+Con ello, las matrices del sistema continuo quedan:
+\[
+F=\begin{bmatrix}
+	-\tfrac{1}{\tau_1} & 0\\[3pt]
+	\tfrac{k_2}{\tau_2} & -\tfrac{1}{\tau_2}
+\end{bmatrix},\qquad
+G=\begin{bmatrix}\tfrac{k_1}{\tau_1}\\[3pt] 0\end{bmatrix},\qquad
+H=\begin{bmatrix}0&1\end{bmatrix},\qquad J=0.
+\]
+Se crea \(\mathrm{sysC}=\mathrm{ss}(F,G,H,J)\) y su \(\mathrm{tf}\) asociada para consulta rápida.
+
+\insertarfigura{placeholder.png}{Esquema conceptual de la planta y medición de salida \(y=Cx\).}{fig:planta-concepto}{0.85}
+
+\subsection{Selección de \(T_s\) y discretización \(\text{ZOH}\)}
+
+Para fijar un período de muestreo informado por la dinámica, se estima la frecuencia del polo más rápido del sistema continuo:
+\[
+f_n \approx \frac{\max|\Re\{p_i(\Gs)\}|}{\pi},\qquad T_n=\frac{1}{f_n},
+\]
+y se toma
+\[
+T_s = \frac{T_n}{4},
+\]
+lo que da al menos cuatro muestras sobre la constante de tiempo dominante. Con este \(T_s\) se discretiza por \(\text{ZOH}\):
+\[
+(A,B,C,D)=\mathrm{ssdata}\big(\mathrm{c2d}(\mathrm{sysC},T_s,\texttt{'zoh'})\big).
+\]
+
+\subsection{Realimentación de estados (sin integrador)}
+
+Se elige un par de polos en \(\mathbb{C}\) para el lazo cerrado sin integrador
+\[
+p_{\text{ctrl}}=\{0{,}8\pm j\,0{,}2\},
+\]
+y se calcula la ganancia de estado \(K\) por asignación de polos:
+\[
+K=\mathrm{acker}(A,B,p_{\text{ctrl}}).
+\]
+Para seguimiento de referencia con ganancia unitaria se usa un prefiltro \(N_{\text{bar}}\) (vía rutina \texttt{refi}):
+\[
+u_k = N_{\text{bar}}\,r_k - K\,\hat{x}_k.
+\]
+
+\subsection{Estimadores de estado: predictivo y actual}
+
+Se fijan polos rápidos para el estimador
+\[
+p_{\text{obs}}=\{0{,}2\pm j\,0{,}2\},
+\]
+y se calculan las ganancias:
+\[
+L_{\text{pred}} = \mathrm{acker}(A^\top,C^\top,p_{\text{obs}})^\top,\]
+\[L_{\text{act}}  = \mathrm{acker}(A^\top,(CA)^\top,p_{\text{obs}})^\top.
+\]
+\textbf{Predictivo}: actualiza con la salida en \(k\):
+\[
+\hat{x}_{k+1}=A\hat{x}_k+B u_k + L_{\text{pred}}\big(y_k - C\hat{x}_k\big).
+\]
+\textbf{Actual}: usa la predicción intermedia \(z_k=A\hat{x}_k+B u_k\) y la salida en \(k\!+\!1\):
+\[
+\hat{x}_{k+1}= z_k + L_{\text{act}}\big(y_{k+1}-C z_k\big).
+\]
+
+\subsection{Acción integral en espacio de estados (sistema aumentado)}
+
+Para eliminar error estacionario frente a referencias/perturbaciones constantes se introduce un estado integral \(v_k\) del error \(e_k=r_k-y_k\):
+\[
+v_{k+1}=v_k + e_k = v_k + (r_k - Cx_k).
+\]
+Se define el sistema \emph{aumentado} (Ogata 6.7; Franklin 8.5):
+\[
+\Aaug=\begin{bmatrix}A&B\\[3pt]0& I\end{bmatrix},\quad
+\Baug=\begin{bmatrix}0\\ I\end{bmatrix},\quad
+\Caug=\begin{bmatrix}C & 0\end{bmatrix},
+\]
+y se asignan polos \(\mathcal{P}_i=\{p_{\text{ctrl}},\,p_i\}\) con un polo real adicional \(p_i\) para el integrador (p.\,ej. \(0{,}6\)). Se obtiene
+\[
+K_{\text{aug}}=\mathrm{acker}(\Aaug,\Baug,\mathcal{P}_i) \;\Rightarrow\;
+K_{\text{aug}}=\begin{bmatrix}K_2 & -K_1\end{bmatrix},
+\]
+donde \(K_2\) actúa sobre \(x\) y \(K_1\) sobre \(v\). En el código, para mantener la ley \(u_k=K_1 v_{k} - K_2 \hat{x}_k\) coherente con el prefiltro, se reexpresa \(K_{\text{aug}}\) mediante el sistema auxiliar
+\[
+\underbrace{\begin{bmatrix}A-I & B\\[3pt] CA & CB\end{bmatrix}}_{\textstyle \mathrm{Aux}}
+\]
+y la relación (Ogata 6.19):
+\[
+K_2K_1 = \big(K_{\text{aug}} + [\,0\ \ I\,]\big)\,\mathrm{Aux}^{-1},
+\]
+desde donde se particiona \(K_2\) (componentes sobre \(x\)) y \(K_1\) (componente integral).
+
+Los observadores para el caso con integrador reutilizan el mismo conjunto rápido:
+\[
+L_{\text{pred},i},\; L_{\text{act},i}\quad \text{con}\quad p_{\text{obs},i}=\{0{,}2\pm j\,0{,}2\}.
+\]
+
+\insertarfigura{placeholder.png}{Diagrama de bloques del lazo cerrado con estado integral \(v\) y realimentación \(K=[K_2\ -K_1]\).}{fig:lazo-integral}{0.9}
+
+\subsection{Escenarios de simulación}
+
+Se simulan cuatro configuraciones: (1) estimador \textbf{predictivo} sin integrador; (2) estimador \textbf{actual} sin integrador; (3) \textbf{predictivo + integrador}; (4) \textbf{actual + integrador}.  
+Se usa un escalón \(r\) de amplitud unitaria (con retardo inicial para ver el transitorio) y un ruido de medición \(w\) activado en la segunda mitad de la simulación para contrastar sensibilidad. Se acumula un \emph{offset} de visualización (\( \text{off}=2{,}024\)) para superponer las curvas en escala física.
+
+\begin{itemize}
+	\item \textbf{Leyes de control}:
+	\[
+	\begin{aligned}
+		&\text{sin int:} &&u_k = N_{\text{bar}}\,r_k - K\,\hat{x}_k,\\
+		&\text{con int:} &&u_k = K_1\,v_{k+1} - K_2\,\hat{x}_k,\quad v_{k+1}=v_k+(r_k-y_k).
+	\end{aligned}
+	\]
+	\item \textbf{Observadores}: actualización \emph{predictiva} con \(y_k\) y \emph{actual} con \(y_{k+1}\) vía \(z_k\).
+\end{itemize}
+
+\subsection{Mapas de polos}
+
+Se resumen: (i) polos de planta y lazo cerrado sin integrador, (ii) polos del sistema aumentado y su lazo cerrado, (iii) polos del estimador. Estos gráficos verifican que la asignación de polos (\(\mathrm{acker}\)) produjo la dinámica deseada en \(z\).
+
+\compararfigsCwide
+{placeholder.png}{Mapa sin integrador}
+{fig:poles-sinint}
+{placeholder.png}{Mapa con integrador}
+{fig:poles-int}
+{Mapas de polos: comparación de ubicaciones en \(z\) (planta vs. lazo cerrado y sistema aumentado).}
+{fig:mapas-polos}
+{0.45}
+
+\subsection{Notas finales}
+
+\begin{itemize}
+	\item El criterio de muestreo \(T_s=T_n/4\) equilibra fidelidad y costo computacional.
+	\item La acción integral en espacio de estados, vía sistema aumentado, garantiza \(\mathrm{ESS}=0\) para entradas/perturbaciones constantes, a costa de un posible aumento del esfuerzo de control.
+	\item La elección del polo del integrador (\(p_i\)) permite modular el compromiso entre rapidez de eliminación del error y amplitud de \(u_k\).
+\end{itemize}
+
+\noindent\textit{El script completo de \texttt{MATLAB} utilizado para obtener \(K\), \(N_{\text{bar}}\), \(L\), \(K_1\), \(K_2\) y para generar las simulaciones y mapas de polos se incluye íntegramente en el \textbf{Anexo}.}

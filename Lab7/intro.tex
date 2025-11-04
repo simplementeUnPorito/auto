@@ -1,0 +1,15 @@
+\section{Introducción}
+
+En el laboratorio anterior se trabajó con un sistema en lazo abierto, donde no existía corrección automática ante perturbaciones ni derivas en los componentes. Esto hacía al sistema más sensible y dependiente de la exactitud del modelo.  
+
+En esta práctica se implementa un esquema en \textbf{lazo cerrado} mediante realimentación de estados, incorporando además una \textbf{acción integral} para asegurar seguimiento de referencia con error estacionario nulo. El integrador acumula el error entre la salida y la referencia, mientras que la realimentación permite ajustar la respuesta dinámica de manera precisa mediante la ubicación arbitraria de polos.  
+
+De esta forma se obtiene un controlador más robusto y con mejor comportamiento frente a perturbaciones, combinando la teoría de control en el espacio de estados con la implementación digital en PSoC.  
+
+\section{Objetivos}
+
+\begin{itemize}
+	\item Diseñar un controlador digital en lazo cerrado con realimentación de estados y acción integral.
+	\item Implementar el control en la planta analógica utilizando el PSoC.
+	\item Comparar el desempeño simulado y experimental, analizando la influencia del integrador y la robustez frente a perturbaciones.
+\end{itemize}
