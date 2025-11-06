@@ -1,0 +1,303 @@
+\section{Desarrollo}
+
+\subsection{Modelado del Sistema}
+
+\subsubsection{Obtención de las matrices del sistema $F$, $G$, $H$ y $J$}
+
+Para el modelado del sistema se parte del circuito mostrado en la Figura~\ref{fig:circuit_planta}, a partir del cual se determinan las ecuaciones de estado mediante el análisis de los lazos de realimentación y las relaciones de tensión en los componentes.
+
+\insertarfigura{Otros/circuit.png}{Circuito de la planta.}{fig:circuit_planta}{1}
+
+El sistema se describe mediante las siguientes ecuaciones en espacio de estados:
+
+\begin{equation}
+	\dot{x}(t) = F\,x(t) + G\,V_i(t)
+	\label{eq:1}
+\end{equation}
+
+\begin{equation}
+	y(t) = H\,x(t) + J\,V_i(t)
+	\label{eq:2}
+\end{equation}
+
+Para obtener las expresiones de las variables de estado, se parte del equivalente del paralelo entre un resistor y un capacitor:
+\[
+R \parallel \frac{1}{sC} = \frac{R}{1 + sRC}
+\]
+
+Considerando que ambos amplificadores operacionales se encuentran en configuración no inversora, se obtienen las siguientes relaciones:
+
+\[
+V_a = \frac{-R_2}{1 + sR_2C_1}\frac{V_i}{R_1}
+\quad \Rightarrow \quad
+sV_a = -\frac{1}{R_1C_1}V_i - \frac{1}{R_2C_1}V_a
+\]
+
+\[
+V_o = -\frac{R_4}{1 + sR_4C_2}\frac{V_a}{R_3}
+\quad \Rightarrow \quad
+sV_o = -\frac{1}{R_3C_2}V_a - \frac{1}{R_4C_2}V_o
+\]
+
+Definiendo como variables de estado $x_1(t) = V_a$ y $x_2(t) = V_o$, las ecuaciones anteriores se expresan en forma matricial como:
+
+\[
+\begin{bmatrix}
+	\dot{x}_1(t) \\[4pt]
+	\dot{x}_2(t)
+\end{bmatrix}
+=
+\begin{bmatrix}
+	-\dfrac{1}{R_2C_1} & 0 \\[4pt]
+	-\dfrac{1}{R_3C_2} & -\dfrac{1}{R_4C_2}
+\end{bmatrix}
+\begin{bmatrix}
+	x_1(t) \\[4pt]
+	x_2(t)
+\end{bmatrix}
++
+\begin{bmatrix}
+	-\dfrac{1}{R_1C_1} \\[4pt]
+	0
+\end{bmatrix}
+V_i(t)
+\]
+
+y la ecuación de salida queda definida como:
+
+\[
+y(t) =
+\begin{bmatrix}
+	0 & 1
+\end{bmatrix}
+\begin{bmatrix}
+	x_1(t) \\[4pt]
+	x_2(t)
+\end{bmatrix}
++ 0\cdot V_i(t)
+\]
+
+Sustituyendo los valores de los componentes 
+$C_1 = 211.1\times10^{-9}\,\text{F}$, 
+$R_1 = 80.55\times10^{3}\,\Omega$, 
+$R_2 = 81.09\times10^{3}\,\Omega$, 
+$C_2 = 103.07\times10^{-9}\,\text{F}$, 
+$R_3 = 14.878\times10^{3}\,\Omega$ y 
+$R_4 = 14.76\times10^{3}\,\Omega$, 
+se obtienen las siguientes matrices numéricas:
+
+\[
+F =
+\begin{bmatrix}
+	-58.42 & 0 \\[4pt]
+	-652.11 & -657.37
+\end{bmatrix}, \quad
+G =
+\begin{bmatrix}
+	-58.81 \\[4pt]
+	0
+\end{bmatrix}, \quad
+H =
+\begin{bmatrix}
+	0 & 1
+\end{bmatrix}
+\]
+\begin{equation}
+	y \quad
+	J = 0
+	\label{eq:J}
+\end{equation}
+
+\subsubsection{Mostrar el diagrama de bloques del sistema}
+\insertarfigura{Otros/Diagramas1.png}{Diagrama de bloques del sistema continuo.}{fig:diag_continuo}{1}
+
+
+\subsection{Discretización del Sistema}
+
+\subsubsection{Elección del tiempo de muestreo $T_s = 1.25~\text{ms}$, usado en laboratorios anteriores}
+
+Para la discretización del sistema continuo descrito por las ecuaciones~(\ref{eq:1}) y~(\ref{eq:2}), se busca obtener un modelo equivalente en tiempo discreto que relacione las variables de estado y la señal de entrada en instantes de muestreo definidos.  
+Las ecuaciones del sistema discreto se expresan como:
+
+\begin{equation}
+	X(k+1) = A\,X(k) + B\,u(k)
+	\label{eq:3}
+\end{equation}
+
+\begin{equation}
+	Y(k) = C\,X(k) + D\,u(k)
+	\label{eq:4}
+\end{equation}
+
+Usando las matrices continuas $F$, $G$, $H$ y $J$ obtenidas previamente, las matrices discretas se determinan mediante las siguientes expresiones:
+
+\[
+A = \mathrm{e}^{F T_s}, \qquad 
+B = F^{-1}\!\left(\mathrm{e}^{F T_s} - I\right)G, \qquad 
+C = H \qquad 
+\]
+
+\[
+\& \quad D = J
+\]
+\subsubsection{Obtención de las matrices discretas $A$, $B$, $C$ y $D$}
+
+Con un tiempo de muestreo $T_s = 1~\text{ms}$, se obtienen las siguientes matrices discretizadas:
+
+\[
+A =
+\begin{bmatrix}
+	0.9296 & 0 \\[4pt]
+	-0.5334 & 0.43968
+\end{bmatrix}, \qquad
+B =
+\begin{bmatrix}
+	-0.07089 \\[4pt]
+	0.02261
+\end{bmatrix}, 
+\]
+\begin{equation}
+	C =
+	\begin{bmatrix}
+		0 & 1
+	\end{bmatrix}, \qquad \& \qquad
+	D = 0
+	\label{eq:d}
+\end{equation}
+
+Estas matrices representan el modelo digital equivalente del sistema continuo, y serán utilizadas posteriormente para el diseño del controlador e implementación en el \texttt{PSoC}.
+
+\subsubsection{Diagrama de bloques del sistema discretizado}
+
+En la Figura~\ref{fig:diag_discreto} se presenta el diagrama de bloques correspondiente al sistema discretizado, donde se observa la relación entre las variables de estado, la entrada $u(k)$ y la salida $Y(k)$.
+
+\insertarfigura{Otros/Diagramas2.png}{Diagrama de bloques del sistema discretizado.}{fig:diag_discreto}{1}
+
+
+\subsubsection{Verificación de la controlabilidad y observabilidad del sistema}
+
+La matriz de controlabilidad se obtiene a partir de la siguiente relación general:
+
+\[
+x(n) - A^{n}x(0) = \sum_{i=0}^{n-1} A^{n-i-1}B\,u(i)
+\]
+
+lo que lleva a la siguiente forma matricial:
+
+\[
+x(n) - A^{n}x(0) =
+\begin{bmatrix}
+	A^{n-1}B & A^{n-2}B & \cdots & AB & B
+\end{bmatrix}
+\begin{bmatrix}
+	u(0) \\[2pt]
+	u(1) \\[2pt]
+	\vdots \\[2pt]
+	u(n-1)
+\end{bmatrix}
+\]
+
+De esta expresión, se define la matriz de controlabilidad como:
+
+\[
+\mathcal{C} =
+\begin{bmatrix}
+	B & AB
+\end{bmatrix}
+\]
+
+Para el sistema analizado, la matriz resultante es:
+
+\[
+\mathcal{C} =
+\begin{bmatrix}
+	-0.071 & -0.066 \\[4pt]
+	0.02201 & 0.0478
+\end{bmatrix}
+\]
+
+El rango de esta matriz es $n = 2$, lo que indica que el sistema es completamente controlable.
+
+\bigskip
+La matriz de observabilidad se obtiene a partir de la expresión general:
+
+\[
+Y(n-1) = 
+\begin{bmatrix}
+	C \\[4pt]
+	CA \\[4pt]
+	\vdots \\[4pt]
+	CA^{n-1}
+\end{bmatrix}
+X(0)
+\]
+
+Por lo tanto, la matriz de observabilidad queda definida como:
+
+\[
+\mathcal{O} =
+\begin{bmatrix}
+	C \\[4pt]
+	CA
+\end{bmatrix}
+\]
+
+Sustituyendo los valores del sistema:
+
+\[
+\mathcal{O} =
+\begin{bmatrix}
+	0 & 1 \\[4pt]
+	-0.5334 & 0.4397
+\end{bmatrix}
+\]
+
+El rango de la matriz de observabilidad también resulta ser $n = 2$.\\  
+Por lo tanto, se concluye que el sistema es **completamente controlable y observable**, cumpliendo con las condiciones necesarias para el diseño de control mediante realimentación de estados.
+
+\subsubsection{Comparar los resultados obtenidos con las simulaciones realizadas en \texttt{MATLAB}}
+\textbf{Resultados de las matrices continuas:}
+\[
+F =
+\begin{bmatrix}
+	-58.42 & 0 \\[4pt]
+	-652.10 & -657.30
+\end{bmatrix}, \quad
+G =
+\begin{bmatrix}
+	-58.81 \\[4pt]
+	0
+\end{bmatrix}, \quad
+H =
+\begin{bmatrix}
+	0 & 1
+\end{bmatrix}
+\]
+
+\[
+\& \quad
+J = [\,0\,]
+\]
+
+\textbf{Resultados de las matrices discretas:}
+\[
+A =
+\begin{bmatrix}
+	0.9433 & 0 \\[4pt]
+	-0.4628 & 0.5182
+\end{bmatrix}, \quad
+B =
+\begin{bmatrix}
+	-0.05712 \\[4pt]
+	0.01527
+\end{bmatrix}, \quad
+C =
+\begin{bmatrix}
+	0 & 1
+\end{bmatrix}
+\]
+
+\[
+\& \quad
+D = [\,0\,]
+\]
