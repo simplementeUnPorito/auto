@@ -1,0 +1,77 @@
+s = tf([1 0],1);
+G = 2/(s*(s+2));
+Ts = 0.2;
+Gd = c2d(G,Ts,'zoh');
+Z = zpk(Gd).Z{1};P = zpk(Gd).P{1};K = zpk(Gd).K;
+
+zita = 0.5;
+Tr = Ts*8;
+
+wn = 1.8/Tr;
+sigma = -wn*zita;
+wd = wn*sqrt(1-zita^ 2);
+s_objetivo = sigma+wd*1j;
+A = exp(Ts*s_objetivo);
+
+Angle = 0;
+for i=1:length(Z)
+    aux = A-Z(i);
+    Angle_aux=atan2d(imag(aux),real(aux));
+    Angle = Angle + Angle_aux;
+end
+
+for i=1:length(P)
+    aux = A-P(i);
+    Angle_aux=atan2d(imag(aux),real(aux));
+    Angle = Angle-Angle_aux;
+end
+
+while abs(Angle)>360
+    if Angle>360
+       Angle=Angle-360;
+    else
+        Angle=Angle+360;
+    end
+end
+
+if(Angle<0)
+    filtro = 'lag';
+else
+    filtro = 'lead';
+end
+
+if strcmp(filtro, 'lag')
+    phi = 180+Angle;
+    pC = [];
+    zC = [];
+    while(phi>0)
+        if(abs(phi)>80)
+            compensar = 80;
+        else
+            compensar = phi;
+        end
+            phi = phi - compensar;
+            cero = P(end);
+            r = abs(cero-A);
+            polo = cero+sin(deg2rad(compensar))*r/sin(pi-deg2rad(compensar)-asin(imag(A)/r));
+            P = P(1:end-1);
+            pC = [pC;polo];
+            zC = [zC;cero];
+    end
+else
+
+end
+
+C = zpk(zC,pC,1,Ts);
+[r,kout] = rlocus(C*Gd);
+% r: [nPolos x nGanancias], kout: [1 x nGanancias]
+distCol = min(abs(r - A), [], 1);   % mínimo por columna (polo más cercano)
+[minValue, indx] = min(distCol);                  % columna "mejor"
+Ksol = kout(indx);
+
+C = Ksol*C;
+
+
+Gcl = feedback(C*Gd,1);
+figure;
+step(Gcl)

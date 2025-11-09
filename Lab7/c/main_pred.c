@@ -95,7 +95,7 @@ int main(void)
              */
             float u_ac = k1 * vint - (k21 * xhat1 + k22 * xhat2);
 
-            /* 4) Observador de PREDICCIÓN:
+            /* 4) Observador de PREDICCION:
              * xhat+ = A*xhat + B*u + L*(y - C*xhat)
              */
             float y_hat = c1 * xhat1 + c2 * xhat2;

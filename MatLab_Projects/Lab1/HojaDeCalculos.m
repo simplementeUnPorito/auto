@@ -1,0 +1,81 @@
+close all
+clear all
+
+%% Definicion de parametros
+R_1 = 15e3;
+R_3 = 15e3;
+C_2 = 100e-9;
+
+R_2 = 82e3;
+R_4 = 82e3;
+C_1 = 0.2e-6;
+
+%% Generar funcion de transferencia d
+numStage = [-R_3/R_1 -R_4/R_2];
+denStage = { [C_2*R_3 1], [C_1*R_4 1] };
+
+% Usamos celdas para guardar los tf de cada stage
+Gstage = cell(1,2);
+G = 1;
+for i = 1:2
+    Gstage{i} = tf(numStage(i), denStage{i});
+    G = G*Gstage{i};
+end
+
+%% Analizamos en el tiempo
+[tr_planta, ts_planta, wn_planta] = plot_step_info(G);
+
+pause;
+%% Calculamos 
+resp = questdlg('¿Querés calcular?', 'Sí', 'No');
+if strcmp(resp, 'Yes')
+    % ======= Step Response Method con pendiente ======
+    [L, T, S, t_max]= zn_step_params(G, ts, wn);
+    
+    K_zn_step = 1.2*T/(1*L);
+    Ti_zn_step = 2*L;
+    Td_zn_step = L/2;
+    
+    numC = K_zn_step*[Ti_zn_step*Td_zn_step, Ti_zn_step, 1];
+    denC = [Ti_zn_step, 0];
+    C = tf(numC, denC);
+    % Lazo cerrado
+    cl_zn_step = feedback(C*G, 1);
+    step(cl_zn_step)
+    fprintf("Los valores iniciales mediante el analisis a la respuesta al impulso son:\nK_p = %.3g T_i = %.3g T_d = %.3g",K_zn_step,Ti_zn_step,Td_zn_step);
+    
+    % ====== Diseño PID interactivo sobre la planta G por fine tuning ======
+    results = diseno_pid(G, 'log_pid.mat');
+else
+    load('log_pid.mat')
+end
+
+%% ==== elegir el mejor Metodo 1
+% ==== 
+%mejor = seleccionar_pid(results, [9 10], [], []);
+% mejor es el struct con los datos
+Kp = 0.5%mejor.Kp;
+Ti = 0.005%mejor.Ti;
+Td = 0.015%mejor.Td;
+tr =0.0293702904510010 %mejor.RiseTime;
+wn = 1.8/tr;
+T = 2*pi/wn;
+sim_pid_euler_ideal(G, T, Kp, Ti, Td,1);
+sim_pid_euler_ideal(G, T/30, Kp, Ti, Td,1);
+sim_pid_euler(G, T/30, Kp, Ti, Td,1,0,-2,2);
+sim_pid_euler_astrom(G, T/30, Kp, Ti, Td,8,2.5,0.25,0,5);
+sim_pid_euler_astrom(G, T/30, Kp, Ti, Td,8,5,0,0,5);
+sim_pid_euler_astrom(G, T, Kp, Ti, Td,8,5,0,0,5);
+
+
+%% ==== elegir el mejor Metodo 2==== 
+mejor = seleccionar_pid(results, 10, [], []);
+% mejor es el struct con los datos
+Kp = 24.1%mejor.Kp;
+Ti = 0.00193%mejor.Ti;
+Td = 0.000482%mejor.Td;
+wn = 1.8/0.00122966069765571 %mejor.RiseTime;
+T = 2*pi/wn;
+sim_pid_euler_ideal(G, T/30, Kp, Ti, Td,1);
+sim_pid_euler(G, T/30, Kp, Ti, Td,2.5,0.1,0,5);
+sim_pid_euler_astrom(G, T/30, Kp, Ti, Td,8,5,0.1,0,5);

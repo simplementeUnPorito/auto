@@ -1,0 +1,332 @@
+%% ====================== DISEÑO CON POLOS OBJETIVO ÚNICOS ======================
+clear all; clc; close all;
+addpath('..\');
+%% --- Planta continua (tu modelo) ---
+C2 = 103.07e-9;  C1 = 211.1e-9;
+R3 = 6.8e3;   R4 = 14.760e3;
+R1 = 47e3;    R2 = 81.09e3;
+
+tau1 = R2*C1;           k1 = -R2/R1;
+tau2 = R4*C2;           k2 = -R4/R3;
+
+F = [ -1/tau1,     0;
+       k2/tau2, -1/tau2 ];
+G = [ k1/tau1; 0 ];
+H = [0 1];
+J = 0;
+
+sysC = ss(F,G,H,J);
+Gc   = tf(sysC);
+
+% Ts base vía polo más rápido continuo (heurística)
+fn = max(abs(zpk(Gc).P{1}))/pi;
+Tn = 1/fn;
+Ts = Tn/4;              % un único Ts; ajustá si querés
+
+sysD = c2d(sysC, Ts, 'zoh');
+[A,B,C,D] = ssdata(sysD);
+
+%% --- Chequeo de controlabilidad/observabilidad, como pediste ---
+Co = ctrb(A,B);
+Ob = obsv(A,C);
+rCo = rank(Co);
+rOb = rank(Ob);
+n   = size(A,1);
+
+fprintf('rank(ctrb) = %d, n = %d\n', rCo, n);
+fprintf('rank(obsv) = %d, n = %d\n', rOb, n);
+
+%% --- Polos objetivo en z (únicos y fijos) ---
+p_ctrl = [0.8 + 1j*0.2; 0.8 - 1j*0.2];  % TU pedido
+
+% Ganancia de realimentación K por Ackermann
+K = acker(A,B,p_ctrl);
+
+% Prefiltro Nbar (para y_ss = r con D=0, SISO)
+
+[~,~,Nbar] = refi(A,B,C,K);
+
+%% --- "N veces más rápido" para el observador en discreto ---
+p_obs  = 0.2+1j*0.2;        % eleva cada polo
+
+
+p_obs = [p_obs(1), conj(p_obs(1))];
+
+% Ganancia del observador por dualidad (esta es la forma correcta):
+L_pred = acker(A', C', p_obs).' ;  % para estimador de PREDICCIÓN
+L_pred_a = acker(A',(C*A)',p_obs).';% para estimador ACTUAL
+
+
+
+%% =================== SIMULACIÓN Y PLOTS (loop + función) ===================
+% Parámetros de simulación
+N = 50;
+M = N-10;
+Amp = 1.5;
+Tsim = 0:Ts:(2*N-1)*Ts;
+r    = Amp/2*[-ones(1,N),ones(1,N)];
+x0   = Amp/2*[-1; 1];
+xh0  = Amp/2*[-1.5; 1.5];
+
+% Sistemas para polos
+sys_open = ss(A,B,C,D,Ts);
+Acl      = A - B*K;
+sys_cl   = ss(Acl, B, C, D, Ts);
+
+% --- después de simular ambos:
+simPred = sim_predictor(A,B,C,D,K,L_pred,   Nbar,Ts,Tsim,x0,xh0,r);
+simPred.title = "Estimador Predictivo.";
+simCurr = sim_current  (A,B,C,D,K,L_pred_a, Nbar,Ts,Tsim,x0,xh0,r);
+simCurr.title = "Estimador Actual.";
+P_open     = eig(A);
+P_cl       = eig(A - B*K);
+r =r +2.024;
+sim = {simPred, simCurr};
+for i = 1:numel(sim)
+    fancy_plot_states_control( ...
+        Tsim, ...
+        sim{i}.X, sim{i}.Xhat, sim{i}.U, r, ...
+        P_open, P_cl, sim{i}.P, sim{i}.title);
+end
+
+
+fancy_plot_states_control_combo( ...
+    Tsim, ...
+    simPred.X, simCurr.X, ...
+    simPred.Xhat, simCurr.Xhat, ...
+    simPred.U, simCurr.U, r, ...
+    P_open, P_cl, simPred.P, simCurr.P, ...
+    'Predicción vs Actual');
+
+%% ======================== FUNCIONES AUXILIARES ============================
+function out = sim_predictor(A,B,C,D,K,L,Nbar,Ts,T, x0,xh0,r)
+    nx = size(A,1);  N = numel(T);
+    x  = x0(:);      xh = xh0(:);
+    X  = zeros(nx,N); XH = zeros(nx,N); U = zeros(1,N);
+
+    for k = 1:N
+        rk = r(k);
+
+        % 1) Control con estado estimado a k: u[k]
+        u = Nbar*rk - K*xh;
+
+        % 2) Medición a k (ANTES de propagar x): y[k]
+        y = C*x + D*u;        % si D=0, no cambia nada
+
+        % 3) Observador de PREDICCIÓN: usa y[k]
+        xh = A*xh + B*u + L*(y - C*xh);
+
+        % 4) Planta real a k+1
+        x  = A*x + B*u;
+
+        % 5) Log
+        X(:,k)  = x;     % estado real en k+1 (está bien si eres consistente)
+        XH(:,k) = xh;    % estimado en k+1
+        U(k)    = u;
+    end
+
+    out.t = T;
+    out.X = X+2.024; out.Xhat = XH+2.024; out.U = U+2.024;
+    out.P = eig(A - L*C);   % dinámicas del error
+end
+
+
+
+function out = sim_current(A,B,C,D,K,Ke,Nbar,Ts,T, x0,xh0,r)
+% Estimador ACTUAL (current): corrige con y[k+1] sobre la predicción z[k+1]
+    nx = size(A,1);
+    N  = numel(T);
+
+    x  = x0(:);      % estado real
+    xh = xh0(:);     % estado estimado
+
+    X  = zeros(nx,N);
+    XH = zeros(nx,N);
+    U  = zeros(1, N);
+
+    for k = 1:N
+        rk = r(k);
+
+        % 1) control con ESTADO ACTUAL (corregido a k): u[k]
+        u   = Nbar*rk - K*xh;
+
+        % 2) planta a k+1
+        x   = A*x + B*u;
+
+        % 3) predicción del estimador a k+1
+        z   = A*xh + B*u;
+        y = C*x + D*u;              % (en tu sistema D=0)
+
+        % corrección actual (usa y[k+1])
+        xh = z + Ke*(y - C*z);
+        
+        % log
+        X(:,k)  = x;
+        XH(:,k) = xh;
+        U(k)    = u;
+    end
+
+    out.t = T; out.X = X+2.024; out.Xhat = XH+2.024; out.U = U+2.024; out.P = eig(A - Ke*C*A);
+
+end
+
+function fancy_plot_states_control( ...
+    t, X, Xhat, U, r, ...
+    Popen, Pcl, Pobs, titulo)
+
+    n  = size(X,1);
+    Ts = t(2) - t(1);
+
+    % Colores
+    c_x     = [0 0.4470 0.7410];           % azul
+    c_xhat  = [0.82 0.91 0.96];            % celeste claro
+    c_ref   = [0.3 0.3 0.3];               % gris
+    c_err   = [0.2 0.6 0.2];               % verde para error
+
+    fig   = figure('Name', titulo, 'Color','w');
+    left  = uipanel(fig,'Position',[0.05 0.08 0.58 0.87]);
+    right = axes   (fig,'Position',[0.68 0.10 0.28 0.82]); %#ok<LAXES>
+
+    tl = tiledlayout(left, n+1, 1, 'TileSpacing','compact','Padding','compact');
+
+    % ====== Estados (x, xhat) + referencia y error e = x - xhat (eje derecho) ======
+    for k = 1:n
+        ax = nexttile(tl); hold(ax,'on');
+
+        % Izquierda: señales principales
+        yyaxis(ax,'left');
+        hX    = plot(ax, t, X(k,:),     '-', 'LineWidth', 1.6, 'Color', c_x,    'DisplayName', '$x$');
+        hXhat = stairs(ax, t, Xhat(k,:),  "pentagram", 'LineWidth', 1.2, 'Color', c_xhat, 'DisplayName', '$\hat{x}$');
+        hR    = stairs(ax, t, r,          ':', 'LineWidth', 1.0, 'Color', c_ref,  'DisplayName', '$r$');
+        ylabel(ax, sprintf('x_%d',k));
+        grid(ax,'on'); grid(ax,'minor');
+
+        % Derecha: error
+        yyaxis(ax,'right');
+        e = X(k,:) - Xhat(k,:);
+        hE = stairs(ax, t, e, '.', 'LineWidth', 1.2, 'Color', c_err, 'DisplayName', '$e$');
+        yline(ax, 0, ':', 'Color',[0.5 0.5 0.5], 'HandleVisibility','off');
+        ylabel(ax, sprintf('e_%d',k));
+
+        if k==1
+            title(ax, titulo);
+        end
+        if k==n
+            % Creamos leyenda con handles explícitos y la bloqueamos
+            yyaxis(ax,'left');
+            lg = legend(ax, [hX, hXhat, hR, hE], {'$x$','$\hat{x}$','$r$','$e$'}, 'Location','best');
+            set(lg,'Interpreter','latex','AutoUpdate','off');
+        end
+    end
+
+    % ====== Control U + r ======
+    axu = nexttile(tl); hold(axu,'on');
+    hU = stairs(axu, t, U, '-', 'LineWidth', 1.4, 'Color', c_x,   'DisplayName', '$u$');
+    hR = stairs(axu, t, r, ':', 'LineWidth', 1.0, 'Color', c_ref, 'DisplayName', '$r$');
+    grid(axu,'on'); grid(axu,'minor');
+    ylabel(axu,'u'); xlabel(axu,'Tiempo [s]');
+    title(axu,'Esfuerzo de control');
+    lg2 = legend(axu, [hU, hR], {'$u$','$r$'}, 'Location','best');
+    set(lg2,'Interpreter','latex','AutoUpdate','off');
+
+    % ====== Polos (zgrid, sin legend) ======
+    axes(right); cla(right); hold(right,'on');
+    zgrid; axis(right,'equal'); axis(right,[-1.1 1.1 -1.1 1.1]);
+    xlabel(right,'Re(z)'); ylabel(right,'Im(z)');
+    title(right, sprintf('Polos — f_s = %.0f Hz', 1/Ts));
+
+    % Ejes en Re=0 e Im=0 (NO entran al legend)
+    xline(right, 0, '-', 'Color',[0.5 0.5 0.5],'LineWidth',0.8,'HandleVisibility','off');
+    yline(right, 0, '-', 'Color',[0.5 0.5 0.5],'LineWidth',0.8,'HandleVisibility','off');
+
+    plot(right, real(Popen), imag(Popen), 's', 'MarkerSize',7, 'LineWidth',1.2, 'Color',[0.6 0.6 0.6]);
+    plot(right, real(Pcl),   imag(Pcl),   'x', 'MarkerSize',9, 'LineWidth',1.6, 'Color',[0 0.4470 0.7410]);
+    plot(right, real(Pobs),  imag(Pobs),  'o', 'MarkerSize',7, 'LineWidth',1.4, 'Color',[0.4940 0.1840 0.5560]);
+end
+
+
+function fancy_plot_states_control_combo( ...
+    t, X_pred, X_act, Xhat_pred, Xhat_act, U_pred, U_act, r, ...
+    Popen, Pcl, Pobs_pred, Pobs_act, titulo)
+
+    n  = size(X_pred,1);
+    Ts = t(2) - t(1);
+
+    % Colores consistentes
+    c_pred     = [0 0.4470 0.7410];      % azul
+    c_act      = [0.70 0.00 0.00];       % rojo oscuro
+    c_xhatpred = [0.8500 0.3250 0.0980]; % naranja
+    c_xhatact  = [0.4940 0.1840 0.5560]; % púrpura
+    c_ref      = [0.3 0.3 0.3];
+    c_open     = [0.6 0.6 0.6];
+    c_errpred  = [0.2 0.6 0.2];          % verde error pred
+    c_erract   = [0.0 0.6 0.6];          % cian  error act
+
+    fig   = figure('Name', titulo, 'Color','w');
+    left  = uipanel(fig,'Position',[0.05 0.08 0.58 0.87]);
+    right = axes   (fig,'Position',[0.68 0.10 0.28 0.82]); %#ok<LAXES>
+    tl = tiledlayout(left, n+1, 1, 'TileSpacing','compact','Padding','compact');
+
+    % ====== Estados + errores (ejes duales) ======
+    for k = 1:n
+        ax = nexttile(tl); hold(ax,'on');
+
+        % Izquierda: señales principales
+        yyaxis(ax,'left');
+        hXp   = plot(ax, t, X_pred(k,:),   '-', 'LineWidth', 1.6, 'Color', c_pred,     'DisplayName', '$x_{\mathrm{pred}}$');
+        hXa   = plot(ax, t, X_act(k,:),    '-', 'LineWidth', 1.2, 'Color', c_act,      'DisplayName', '$x_{\mathrm{act}}$');
+        hXhp  = stairs(ax, t, Xhat_pred(k,:),"pentagram", 'LineWidth', 1.2, 'Color', c_xhatpred, 'DisplayName', '$\hat{x}_{\mathrm{pred}}$');
+        hXha  = stairs(ax, t, Xhat_act(k,:), "pentagram", 'LineWidth', 1.2, 'Color', c_xhatact,  'DisplayName', '$\hat{x}_{\mathrm{act}}$');
+        hR    = stairs(ax, t, r,             ':', 'LineWidth', 1.0, 'Color', c_ref,      'DisplayName', '$r$');
+        ylabel(ax, sprintf('x_%d',k));
+        grid(ax,'on'); grid(ax,'minor');
+
+        % Derecha: errores
+        yyaxis(ax,'right');
+        e_pred = X_pred(k,:) - Xhat_pred(k,:);
+        e_act  = X_act(k,:)  - Xhat_act(k,:);
+        hEp = stairs(ax, t, e_pred, '--', 'LineWidth', 1.0, 'Color', c_errpred, 'DisplayName', '$e_{\mathrm{pred}}$');
+        hEa = stairs(ax, t, e_act,  '--', 'LineWidth', 1.0, 'Color', c_erract,  'DisplayName', '$e_{\mathrm{act}}$');
+        yline(ax, 0, ':', 'Color',[0.5 0.5 0.5], 'HandleVisibility','off');
+        ylabel(ax, sprintf('e_%d',k));
+
+        if k==1
+            title(ax, sprintf('%s — Estados y estimaciones', titulo));
+        end
+        if k==n
+            % Leyenda con handles explícitos y bloqueada
+            yyaxis(ax,'left');
+            lg = legend(ax, [hXp, hXa, hXhp, hXha, hR, hEp, hEa], ...
+                {'$x_{\mathrm{pred}}$','$x_{\mathrm{act}}$', ...
+                 '$\hat{x}_{\mathrm{pred}}$','$\hat{x}_{\mathrm{act}}$','$r$', ...
+                 '$e_{\mathrm{pred}}$','$e_{\mathrm{act}}$'}, ...
+                'Location','best');
+            set(lg,'Interpreter','latex','AutoUpdate','off');
+        end
+    end
+
+    % ====== Control ======
+    axu = nexttile(tl); hold(axu,'on');
+    hUp = stairs(axu, t, U_pred, '-', 'LineWidth', 1.4, 'Color', c_pred, 'DisplayName', '$u_{\mathrm{pred}}$');
+    hUa = stairs(axu, t, U_act,  '-', 'LineWidth', 1.2, 'Color', c_act,  'DisplayName', '$u_{\mathrm{act}}$');
+    hR  = stairs(axu, t, r,      ':', 'LineWidth', 1.0, 'Color', c_ref,  'DisplayName', '$r$');
+
+    grid(axu,'on'); grid(axu,'minor'); ylabel(axu,'u'); xlabel(axu,'Tiempo [s]');
+    title(axu,'Esfuerzo de control');
+    lg2 = legend(axu, [hUp, hUa, hR], {'$u_{\mathrm{pred}}$','$u_{\mathrm{act}}$','$r$'}, 'Location','best');
+    set(lg2,'Interpreter','latex','AutoUpdate','off');
+
+    % ====== Polos (sin legend) ======
+    axes(right); cla(right); hold(right,'on');
+    zgrid; axis(right,'equal'); axis(right,[-1.1 1.1 -1.1 1.1]); xlabel(right,'Re(z)'); ylabel(right,'Im(z)');
+    title(right, sprintf('Polos — f_s = %.0f Hz', 1/Ts));
+
+    % Ejes en Re=0 e Im=0 (no ensucian leyenda)
+    xline(right, 0, '-', 'Color',[0.5 0.5 0.5],'LineWidth',0.8,'HandleVisibility','off');
+    yline(right, 0, '-', 'Color',[0.5 0.5 0.5],'LineWidth',0.8,'HandleVisibility','off');
+
+    plot(right, real(Popen),     imag(Popen),     's', 'MarkerSize',7, 'LineWidth',1.2, 'Color', c_open);
+    plot(right, real(Pcl),       imag(Pcl),       'x', 'MarkerSize',9, 'LineWidth',1.6, 'Color', c_pred);
+    plot(right, real(Pobs_pred), imag(Pobs_pred), 'o', 'MarkerSize',7, 'LineWidth',1.4, 'Color', c_xhatpred);
+    plot(right, real(Pobs_act),  imag(Pobs_act),  '^', 'MarkerSize',7, 'LineWidth',1.4, 'Color', c_xhatact);
+end

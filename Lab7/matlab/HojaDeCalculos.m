@@ -227,7 +227,7 @@ p_obs = eig(A - L_pred*C);   % mismo para predictivo y actual
 plot(real(p_obs), imag(p_obs), 'bs', 'MarkerSize',9, 'LineWidth',1.5);
 
 title('Estimadores de estado (p_{obs})');
-%legend({'A - L·C'},'Location','best');
+%legend({'A - LxC'},'Location','best');
 xlabel('Re\{z\}'); ylabel('Im\{z\}');
 grid on; box on;
 

@@ -1,4 +1,3 @@
-
 \section{Implementación}
 
 En este laboratorio se reutilizaron los proyectos del Lab~6 (\emph{predictivo} y \emph{actual}) manteniendo la misma estructura de hardware en el PSoC.  
@@ -12,12 +11,29 @@ u_k = K_1 v_{k+1} - K_2 \hat{x}_k.
 
 Los bloques físicos (planta, DAC, ADC, UART e ISR de adquisición) se mantuvieron idénticos al laboratorio anterior, por lo que la adaptación fue directa y sin cambios en el diagrama del sistema.
 
-\compararfigsC
-{placeholder.png}{Implementación del controlador predictivo con integrador.}{fig:impl_pred}
-{placeholder.png}{Implementación del controlador actual con integrador.}{fig:impl_curr}
-{Implementaciones en PSoC de los esquemas con acción integral.}
-{fig:impl_psoc}
+% --- Circuito de la planta (referencia física)
+\insertarfigura{exp/circuito_de_la_planta.png}
+{Diagrama del circuito de la planta utilizado en el montaje experimental.}
+{fig:planta_exp}
+{0.9}
 
-Ambos códigos —\texttt{main\_pred.c} y \texttt{main\_curr.c}— se ejecutaron correctamente en la placa, mostrando un seguimiento más robusto y una reducción del error estacionario frente a perturbaciones.
+% --- Implementación del controlador predictivo con integrador
+\insertarfigura{exp/circuito_de_control_pred.png}
+{Implementación del controlador \textbf{predictivo} con integrador en PSoC (diagrama de control).}
+{fig:impl_pred}
+{0.9}
 
+% --- Implementación del controlador actual con integrador
+\insertarfigura{exp/circuito_de_control_curr.png}
+{Implementación del controlador \textbf{actual} con integrador en PSoC (diagrama de control).}
+{fig:impl_curr}
+{0.9}
+
+
+% --- Resultados experimentales del osciloscopio
+\compararfigsCwide
+{exp/PRED.JPG}{Respuesta experimental con estimador \textbf{predictivo} (con integrador).}{fig:osc_pred}
+{exp/CURR.JPG}{Respuesta experimental con estimador \textbf{actual} (con integrador).}{fig:osc_curr}
+{Capturas del osciloscopio: ambos esquemas con acción integral muestran eliminación del error estacionario y seguimiento.}
+{fig:osc_psoc}{0.8}
 \balance

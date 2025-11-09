@@ -20,7 +20,7 @@ H=\begin{bmatrix}0&1\end{bmatrix},\qquad J=0.
 \]
 Se crea \(\mathrm{sysC}=\mathrm{ss}(F,G,H,J)\) y su \(\mathrm{tf}\) asociada para consulta rápida.
 
-\insertarfigura{placeholder.png}{Esquema conceptual de la planta y medición de salida \(y=Cx\).}{fig:planta-concepto}{0.85}
+\insertarfigura{sim/circuito_esquematico.png}{Esquema conceptual de la planta y medición de salida \(y=Cx\).}{fig:planta-concepto}{0.85}
 
 \subsection{Selección de \(T_s\) y discretización \(\text{ZOH}\)}
 
@@ -32,7 +32,7 @@ y se toma
 \[
 T_s = \frac{T_n}{4},
 \]
-lo que da al menos cuatro muestras sobre la constante de tiempo dominante. Con este \(T_s\) se discretiza por \(\text{ZOH}\):
+lo que da al menos ocho muestras sobre la constante de tiempo dominante. Con este \(T_s\) se discretiza por \(\text{ZOH}\):
 \[
 (A,B,C,D)=\mathrm{ssdata}\big(\mathrm{c2d}(\mathrm{sysC},T_s,\texttt{'zoh'})\big).
 \]
@@ -60,8 +60,8 @@ p_{\text{obs}}=\{0{,}2\pm j\,0{,}2\},
 \]
 y se calculan las ganancias:
 \[
-L_{\text{pred}} = \mathrm{acker}(A^\top,C^\top,p_{\text{obs}})^\top,\]
-\[L_{\text{act}}  = \mathrm{acker}(A^\top,(CA)^\top,p_{\text{obs}})^\top.
+L_{\text{pred}} = \mathrm{acker}(A^\top,C^\top,p_{\text{obs}})^\top,\qquad
+L_{\text{act}}  = \mathrm{acker}(A^\top,(CA)^\top,p_{\text{obs}})^\top.
 \]
 \textbf{Predictivo}: actualiza con la salida en \(k\):
 \[
@@ -104,7 +104,8 @@ Los observadores para el caso con integrador reutilizan el mismo conjunto rápid
 L_{\text{pred},i},\; L_{\text{act},i}\quad \text{con}\quad p_{\text{obs},i}=\{0{,}2\pm j\,0{,}2\}.
 \]
 
-\insertarfigura{placeholder.png}{Diagrama de bloques del lazo cerrado con estado integral \(v\) y realimentación \(K=[K_2\ -K_1]\).}{fig:lazo-integral}{0.9}
+% Usamos la imagen de esfuerzos para representar el lazo con integrador (diagrama práctico)
+\insertarfigura{sim/comp_todos_los_esfuerzos.png}{Lazo cerrado con estado integral \(v\) y realimentación \(K=[K_2\ -K_1]\). Se muestran los esfuerzos de control en los distintos esquemas.}{fig:lazo-integral}{0.9}
 
 \subsection{Escenarios de simulación}
 
@@ -122,25 +123,19 @@ Se usa un escalón \(r\) de amplitud unitaria (con retardo inicial para ver el t
 	\item \textbf{Observadores}: actualización \emph{predictiva} con \(y_k\) y \emph{actual} con \(y_{k+1}\) vía \(z_k\).
 \end{itemize}
 
-\subsection{Mapas de polos}
+% Respuesta al escalón con y sin integrador — estimador ACTUAL
+\insertarfigura{sim/actual_comp_sin_y_con_int.png}{Respuesta al escalón con estimador \textbf{actual}. Con ruido en la planta, el integrador corrige la deriva en la salida, a diferencia del caso sin integral.}{fig:resp-actual-int}{0.95}
 
-Se resumen: (i) polos de planta y lazo cerrado sin integrador, (ii) polos del sistema aumentado y su lazo cerrado, (iii) polos del estimador. Estos gráficos verifican que la asignación de polos (\(\mathrm{acker}\)) produjo la dinámica deseada en \(z\).
+% Respuesta al escalón con y sin integrador — estimador PREDICTOR
+\insertarfigura{sim/predictor_comp_sin_y_con_int.png}{Respuesta al escalón con estimador \textbf{predictivo}. Se observa el mismo efecto: el integrador elimina el error estacionario frente a perturbaciones.}{fig:resp-predictor-int}{0.95}
 
-\compararfigsCwide
-{placeholder.png}{Mapa sin integrador}
-{fig:poles-sinint}
-{placeholder.png}{Mapa con integrador}
-{fig:poles-int}
-{Mapas de polos: comparación de ubicaciones en \(z\) (planta vs. lazo cerrado y sistema aumentado).}
-{fig:mapas-polos}
-{0.45}
+% Esfuerzos de control comparados (todas las variantes)
+\insertarfigura{sim/comp_todos_los_esfuerzos.png}{Esfuerzos de control para las cuatro configuraciones (sin/con integrador; estimador actual/predictor).}{fig:esfuerzos}{0.95}
 
-\subsection{Notas finales}
 
-\begin{itemize}
-	\item El criterio de muestreo \(T_s=T_n/4\) equilibra fidelidad y costo computacional.
-	\item La acción integral en espacio de estados, vía sistema aumentado, garantiza \(\mathrm{ESS}=0\) para entradas/perturbaciones constantes, a costa de un posible aumento del esfuerzo de control.
-	\item La elección del polo del integrador (\(p_i\)) permite modular el compromiso entre rapidez de eliminación del error y amplitud de \(u_k\).
-\end{itemize}
+% Como tenés un PNG compuesto con todos los mapas, lo usamos en ambos paneles para mantener la macro.
+
+
+\insertarfigura{sim/pzmap_plantas_y_estimadores.png}{Polos en el plano Z: incluye (i) planta sin integrador antes/después, (ii) planta con integrador antes/después y (iii) estimador de estados (actual y predictor).}{fig:esfuerzos}{0.95}
 
 \noindent\textit{El script completo de \texttt{MATLAB} utilizado para obtener \(K\), \(N_{\text{bar}}\), \(L\), \(K_1\), \(K_2\) y para generar las simulaciones y mapas de polos se incluye íntegramente en el \textbf{Anexo}.}

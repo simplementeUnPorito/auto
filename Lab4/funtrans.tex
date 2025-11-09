@@ -1,0 +1,81 @@
+\section{Obtención de la función de transferencia de la planta.}
+\subsection{Función de transferencia de la planta en lazo abierto.}
+La planta puede interpretarse como la conexión en cascada de dos filtros activos de primer orden. Cada uno posee la misma topología: un amplificador operacional en configuración inversora cuya impedancia de realimentación está compuesta por una resistencia en paralelo con un capacitor.
+
+\paragraph{Impedancia de realimentación.}  
+Para el paralelo $R_f \parallel C_f$, se obtiene:
+\begin{equation}
+	Z_f \;=\; R_f \parallel \frac{1}{sC_f}
+	\;=\; \frac{R_f}{1 + s R_f C_f}
+	\label{eq:Zf}
+\end{equation}
+
+
+El sistema trabaja sobre una tensión de referencia en continua $V_{\text{cc}}/2 = 2.5$ V. En los cálculos posteriores se toma dicho valor como punto de referencia.
+
+\paragraph{Ganancia de una etapa (entrada inversora).}  
+Con $V_{\text{ref}}=0$, se cumple el cortocircuito virtual ($V_p = V_n = 0$). Aplicando KCL en el nodo inversor:
+\[
+\frac{V_i}{R_i} \;=\; \frac{-V_o}{Z_f}
+\quad\Rightarrow\quad
+\frac{V_o}{V_i} \;=\; -\,\frac{Z_f}{R_i}
+\]
+y reemplazando \eqref{eq:Zf}:
+\begin{equation}
+	\frac{V_o}{V_i}\Bigg|_{V_{\text{ref}}=0}
+	= -\,\frac{R_f}{R_i}\,\frac{1}{1+sR_f C_f}
+	\label{eq:gain_inverting}
+\end{equation}
+
+\paragraph{Encadenamiento de etapas.}  
+Como ambas etapas AO1 y AO2 responden a la forma \eqref{eq:gain_inverting}, la ganancia total en lazo abierto resulta del producto de sus transferencias:
+\[
+G_{\text{ol}}(s)
+= \Big(-\frac{Z_{f1}(s)}{R_{i1}}\Big)\,
+\Big(-\frac{Z_{f2}(s)}{R_{i2}}\Big)
+\]
+
+\insertarfigura{./Img/openLoop/EscalonLazoAb.png}{Escalón en lazo abierto del sistema.}{fig:escalonLazoab}{1}
+\subsection{Discretización de la planta.}
+La planta a discretizar está dada por:
+\[
+G(s) = \frac{K}{(s+a)(s+b)}.
+\]
+
+Para discretizarla, se utiliza el método de la \emph{transformación de la respuesta al impulso}. La relación general es:
+\begin{equation}
+	G(z) = (1 - z^{-1}) \, \mathcal{Z}\left\{\mathcal{L}^{-1}\left(\frac{G(s)}{s}\right)^*\right\}.
+	\label{eq:RelacionGen}
+\end{equation}
+
+\noindent A partir de la descomposición en fracciones parciales, se obtiene:
+\begin{equation}
+	\frac{G(s)}{s} =
+	\underset{\delta}{\frac{K}{ab}} \cdot \frac{1}{s}
+	+ \underset{\beta}{\frac{K}{\,b^2-ab\,}} \cdot \frac{1}{s+b}
+	+ \underset{\alpha}{\frac{K}{\,a^2-ab\,}} \cdot \frac{1}{s+a},
+	\label{eq:Gs}
+\end{equation}
+donde los coeficientes $\alpha$, $\beta$ y $\delta$ corresponden a los términos de la expansión.
+
+\textbf{Transformada-$Z$:}  
+Aplicando la transformada inversa de Laplace, discretizando la señal con un muestreador de orden cero, y por último aplicando la transformada-$Z$ a cada se obtiene:
+\[
+\mathcal{Z}\left[\frac{G(s)}{s}\right] =
+\delta \frac{z}{z-1} +
+\beta \frac{z}{z-e^{-bT}} +
+\alpha \frac{z}{z-e^{-aT}}.
+\]
+
+\noindent Finalmente, la planta discretizada puede escribirse como:
+\begin{equation}
+	G(z) = \frac{\gamma z^2 - \theta z + \psi}{(z-e^{-aT})(z-e^{-bT})},
+	\label{eq:DiscZ}
+\end{equation}
+donde los parámetros $\gamma$, $\theta$ y $\psi$ se expresan en función de los coeficientes de la fracción parcial \eqref{eq:Gs}:
+\begin{flalign*}
+	\gamma &= \alpha + \beta + \delta & \\
+	\theta &= \alpha + \beta + \delta + \alpha e^{-bT} + \beta e^{-aT} + \delta \big(e^{-aT}+e^{-bT}\big) & \\
+	\psi   &= \alpha e^{-bT} + \beta e^{-aT} + \delta e^{-aT} e^{-bT}\big. &
+\end{flalign*}
+

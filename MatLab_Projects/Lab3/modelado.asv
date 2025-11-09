@@ -1,0 +1,144 @@
+close all
+clear all
+%% Definicion de parametros
+R_1 = 15e3;
+R_3 = 15e3;
+C_2 = 100e-9;
+
+R_2 = 82e3;
+R_4 = 82e3;
+C_1 = 0.22e-6;
+
+%% Generar funcion de transferencia d
+numStage = [-R_3/R_1 -R_4/R_2];
+denStage = { [C_2*R_3 1], [C_1*R_4 1] };
+
+
+% Usamos celdas para guardar los tf de cada stage
+Gstage = cell(1,2);
+G = 1;
+for i = 1:2
+    Gstage{i} = tf(numStage(i), denStage{i});
+    G = G*Gstage{i};
+end
+
+% Cargar CSV
+data = readmatrix('/OpenLoop/mediciones.csv');
+
+% Ignorar cabeceras, quedarte solo con datos numéricos
+u = data(1:end, 11); % columna E = salida
+y = data(1:end, 17); % columna K = entrada
+Ts = 0.000099999997474; % tiempo de muestreo de B3
+
+% Crear objeto de identificación
+data_id = iddata(y, u, Ts);
+
+% Estimar una función de transferencia discreta (ejemplo: 2 polos, 1 cero)
+sys0 = tfest(data_id,2);
+
+% % Ver resultado
+%  step(sys);
+% % Crear datos de identificación
+% data_id = iddata(y, u, Ts);
+% 
+% % Probar con distintos órdenes
+% sys1 = tfest(data_id, 1, 0); % 1 polo
+% sys2 = tfest(data_id, 2, 1); % 2 polos, 1 cero
+% 
+% % Comparar
+
+%% Tolerancias
+tolR = 0.05;   % ±5% resistencias
+tolC = 0.20;   % ±20% capacitores
+
+%% ===== Envolvente por tolerancias: 64 corners (2^6) =====
+% helper para armar G(s) a partir de R,C
+makeG = @(R1,R2,R3,R4,C1,C2) tf( (R3/R1)*(R4/R2), conv([R3*C2 1],[R4*C1 1]) );
+
+% pares [lo, hi] por componente
+pairs = [ R1_lo R1_hi;  R2_lo R2_hi;  R3_lo R3_hi;  R4_lo R4_hi;  C1_lo C1_hi;  C2_lo C2_hi ];
+names = {'R1','R2','R3','R4','C1','C2'};
+
+% tiempo de simulación igual al de tus datos
+Ndata = min(length(y), length(u));
+tdata = (0:Ndata-1).' * Ts;
+
+% generar todas las combinaciones binaria (0=lo, 1=hi)
+comb = dec2bin(0:(2^6-1)) - '0';   % 64x6
+
+% arrays para guardar resultados
+Yall   = zeros(Ndata, size(comb,1));
+Gds    = cell(size(comb,1),1);
+DCgain = zeros(size(comb,1),1);
+RT     = nan(size(comb,1),1);  % rise time
+MP     = nan(size(comb,1),1);  % overshoot
+TS     = nan(size(comb,1),1);  % settling time
+params = cell(size(comb,1),1);
+
+for k = 1:size(comb,1)
+    % elegir lo/hi por columna
+    sel = comb(k,:)+1; % 1 o 2
+    R1 = pairs(1,sel(1)); R2 = pairs(2,sel(2));
+    R3 = pairs(3,sel(3)); R4 = pairs(4,sel(4));
+    C1 = pairs(5,sel(5)); C2 = pairs(6,sel(6));
+
+    % modelo continuo y discreto
+    Gc  = makeG(R1,R2,R3,R4,C1,C2);
+    Gdz = c2d(Gc, Ts, 'zoh');
+    Gds{k} = Gdz;
+
+    % respuesta al escalón con el mismo vector de tiempo que la medición
+    yk = step(Gdz, tdata);
+    if isrow(yk), yk = yk.'; end
+    Yall(:,k) = yk;
+
+    % métricas
+    DCgain(k) = dcgain(Gc);
+    info = stepinfo(Gdz);
+    RT(k) = info.RiseTime;
+    MP(k) = info.Overshoot;
+    TS(k) = info.SettlingTime;
+
+    % guardar parámetros usados
+    params{k} = struct('R1',R1,'R2',R2,'R3',R3,'R4',R4,'C1',C1,'C2',C2);
+end
+
+% envolvente min–max en cada instante
+ymin = min(Yall, [], 2);
+ymax = max(Yall, [], 2);
+
+%% ===== Plot: datos medidos + banda por tolerancias + nominal/estimado (opc.) =====
+figure; hold on; box on;
+% banda (sombreado)
+fill([tdata; flipud(tdata)], [ymin; flipud(ymax)], [0.85 0.90 1.00], ...
+     'EdgeColor','none','FaceAlpha',0.5);
+% señal medida
+stairs(tdata, y(1:Ndata), 'k', 'LineWidth', 1.2);
+
+% (opcionales) superponer nominal y/o estimado si querés
+Gc_nom  = makeG(R1n,R2n,R3n,R4n,C1n,C2n);
+Gd_nom  = c2d(Gc_nom, Ts, 'zoh');
+plot(tdata, step(Gd_nom, tdata), 'LineWidth', 1.0);   % nominal
+
+if exist('sys0','var')
+    if sys0.Ts==0, sys0d = c2d(sys0, Ts, 'zoh'); else, sys0d = d2d(sys0, Ts); end
+    plot(tdata, step(sys0d, tdata), 'LineWidth', 1.0); % estimado tfest
+end
+
+xlabel('t [s]'); ylabel('y');
+legend({'Banda tolerancias (min–max)','Medición','Nominal','Estimado'},'Location','best');
+title('Respuesta al escalón: medición vs banda por tolerancias');
+grid on; grid minor;
+
+%% ===== Reporte de extremos útiles =====
+[~, idxRTmin] = min(RT);   [~, idxRTmax] = max(RT);
+[~, idxDCmin] = min(DCgain); [~, idxDCmax] = max(DCgain);
+
+disp('== Extremos por tolerancias (64 corners) ==');
+fprintf('RiseTime mínimo: %.4f s\n', RT(idxRTmin));
+disp(params{idxRTmin});
+fprintf('RiseTime máximo: %.4f s\n', RT(idxRTmax));
+disp(params{idxRTmax});
+
+fprintf('DC gain mínima: %.4f\n', DCgain(idxDCmin));
+

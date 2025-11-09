@@ -1,0 +1,48 @@
+% =========================================================
+\clearpage
+\section{Resultados}
+
+En las figuras se observa que la incorporación de la acción integral elimina la deriva frente a perturbaciones y garantiza error estacionario nulo, manteniendo una dinámica global comparable a la simulada. Tanto el observador \textit{predictivo} como el \textit{actual} replican la tendencia teórica, aunque el sobreimpulso real resulta no se asemeja a lo calculado para todos los casos.
+Las discrepancias pueden atribuirse a tolerancias de componentes pasivos, desajustes de ganancia y cuantización DAC/ADC, además de pequeños desvíos de polos respecto a los ubicados por diseño.
+
+\begin{table}[!t]
+	\centering
+	\caption{Comparación experimental y simulada: \emph{sin integrador} / \emph{con integrador}.}
+	\label{tab:desempeno_exp}
+	\begin{tabular}{lcc}
+		\toprule
+		\textbf{Caso} & {$t_s$ [ms] (\emph{sin}/\emph{con})} & {OS [\%] (\emph{sin}/\emph{con})} \\
+		\midrule
+		Predictor (Sim)     & 7.00/8.00  & 4.6/4.0 \\
+		Actual (Sim)        & 7.00/8.00 & 4.6/4.0 \\
+		Predictor (Exp)  &10.0/4.0   & 6.520/8.150  \\
+		Actual (Exp)        & 5.940/6.850 & 10.0/5.0 \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+La tabla~\ref{tab:desempeno_exp} resume los valores simulados y experimentales para ambos estimadores, contrastando \emph{sin} y \emph{con} integrador. 
+Se confirma que el integrador elimina el error estacionario y mejora la robustez, a costa de un leve aumento del esfuerzo de control. 
+
+\balance
+
+% ====== Figuras de comparación (Sim vs Exp) ======
+% Predictor: Simulación (sin vs con integrador) y resultado experimental (con integrador)
+\compararfigsC
+{sim/predictor_comp_sin_y_con_int.png}{Estimador \textbf{predictivo} (sim.): \emph{sin} vs \emph{con} integrador.}{fig:sim_pred_int}
+{exp/PRED.JPG}{Estimador \textbf{predictivo} (exp.): \emph{con} integrador.}{fig:exp_pred_int}
+{Comparación del estimador predictivo: simulación \emph{sin/con} integrador vs resultado experimental \emph{con} integrador.}
+{fig:cmp_pred}
+
+% Actual: Simulación (sin vs con integrador) y resultado experimental (con integrador)
+\compararfigsC
+{sim/actual_comp_sin_y_con_int.png}{Estimador \textbf{actual} (sim.): \emph{sin} vs \emph{con} integrador.}{fig:sim_act_int}
+{exp/CURR.JPG}{Estimador \textbf{actual} (exp.): \emph{con} integrador.}{fig:exp_act_int}
+{Comparación del estimador actual: simulación \emph{sin/con} integrador vs resultado experimental \emph{con} integrador.}
+{fig:cmp_act}
+
+% Esfuerzos de control (todas las variantes en simulación)
+\insertarfigura{sim/comp_todos_los_esfuerzos.png}
+{Esfuerzos de control para las cuatro configuraciones: \emph{sin} y \emph{con} integrador, estimador \emph{predictivo} y \emph{actual} (simulación).}
+{fig:esfuerzos_sim}
+{0.95}

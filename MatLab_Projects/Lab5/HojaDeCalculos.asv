@@ -1,0 +1,140 @@
+close all
+clear all
+clc;
+%% modelo
+% load('../modelo.mat');Gc = G;
+% [F,G,H,J] = tf2ss(Gc.Numerator,Gc.Denominator); sysC = ss(F,G,H,J);
+% fn = 2*abs(min(zpk(Gc).P{1})/pi);
+% Tn = 1/fn;
+
+% === Parametros fisicos ===
+% C1 = 103.07e-9;  C2 = 211.1e-9;
+% R1 = 14.878e3;    R2 = 14.760e3;
+% R3 = 80.55e3;    R4 = 81.09e3;
+C2 = 103.07e-9;  C1 = 211.1e-9;
+R3 = 14.878e3;    R4 = 14.760e3;
+R1 = 80.55e3;    R2 = 81.09e3;
+
+
+tau1 = R2*C1;           k1 = -R2/R1;
+tau2 = R4*C2;           k2 = -R4/R3;
+%tau2 = 1/376.4;
+%tau1 = 1/114.2;
+F = [ -1/tau1,     0;
+       k2/tau2, -1/tau2 ];
+G = [ k1/tau1; 0 ];
+H = [0 1];     % <- justo lo que querías
+J = 0;
+
+sysC = ss(F,G,H,J);     % modelo "práctico" coherente
+Gc   = tf(sysC);        % si querés compararlo con el empírico
+
+zpk(Gc)
+
+
+
+fn = max(abs(zpk(Gc).P{1}))/pi;
+Tn = 1/fn;
+
+
+%% Parametros
+Ts = Tn/1.5; 
+wn_obj = 5*abs(max(zpk(Gc).P{1}));
+zita_obj = 0.7;
+poloObj = @(zita,wn,Ts) exp(Ts*wn*(-zita+1j*sqrt(1-zita^2)));
+p1 =[poloObj(zita_obj,wn_obj,Ts);conj(poloObj(zita_obj,wn_obj,Ts))];
+p2 = [0.5+1j*0.5;0.5-1j*0.5];
+polos = cell(2);
+polos = {p1,p2};
+%% Calculo
+
+
+%step(sysC)
+%save('../modeloSS.mat','sysC');
+
+sysD = c2d(sysC,Ts);
+K = cell(length(polos));
+K0 = cell(length(polos));
+sysCL = cell(length(polos));
+
+addpath('..\');
+for i = 1:length(polos)
+    K{i} = acker(sysD.A,sysD.B,polos{i});
+    Ac = sysD.A - sysD.B*K{i};                  
+    [~,~,K0{i}] = refi(Ac,sysD.B,sysD.C,K{i});
+    sysCL{i} = ss(Ac, sysD.B, sysD.C, sysD.D, sysD.Ts);
+    
+end
+
+
+
+%%
+r = cell(2);
+
+r = [zeros(1,20),0.5*ones(1,50)];
+r = r(:);
+for i = 1:length(sysCL)
+    sysi = ss(sysCL{i});
+    [X, Y, U] = ss_sym_digital(sysi, r, K{i}, K0{i},[0;0]);
+    X = 2.024+X;
+    Y = 2.024+Y;
+    U = 2.024+U;
+    N  = numel(r);  t = (0:N-1)'*sysi.Ts;  n = size(X,2);
+
+    % ----- Figura y paneles -----
+    fig = figure('Name', sprintf('CL #%d — señales + polos/ceros', i));
+    left = uipanel(fig,'Position',[0.05 0.08 0.58 0.87]);   % panel izq
+    rightAx = axes(fig,'Position',[0.68 0.10 0.28 0.82]);   % eje der (NO tiled)
+
+    % ----- Columna izquierda (y, estados, u) con tiledlayout -----
+    tl = tiledlayout(left, n+2, 1, 'TileSpacing','compact','Padding','compact');
+
+    % y & r
+    ax = nexttile(tl); hold(ax,'on');
+    stairs(ax, t, Y, 'LineWidth', 1.6);
+    stairs(ax, t, r+2.024, '--', 'LineWidth', 1.2);
+    grid(ax,'on'); grid(ax,'minor'); ylabel(ax,'y, r');
+    legend(ax, {'y','r'}, 'Location','best');
+    title(ax, sprintf('CL #%d — Salida y referencia', i));
+
+    % estados
+    for k = 1:n
+        axk = nexttile(tl);
+        stairs(axk, t, X(:,k), 'LineWidth', 1.4);
+        grid(axk,'on'); grid(axk,'minor'); ylabel(axk, sprintf('x_%d',k));
+        if k==1, title(axk, 'Estados'); end
+    end
+
+    % u
+    axu = nexttile(tl);
+    stairs(axu, t, U, 'LineWidth', 1.3);
+    grid(axu,'on'); grid(axu,'minor'); ylabel(axu,'u'); xlabel(axu,'Tiempo [s]');
+    title(axu,'Esfuerzo de control');
+
+    % ----- Columna derecha: polos y ceros con pzplot en axes normal -----
+    % (No usar tiledlayout aquí)
+    axes(rightAx); %#ok<LAXES>
+    cla(rightAx);
+    try
+        % pzplot en un axes normal funciona bien
+        pzplot(sysi); 
+        zgrid;
+        title(sprintf('Polos y ceros (fs=%.4g Hz)', 1/sysi.Ts));
+    catch
+        % fallback por si tu versión ata pzplot a ltiplot
+        [Z,P,~] = zpkdata(sysi,'v'); hold(rightAx,'on'); grid(rightAx,'on'); axis(rightAx,'equal');
+        plot(real(P), imag(P), 'x', 'LineWidth', 1.6, 'Parent', rightAx);
+        plot(real(Z), imag(Z), 'o', 'LineWidth', 1.6, 'Parent', rightAx);
+        if sysi.Ts>0
+            th = linspace(0,2*pi,400);
+            plot(cos(th), sin(th), '--', 'Parent', rightAx);  % círculo unidad
+            xlabel(rightAx,'Re(z)'); ylabel(rightAx,'Im(z)');
+        else
+            xline(rightAx,0,'--'); xlabel(rightAx,'Re(s)'); ylabel(rightAx,'Im(s)');
+        end
+        legend(rightAx,{'Polos','Ceros','Círc. unidad'},'Location','best');
+        title(rightAx, sprintf('Polos/Ceros (manual) — fs=%.4g s', 1/sysi.Ts));
+    end
+end
+
+

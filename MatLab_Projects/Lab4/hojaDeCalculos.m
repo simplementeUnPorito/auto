@@ -1,0 +1,254 @@
+close all
+clear all
+clc;
+
+% addpath('C:\Users\Elias\OneDrive\UCA\10_semestre\Auto\Lab1\');
+% addpath('..\Lab2\');
+% addpath('..\Lab3\');
+% 
+% %% Definicion de parametros
+% R_1 = 15e3;
+% R_3 = 15e3;
+% C_2 = 100e-9;
+% 
+% R_2 = 82e3;
+% R_4 = 82e3;
+% C_1 = 0.22e-6;
+% 
+% %% Generar funcion de transferencia d
+% numStage = [-R_3/R_1 -R_4/R_2];
+% denStage = { [C_2*R_3 1], [C_1*R_4 1] };
+% 
+% % Usamos celdas para guardar los tf de cada stage
+% Gstage = cell(1,2);
+% G = 1;
+% for i = 1:2
+%     Gstage{i} = tf(numStage(i), denStage{i});
+%     G = G*Gstage{i};
+% end
+
+
+load('modelo.mat');
+%% Analizamos en la frecuencia
+polos = zpk(G).P{1};
+fn = max(abs(polos))/pi;
+Tn = 1/fn;
+%% ================== Barrido sobre un vector de T ==================
+% Vector de periodos de muestreo a probar (ejemplo: usar T1, T2 y más)
+T = [1.25e-3 Tn/32 Tn/16 Tn/8 Tn/4 Tn/2];   % <-- ajustá a gusto
+f = 1./T;
+%%
+
+% Parámetros de la simulación para ver_intersample
+Tsim = Tn*3; 
+Nups = 40;   % sobremuestreo del ZOH (submuestras por periodo)
+
+% Resultados de cada Ts
+S_all_m1 = cell(1, numel(T));
+C_all_m1 = cell(1, numel(T));
+Gd_all_m1 = cell(1, numel(T));
+for k = 1:numel(T)
+    Ts = T(k);
+
+    % Discretizar la planta con ZOH a Ts
+    Gd_k = c2d(G, Ts, 'zoh');
+
+    % Método 1 (oscilaciones entre muestras): F = z^-1 ; C = F/(Gd*(1-F))
+    z_k = tf([1 0], 1, Ts);
+    C_k = 1/(Gd_k)*1/(z_k-1);
+
+    % Simulación intersample (usa tu función ver_intersample)
+    S_k = ver_intersample(G, C_k, round(Tsim/T(k)), Nups);  %#ok<NASGU>
+
+    % Guardar
+    S_all_m1{k}  = S_k;
+    C_all_m1{k}  = C_k;
+    Gd_all_m1{k} = Gd_k;
+end
+
+%%
+comparar_intersample(S_all_m1, T);
+%%
+
+% %% no funciona
+% % parámetros
+% C = C_all_m1{1};
+% Gd = Gd_all_m1{1};
+% Ts_ref  = C.Ts;     % 0.5 ms entre muestras de referencia
+% 
+% % 1) pulso montado
+% f = 1/(Ts*300);
+% Tfin = 3/f;
+% [t, refd] = gen_ref_pulso_blocks(Ts,Tfin,2.05,0.5,f); umin=0; umax=5;
+% figure;
+% plot(t,refd);
+% [yd,ud,ucd,ed,t] = sim_lazo_discreto_sat(Gd,C,refd,umin,umax);
+% 
+% figure;
+% subplot(3,1,1); stairs(t,yd); grid on; ylabel('y[k]');hold on;stairs(t,refd)
+% subplot(3,1,2); stairs(t,ud,'-');hold on; stairs( t,ucd,'--'); grid on; ylabel('u[k]'); legend('u','uc')
+% subplot(3,1,3); stairs(t,ed); grid on; ylabel('e[k]'); xlabel('t [s]')
+% 
+% 
+% Nups = 40;           % submuestras por periodo (p.ej. 40)
+% Muse = 0;            % 0 => usar todo u[k]
+% S = ver_intersample_desde_u(G, Ts, ud, Muse, Nups);
+
+
+%% ================== Metodo 2 (orden 1 del numerador A) ==================
+S_all_m2 = cell(1, numel(T));
+C_all_m2 = cell(1, numel(T));
+Gd_all_m2 = cell(1, numel(T));
+for k = 1:numel(T)
+    Ts = T(k);
+
+    % Planta discreta
+    Gd_k = c2d(G, Ts, 'zoh');
+
+    % === A(z): orden 1 (A = a1 z + a0). En z^{-1} MATLAB da [a0 a1].
+   
+    Azinv = Gd_k.Numerator;
+    if numel(Azinv) < 2
+        error('El numerador de Gd_k no es de orden 1.');
+    end
+    a0 = Azinv(3); 
+    a1 = Azinv(2);
+
+    % === K y b0 (¡correctos!)
+    denom = a1 + a0;
+    if abs(denom) < 1e-12
+        error('a1 + a0 = 0 -> no hay solución con l=2 y (z-1)B.');
+    end
+    K  = 1/denom;
+    b0 = a0/denom;
+
+    % === B(z) = z + b0 (en variable z, mayor->menor)
+    Bz = [1, b0];
+
+    % === D(z): quita polos en z=1 del denominador de Gd
+    p = zpk(Gd_k).P{1};
+    has_pole_at_1 = any(abs(p - 1) < 1e-6);
+    p_no1 = p(abs(p - 1) >= 1e-6);
+    Dz = poly(p_no1);              % en z (mayor->menor)
+    if max(abs(imag(Dz))) < 1e-12, Dz = real(Dz); end
+
+    % === Denominador del controlador según tenga o no polo en z=1
+    if has_pole_at_1
+        % Caso Eq. (6.54): C(z) = K*D(z) / (z + b0)
+        denC_z = Bz;
+    else
+        % Caso Eq. (6.51): C(z) = K*D(z) / [(z-1)(z + b0)]
+        denC_z = conv([1 -1], Bz);
+    end
+
+    C_k = tf(K * Dz, denC_z, Ts);
+
+    % Simulación inter-muestra
+    S_k = ver_intersample(G, C_k, round(Tsim/Ts), Nups);
+
+    % Guardar
+    S_all_m2{k}  = S_k;
+    C_all_m2{k}  = C_k;
+    Gd_all_m2{k}  = Gd_k;
+end
+
+comparar_intersample(S_all_m2, T);
+
+
+
+% %% no funciona
+% % parámetros
+% C = C_all_m2{1};
+% Gd = Gd_all_m2{1};
+% Ts_ref  = C.Ts;     % 0.5 ms entre muestras de referencia
+% 
+% % 1) pulso montado
+% f = 1/(Ts*300);
+% Tfin = 3/f;
+% [t, refd] = gen_ref_pulso_blocks(Ts,Tfin,2.05,0.5,f); umin=-300; umax=500;
+% figure;
+% plot(t,refd);
+% [yd,ud,ucd,ed,t] = sim_lazo_discreto_sat(Gd,C,refd,umin,umax);
+% 
+% figure;
+% subplot(3,1,1); stairs(t,yd); grid on; ylabel('y[k]');hold on;stairs(t,refd)
+% subplot(3,1,2); stairs(t,ud,'-');hold on; stairs( t,ucd,'--'); grid on; ylabel('u[k]'); legend('u','uc')
+% subplot(3,1,3); stairs(t,ed); grid on; ylabel('e[k]'); xlabel('t [s]')
+% 
+% 
+% Nups = 40;           % submuestras por periodo (p.ej. 40)
+% Muse = 0;            % 0 => usar todo u[k]
+% S = ver_intersample_desde_u(G, Ts, ud, Muse, Nups);
+%% ================== Guardar figuras e informe ==================
+% Carpeta de salida
+outDir = fullfile(pwd, 'resultados');
+figDir = fullfile(outDir, 'figuras');
+if ~exist(outDir, 'dir'), mkdir(outDir); end
+if ~exist(figDir, 'dir'), mkdir(figDir); end
+
+% --- 1) Guardar TODAS las figuras abiertas (las que genera comparar_intersample y otras)
+figs = findall(0, 'Type', 'figure');
+tsStamp = datestr(now, 'yyyymmdd_HHMMSS');  % timestamp único
+for i = 1:numel(figs)
+    try
+        set(figs(i), 'PaperPositionMode', 'auto');
+        fname = sprintf('fig_%02d_%s.png', i, tsStamp);
+        print(figs(i), fullfile(figDir, fname), '-dpng', '-r300');
+    catch ME
+        warning('No pude exportar la figura %d: %s', i, ME.message);
+    end
+end
+%%
+
+% --- 2) Armar archivo .txt con: Ts | Planta(G) | C_m1 | C_m2 (solo FT)
+txtPath = fullfile(outDir, sprintf('resumen_control_%s.txt', tsStamp));
+fid = fopen(txtPath, 'w');
+if fid < 0
+    error('No pude crear el archivo de resumen en %s', txtPath);
+end
+
+fprintf(fid, 'Resumen de control por periodo de muestreo\n');
+fprintf(fid, 'Formato: Ts [s] | Planta G | C_m1 | C_m2\n');
+fprintf(fid, '---------------------------------------------------------------\n');
+
+% String "limpio" de G continua (única para todas las filas)
+
+Nrows = min([numel(T), numel(C_all_m1), numel(C_all_m2)]);
+for k = 1:Nrows
+    Ts_k   = T(k);
+    G_show = tf2str_z(Gd_all_m2{k});
+    C1_show = tf2str_z(C_all_m1{k});
+    C2_show = tf2str_z(C_all_m2{k});
+    fprintf(fid, '%.12g | %s | %s | %s\n', Ts_k, G_show, C1_show, C2_show);
+end
+fclose(fid);
+
+% Guarda también el workspace por si querés reusar
+save(fullfile(outDir, sprintf('workspace_%s.mat', tsStamp)), ...
+     'T','G','C_all_m1','C_all_m2','Gd_all_m1','Gd_all_m2');
+fprintf('Listo.\nResumen: %s\n', txtPath);
+
+function s = tf2str_simple(sys)
+% Devuelve "(num)/(den)" en una línea.
+% - Si es continuo: variable 's'
+% - Si es discreto: variable 'z^-1' + sample time
+    [num, den, Ts] = tfdata(sys, 'v');
+    if isct(sys)
+        s = sprintf('(%s)/(%s)', poly2str(num,'s'), poly2str(den,'s'));
+    else
+        s = sprintf('(%s)/(%s); Ts=%.10g', poly2str(num,'z^-1'), poly2str(den,'z^-1'), Ts);
+    end
+    s = regexprep(s, '\s+', ' '); % compactar espacios
+end
+function s = tf2str_z(sys)
+% Escribe la FT discreta en variable 'z' (no z^-1)
+    assert(~isct(sys),'Solo discreto');
+    [num, den, ~] = tfdata(sys,'v');  % coef. en z^-1 descendentes
+    % Convertimos a polinomios en z multiplicando por z^-N y revirtiendo:
+    num_z = fliplr(num); den_z = fliplr(den);
+    s = sprintf('(%s)/(%s);', poly2str(num_z,'z'), poly2str(den_z,'z'));
+    s = regexprep(s, '\s+', ' ');
+end
+
+%%
+

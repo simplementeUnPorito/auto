@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CyXmlSerializer>
+<!--This file is machine generated and read. It is not intended to be edited by hand.-->
+<!--Due to this, there is no schema for this file.-->
+<CyGuid_2867d519-54d2-4c01-9830-c51cb08bc3dd type_name="CyDesigner.Common.ProjMgmt.Model.CyPrjMgmtWorkspaceSerialize" version="5" xml_contents_version="3" name="template-000" persistent="template-000.cywrk" platform="NOT_USED">
+<current_project name="..\Lab8.cydsn\Lab8.cyprj" />
+<wrkspc_folders />
+<files />
+<projects>
+<v>.\template.cyprj</v>
+<v>..\Lab3.cydsn\Lab3.cyprj</v>
+<v>..\lab2.cydsn\lab2.cyprj</v>
+<v>..\Lab4.cydsn\Lab4.cyprj</v>
+<v>..\Lab5.cydsn\Lab5.cyprj</v>
+<v>..\Lab6.predict.cydsn\Lab6.predict.cyprj</v>
+<v>..\Lab6.current.cydsn\Lab6.current.cyprj</v>
+<v>..\Lab6.predict_Simple.cydsn\Lab6.predict_Simple.cyprj</v>
+<v>..\Lab5_editado.cydsn\Lab5_editado.cyprj</v>
+<v>..\Lab7.predict.cydsn\Lab7.predict.cyprj</v>
+<v>..\Lab7.current.cydsn\Lab7.current.cyprj</v>
+<v>..\Lab8.cydsn\Lab8.cyprj</v>
+</projects>
+<workspace_id v="01fe52c4-bf65-40dc-a859-72abb3a9dd07" />
+<WriteAppVersionLastSavedWith v="4.4.0.80" />
+<WriteAppMarketingVersionLastSavedWith v="4.4" />
+<CyGuid_dcbd9771-0334-43dc-9cc3-fe99dc3c5316 type_name="CyDesigner.Common.ProjMgmt.Model.CyPrjMgmtWorkspaceSerialize+CyPrjDependencyList" version="4">
+<wrkspc_dependencies />
+</CyGuid_dcbd9771-0334-43dc-9cc3-fe99dc3c5316>
+<CyGuid_63b68103-67f5-4406-8da6-5c8625765b82 type_name="CyDesigner.Common.ProjMgmt.Model.CyPrjMgmtWorkspaceSerialize+CyIgnoredSystemDepsList" version="1">
+<wrkspc_dependencies />
+</CyGuid_63b68103-67f5-4406-8da6-5c8625765b82>
+</CyGuid_2867d519-54d2-4c01-9830-c51cb08bc3dd>
+</CyXmlSerializer>
