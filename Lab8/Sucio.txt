@@ -1,0 +1,194 @@
+Desarrollo
+1. Modelado del Sistema
+
+Esta es tu parte, no olvidar que la frecuencia de muestreo es 1kHz
+
+1.1. Obtener el diagrama de bloques del sistema.
+2. Discretizaci ́on del Sistema
+2.1. Elegir el tiempo de muestreo .
+	Para elegir un buen tiempo de muestreo primero simulamos el sistema 
+	
+
+%% ====================== DISEÑO CON POLOS OBJETIVO ÚNICOS ======================
+clear all; clc; close all;
+addpath('..\');
+
+%% --- Planta continua (tu modelo) ---
+C2 = 103.07e-9;  C1 = 211.1e-9;
+R3 = 6.74e3;      R4 = 14.760e3;
+R1 = 46.4e3;       R2 = 81.09e3;
+
+tau1 = R2*C1;           k1 = -R2/R1;
+tau2 = R4*C2;           k2 = -R4/R3;
+
+F = [ -1/tau1,     0;
+       k2/tau2, -1/tau2 ];
+G = [ k1/tau1; 0 ];
+H = [0 1];
+J = 0;
+
+sysC = ss(F,G,H,J);
+Gc   = tf(sysC);
+
+
+
+y obtemos su frecuencia e Nyquist, esta le definimos como 
+fn = max(abs(zpk(Gc).P{1}))/pi; 
+
+necesitamos minimo el doble de la frecuencia más rapida
+fn da aprox   209.2336
+Por lo que se considera razonable el usar 1kHz puesto que el PSoC posee uno de sus clocks a esta frecuencia, por lo que el sistema sera preciso
+
+Ts = 1/1e3;
+2.2. Discretizar las matrices del sistema.
+
+
+sysD = c2d(sysC, Ts, 'zoh');
+[A,B,C,D] = ssdata(sysD);
+
+
+2.3. Comparar el resultado con Matlab.
+A = 
+           x1      x2
+   x1  0.9433       0
+   x2  -1.022  0.5182
+ 
+  B = 
+             u1
+   x1  -0.09917
+   x2   0.05851
+ 
+  C = 
+       x1  x2
+   y1   0   1
+ 
+  D = 
+       u1
+   y1   0
+
+3. Modificaci ́on de la Din ́amica de la Planta
+
+3.1. Modificar la din ́amica de la planta con integrador considerando 3 matrices de pesos dis-
+tintas.
+Para añadirle el integrador, creamos un sistema auxiliar como se hizo ya en los laboratorios anteriores
+%% Anhadimos el integrador 
+n = size(A,1);
+m = 1;
+Ahat = [A B; zeros(m,n+m)];
+Bhat = [zeros(n,m); eye(m)];
+Chat = [C zeros(1,m)];
+sysDI = ss(Ahat,Bhat,Chat,D);
+
+
+
+3.1. Modificar la din ́amica de la planta con integrador considerando las siguientes matrices de
+pesos:
+
+Q1 =
+
+
+0,01 0 0
+0 0,01 0
+0 0 0,001
+
+ , Q2 = 1
+3.2. Modificar la din ́amica de la planta con integrador considerando:
+
+Q1 =
+
+
+0,01 0 0
+0 0,01 0
+0 0 0,1
+
+ , Q2 = 0,1
+3.3. Modificar la din ́amica de la planta con integrador considerando:
+
+Q1 =
+
+
+0,01 0 0
+0 0,01 0
+0 0 0,001
+
+ , Q2 = 0,01
+
+
+Para poner hacer las 3 matrices solicitadas, lo más sencillo fue generar un vector con todas las Q1 que se nos pide
+Q1 = {diag([0.01 0.01 0.001]), diag([0.01 0.01 0.1]), diag([0.01 0.01 0.001])};
+Q2 = {1, 0.1, 0.01};
+
+Asimismo, se necesitará un vector para K, K1 K2 y los polos donde coloquemos al sistema
+K = cell(size(Q2)); K1 = K; K2 = K; P = K;
+Utilizamos ntonces la function dlqr para obtener cada una de las ganancias y los polos
+
+ % ========= LQR DISCRETO sobre el sistema AUMENTADO =========
+    [Ki,~,Pi] = dlqr(Ahat, Bhat, Q1{i}, Q2{i})  % <- dlqr y matrices, no sys
+    
+Y por ultimo almacenamos estos n el vector y ademas generamos las matrices del sistema en lazo cerrado
+
+K{i} = Ki; P{i} = Pi;
+    K2{i} = Ki(1,1:n);          % sobre x
+    K1{i} = Ki(1,n+1:end);      % sobre integrador (z)
+    
+    Acl = [A B;(K2{i}-K2{i}*A-K1{i}*C*A) (eye(m)-K2{i}*B-K1{i}*C*B)];
+    Bcl = [0;0;K1{i}];
+
+Por ultimo hacemos un observador valido. por sencillez, usamos en todos los casos el mismo observador, tanto en predictor como actual
+
+p_obs = [0.2+1i*0.2, 0.2-1i*0.2];
+    L_pred_i   = acker(A', C', p_obs).';  % predictivo
+    L_actual_i = acker(A', (C*A)', p_obs).'; % actual 
+
+Despues se simula como ya se hizo en las anteriores
+
+Graficamos y listo
+
+las graficas estan en la carpeta 
+./Sim/
+
+Y son Q1_1.png, Q1_2.png, Q2_3.png sucesivamente
+
+el codigo de matlab completito esta en 
+
+../MatLab_Projects/Lab8/HojaDeCalculos.m
+
+
+
+4. Implementaci ́on del Sistema
+4.1. Implementar el estimador en el PSoC.
+
+La imagen de la planta se encuentra en
+../planta.png
+
+Además, los circuitos auxiliares utilizados se pueden ver en la imagen
+../circuito_auxiliar.png
+
+En esta imagen se puede ver que:
+timer_ref: Timer que genera la señal de referencia, un Escalon. Auxiliarmente se usar un registro ref_state que es el que permite al procesador del PSoC leer el estado de la ref, una puerta XOR y un registro tipo D para generar un compartamiento tipo flipflop tipo T cada vez que el timer genere un TC (termina de contar).
+PC: es un UART que nos permite comunicar con la pc por el usb si fuese necesario, se le suele dar las funcionalidades de cambiar la amplitud de la ref, el periodo, y abrir y cerrar el lazo de realimentacion por si hiciese falta para hacer pruebas, en este lab no fue utilizado
+VADC: el digitalizador tipo SAR, se usa en modo diferencial para no amplificar el dc donde esta montada la planta. con la señal soc inicializamos una digitalizacion cada 1kHz y cuando termina activa la interrupcion eoc que nos dice que actualicemos todo el sistema de control.
+Debouncer: Usamos el boton que viene en el kit de desarrollo del PSoC para cambiar el tipo de estimador, este tiene Tambien como timer_ref un flipflop llamado mode que actua en modo T y se lee para saber cual estimador utilizar
+
+
+Se uso el mismo codigo que en el lab anterior, per se añadió que se pueda cambiar entre el predictor y observador con un boton. De todos modos, solo ponemos las fotos del actual puesto que no se ven diferencias apreciables entre ambos. Estas fotos estan en 
+./Exp/
+
+Y son Q1_1.jpg, Q1_2.jpg, Q2_3.jpg sucesivamente
+
+El codigo entero de c se encuentra en
+../PSoC_Projects/Lab8.cydsn/main.c
+
+Se puede usar 
+
+5. Resultados
+5.1. Comparar los resultados obtenidos con Matlab.
+Mira las imagenes Q1_X.png y Q1_X.jpg de las carpertas Sim y Exp, de ahi hace una tabla comparando OverShoot y Tr, para facilitarte la vida, te puse el overshoot y tr en las imagenes de la simulacion
+
+En las que vienen del osciloscopio, solo se ve el rising time, el overshoot hace a ojo
+
+asimismo, la explicación de las discrepancias podes hacer copiando de las anteriores.
+
+Suerte, te amo, fuerza
+
+
