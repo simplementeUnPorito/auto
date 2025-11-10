@@ -178,6 +178,8 @@ Se uso el mismo codigo que en el lab anterior, per se añadió que se pueda camb
 
 Y son Q1_1.jpg, Q1_2.jpg, Q2_3.jpg sucesivamente
 
+la curva superior es la sonda 1 y la curva inferior la sonda 2. la sonda 1 es la salida de la planta y la sonda 2 es el esfuerzo.
+
 El codigo entero de c se encuentra en
 ../PSoC_Projects/Lab8.cydsn/main.c
 
@@ -190,6 +192,12 @@ Mira las imagenes Q1_X.png y Q1_X.jpg de las carpertas Sim y Exp, de ahi hace un
 En las que vienen del osciloscopio, solo se ve el rising time, el overshoot hace a ojo
 
 asimismo, la explicación de las discrepancias podes hacer copiando de las anteriores.
+
+Anexo
+para la parte de anexo, copia los anexos anteriores.
+tenes que poner entre los argumentos la direccion de donde se encuentran los códigos, tanto main.c como HojaDeCalculos.m
+
+tene en cuenta que capaz te tire error si algun caracter raro en los comentarios del .c o .m, cosas como Â y cosas no ASCCI standard. añadi en el main del latex o simplemente borra esos comentarios o modificalos, si ves Â cambias por Ahat por ejemplo 
 
 Suerte, te amo, fuerza
 
