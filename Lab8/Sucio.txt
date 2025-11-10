@@ -178,6 +178,8 @@ Se uso el mismo codigo que en el lab anterior, per se añadió que se pueda camb
 
 Y son Q1_1.jpg, Q1_2.jpg, Q2_3.jpg sucesivamente
 
+la curva superior es la sonda 1 y la curva inferior la sonda 2. la sonda 1 es la salida de la planta y la sonda 2 es el esfuerzo.
+
 El codigo entero de c se encuentra en
 ../PSoC_Projects/Lab8.cydsn/main.c
 
