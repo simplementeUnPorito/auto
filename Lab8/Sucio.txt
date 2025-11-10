@@ -149,6 +149,8 @@ las graficas estan en la carpeta
 
 Y son Q1_1.png, Q1_2.png, Q2_3.png sucesivamente
 
+en stas imagenes los triangulos rozados son los polos del sistema en lazo cerrado y los cuadrados azules los polos del estimador
+
 el codigo de matlab completito esta en 
 
 ../MatLab_Projects/Lab8/HojaDeCalculos.m
