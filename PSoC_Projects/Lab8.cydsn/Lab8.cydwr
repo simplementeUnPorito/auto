@@ -365,6 +365,7 @@
       <Data key="e851a3b9-efb8-48be-bbb8-b303b216c393" value="led" />
       <Data key="ed092b9b-d398-4703-be89-cebf998501f6" value="Tx_PC" />
       <Data key="f0b32879-8b81-417b-97c7-51f2d70fc6b3/16a808f6-2e13-45b9-bce0-b001c8655113" value="VADC_Bypass" />
+      <Data key="f9227edb-df07-4f09-8267-e130f23c5661" value="flanco_xd" />
     </Group>
   </Group>
   <Group key="EEPROM">
@@ -3453,7 +3454,7 @@
   <Group key="Pin2">
     <Group key="4aaa96d2-7415-4f97-b00f-199f3f91f1a1/16a808f6-2e13-45b9-bce0-b001c8655113">
       <Group key="0">
-        <Data key="Port Format" value="0,4" />
+        <Data key="Port Format" value="0,2" />
       </Group>
     </Group>
     <Group key="6b323c99-f247-45d0-b432-87f21ced2bdb">
@@ -3524,6 +3525,11 @@
     <Group key="f0b32879-8b81-417b-97c7-51f2d70fc6b3/16a808f6-2e13-45b9-bce0-b001c8655113">
       <Group key="0">
         <Data key="Port Format" value="0,2" />
+      </Group>
+    </Group>
+    <Group key="f9227edb-df07-4f09-8267-e130f23c5661">
+      <Group key="0">
+        <Data key="Port Format" value="2,0" />
       </Group>
     </Group>
     <Group key="UnAssigned Pins" />
