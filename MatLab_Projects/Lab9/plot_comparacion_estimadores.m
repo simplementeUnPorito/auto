@@ -17,6 +17,7 @@ mk = 5;
 
 fig = figure('Name',sprintf('Caso LQR %d — Kalman vs rápido',idx_case), ...
              'Position',[100 100 1200 800]);
+fig.Theme = "light"; %or
 tlo = tiledlayout(fig,3,2,'TileSpacing','compact','Padding','compact');
 
 % ===== (1) Kalman: y vs ŷ vs y_meas =====
@@ -41,13 +42,13 @@ legend('y real','\hat{y}','y medida','r','Location','best');
 
 % ===== (3) U Kalman =====
 nexttile(tlo);
-plot(t,U_kal,'LineWidth',1.3); grid on; grid minor;
+stairs(t,U_kal,'LineWidth',1.3); grid on; grid minor;
 xlabel('t [s]'); ylabel('u');
 title('Esfuerzo de control — Kalman');
 
 % ===== (4) U rápido =====
 nexttile(tlo);
-plot(t,U_lu,'LineWidth',1.3); grid on; grid minor;
+stairs(t,U_lu,'LineWidth',1.3); grid on; grid minor;
 xlabel('t [s]'); ylabel('u');
 title('Esfuerzo de control — rápido');
 
@@ -71,6 +72,6 @@ plot(real(p_kal),    imag(p_kal),    'go', 'MarkerSize',8, 'LineWidth',1.4, ...
 
 xlabel('Re\{z\}'); ylabel('Im\{z\}');
 title('Mapa de polos');
-legend('Location','bestoutside');
+%legend('Location','bestoutside');
 
 end

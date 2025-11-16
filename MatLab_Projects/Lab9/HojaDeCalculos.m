@@ -4,8 +4,8 @@ addpath('..\');
 
 %% --- Planta continua (tu modelo) ---
 C2 = 103.07e-9;  C1 = 211.1e-9;
-R3 = 6.74e3;      R4 = 14.760e3;
-R1 = 46.4e3;       R2 = 81.09e3;
+R3 = 6.74e3;     R4 = 14.760e3;
+R1 = 46.4e3;     R2 = 81.09e3;
 
 [sysC,fn,Tn] = plantaLabs(R1,R2,R3,R4,C1,C2);
 Ts = 1/1e3;   % 1 kHz
