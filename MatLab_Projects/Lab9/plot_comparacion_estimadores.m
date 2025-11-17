@@ -1,5 +1,5 @@
 function plot_comparacion_estimadores( ...
-    t, r_plot, ...
+    t, r_plot,sigma_w,sigma_v, ...
     X_kal, Xhat_kal, U_kal, y_true_kal, y_meas_kal, ...
     X_lu,  Xhat_lu,  U_lu,  y_true_lu,  y_meas_lu, ...
     C, Acl, Bcl, p_obs, p_kal, Ts, idx_case)
@@ -12,8 +12,7 @@ sys_cl = ss(Acl,Bcl,[C 0],0,Ts);
 info   = stepinfo(sys_cl);
 tr     = info.RiseTime*1000;    % ms
 os     = info.Overshoot;        % %
-
-mk = 5;
+ts     =info.SettlingTime*1000;
 
 fig = figure('Name',sprintf('Caso LQR %d — Kalman vs rápido',idx_case), ...
              'Position',[100 100 1200 800]);
@@ -23,33 +22,35 @@ tlo = tiledlayout(fig,3,2,'TileSpacing','compact','Padding','compact');
 % ===== (1) Kalman: y vs ŷ vs y_meas =====
 nexttile(tlo);
 plot(t,y_true_kal,'r','LineWidth',1.3); hold on; grid on; grid minor;
-plot(t(1:mk:end), (C*Xhat_kal(:,1:mk:end)),'b*');
-plot(t,y_meas_kal,'k:');
-plot(t,r_plot,'k--');
-xlabel('t [s]'); ylabel('Salida');
-title(sprintf('Kalman — t_r = %.2f ms, OS = %.1f%%',tr,os));
-legend('y real','\hat{y}','y medida','r','Location','best');
+plot(t,y_meas_kal,'b.');
+stairs(t,r_plot,'k--');
+xlabel('t [ms]'); ylabel('Salida');
+title(sprintf('Kalman — t_r = %.2f ms, t_s = %.2f ms, OS = %.1f%%',tr,ts,os));
+legend('y real','y medida','r','Location','best');
 
 % ===== (2) Rápido: y vs ŷ vs y_meas =====
 nexttile(tlo);
 plot(t,y_true_lu,'r','LineWidth',1.3); hold on; grid on; grid minor;
-plot(t(1:mk:end), (C*Xhat_lu(:,1:mk:end)),'b*');
-plot(t,y_meas_lu,'k:');
-plot(t,r_plot,'k--');
-xlabel('t [s]'); ylabel('Salida');
-title('Observador rápido (polos ×5)');
-legend('y real','\hat{y}','y medida','r','Location','best');
+plot(t,y_meas_lu,'b.');
+stairs(t,r_plot,'k--');
+xlabel('t [ms]'); ylabel('Salida');
+title(sprintf('Observador rápido (polos ×5)  —  \\sigma_w_1 = %.3g,  \\sigma_w_1 = %.3g,  \\sigma_v = %.3g',...
+      sigma_w(1),sigma_w(2), sigma_v));
+
+legend('y real','y medida','r','Location','best');
 
 % ===== (3) U Kalman =====
 nexttile(tlo);
-stairs(t,U_kal,'LineWidth',1.3); grid on; grid minor;
-xlabel('t [s]'); ylabel('u');
+stairs(t,U_kal,'LineWidth',1.3); grid on; grid minor; hold on;
+stairs(t,r_plot,'k--');
+xlabel('t [ms]'); ylabel('u');
 title('Esfuerzo de control — Kalman');
 
 % ===== (4) U rápido =====
 nexttile(tlo);
+stairs(t,r_plot,'k--'); hold on;
 stairs(t,U_lu,'LineWidth',1.3); grid on; grid minor;
-xlabel('t [s]'); ylabel('u');
+xlabel('t [ms]'); ylabel('u');
 title('Esfuerzo de control — rápido');
 
 % ===== (5) Mapa de polos =====
@@ -72,6 +73,11 @@ plot(real(p_kal),    imag(p_kal),    'go', 'MarkerSize',8, 'LineWidth',1.4, ...
 
 xlabel('Re\{z\}'); ylabel('Im\{z\}');
 title('Mapa de polos');
-%legend('Location','bestoutside');
+ 
+ax = gca;
+h = ax.Children;      % ojo: orden inverso al de dibujo
+
+% Por ejemplo, saltar los 3 primeros:
+legend(h(1:3), 'Location','bestoutside');
 
 end

@@ -23,7 +23,7 @@ function [X, Xhat, U, y_true, y_meas] = ...
     n = size(A,1);
 
     % ==== Generación de ruidos en TODAS las muestras ====
-    w_proc = sigma_w*randn(n,N);      % ruido de proceso para todos los estados
+    w_proc =sigma_w'.* randn(n,N);      % ruido de proceso para todos los estados
     v_meas = sigma_v*randn(1,N);      % ruido de medición en toda la simulación
 
     % ==== Variables de estado ====
@@ -35,7 +35,7 @@ function [X, Xhat, U, y_true, y_meas] = ...
     y_meas = zeros(1,N);
 
     % condición inicial estimador (podés cambiarla si querés)
-    Xhat(:,1) = [0.1; 0.1];
+    %Xhat(:,1) = [0.1; 0.1];
 
     for k = 1:N-1
         rk = r(k);

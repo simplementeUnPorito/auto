@@ -22,10 +22,22 @@ Chat = [C zeros(1,m)];
 sysDI = ss(Ahat,Bhat,Chat,D);
 
 %% Pesos LQR (para el sistema aumentado)
-Q1 = {diag([0.01 0.01 0.001]), ...
-      diag([0.01 0.01 0.1]),   ...
-      diag([0.01 0.01 0.001])};
-Q2 = {1, 0.1, 0.01};
+
+k1 = abs(R2/R1);
+k2 = abs(R4/R3);
+Sx = [1/k1, 1/(k1*k2), 1];   % [x1; x2; z] -> [x1_norm; x2_norm; z]
+
+% caso (a): rápido
+Q_fast = [ 100, 100, 1];   % 
+
+% caso (b): ahorro de esfuerzo
+Q_soft = [ 2, 4,  1.5 ];
+
+Q1{1} = diag(Q_fast.*Sx);
+Q1{2} = diag(Q_soft.*Sx);
+
+
+Q2 = {1, 1};
 
 K  = cell(size(Q2)); 
 K1 = K; 
@@ -33,26 +45,62 @@ K2 = K;
 P  = K;
 
 %% Parámetros de simulación y ruido (ACÁ TOCÁS VOS)
-N   = 200;
-t   = 0:Ts:(N-1)*Ts;
-r   = ones(1,N);      
-r(1:30) = 0;
+
+
 
 off      = 2.024;   % offset DC de tu planta
-sigma_w  = 1e-3;    % std ruido de proceso (w)   <-- CAMBIÁS ACÁ
-sigma_v  = 10e-3;    % std ruido de medición (v)  <-- CAMBIÁS ACÁ
+
+
+Vpp_adc = 4.8;    % ±2.4 V
+Nbits_adc = 12;
+
+
+Vpp_dac = 4.024;
+Nbits_dac = 8;
+
+[lsb_adc, sigmaq_adc, snr_adc] = quanti_noise_from_bits(Nbits_adc, Vpp_adc);
+[lsb_dac, sigmaq_dac, snr_dac] = quanti_noise_from_bits(Nbits_dac, Vpp_dac);
+
+
+
+f_pts  = [0.01 0.1 2 10 100 1000]*1e3;      % Hz, ejemplo
+S_nV   = [700 300 100 60 50 45];     % nV/sqrt(Hz), ejemplo
+S_pts  = S_nV * 1e-9;                       % V/sqrt(Hz)
+
+poles_plant = [-1/(C1*R2), -1/(C2*R4)];           % rad/s
+
+[vrms_unf, vrms_filt] = noise_from_psd_with_poles(f_pts, S_pts, poles_plant);
+
+BW = 500;
+G1 = R2/R1;G2=R4/R3;
+
+[vrms_R1, en_R1] = resistor_noise(R1, BW, G1);
+[vrms_R2, en_R2] = resistor_noise(R2, BW, 1);
+[vrms_R3, en_R3] = resistor_noise(R3, BW, G2);
+[vrms_R4, en_R4] = resistor_noise(R4, BW, 1);
+
+sigma_x1 = sqrt(vrms_unf^2 + vrms_R1^2 + vrms_R2^2 + sigmaq_dac^2);
+sigma_x2 = sqrt(vrms_unf^2 + vrms_R3^2 + vrms_R4^2);
+
+
+
+
+
+sigma_w  = [sigma_x1,sigma_x2];    % std ruido de proceso (w)  
+sigma_v = sigmaq_adc;              % std ruido de medicion (v)
+
 G = eye(n);                        % ruido de proceso en todos los estados
 
 % Ganancia de Kalman (misma para todos los LQR en este ejemplo)
 L_kal = disenar_kalman_simple(A,C,G,sigma_w,sigma_v);
 
 % (Opcional) polos "5 veces más rápidos" para comparador de Luenberger
-p_obs = [0.2+1i*0.2, 0.2-1i*0.2];
-L_rapido = acker(A', (C*A)', p_obs).';   % segundo estimador para comparar
+L_obs =K;
 
 
 %% =================== Bucle sobre los diseños LQR ===================
 for i = 1:length(Q2)
+    
     % ========= LQR DISCRETO sobre el sistema AUMENTADO =========
     [Ki,~,Pi] = dlqr(Ahat, Bhat, Q1{i}, Q2{i});  % dlqr con matrices
     K{i}  = Ki; 
@@ -62,10 +110,48 @@ for i = 1:length(Q2)
     
     % Dinámica cerrada del sistema AUMENTADO (para análisis de control)
     Acl = [A B;
-          (K2{i}-K2{i}*A-K1{i}*C*A) (eye(m)-K2{i}*B-K1{i}*C*B)];
+      (K2{i}-K2{i}*A-K1{i}*C*A) (eye(m)-K2{i}*B-K1{i}*C*B)];
+
     Bcl = [zeros(n,1); K1{i}];   % generalizado para n estados
+    Ccl = [C 0];
+    sysCl = ss(Acl,Bcl,Ccl,D,Ts);
+    N = ceil(2*ceil(stepinfo(sysCl).SettlingTime/Ts));
     
-    % ======== SIMULACIÓN CON KALMAN (ruido en TODO el horizonte) ========
+    r   = ones(1,N);      
+    r(1:ceil(N/4)) = 0;
+    t   = (0:Ts:(N-1)*Ts)*1000;
+
+    Pcl = eig(Acl);           % columna, 3x1
+
+    % Elegir los n polos dominantes (más cercanos al círculo unidad)
+    [~, idx] = sort(abs(Pcl), 'descend');  % de mayor |z| a menor
+    Pdom = Pcl(idx(1:n));                  % n polos “importantes”
+    
+    % Hacerlos 5 veces más rápidos (equivalente a escalar en s-plane)
+    p_obs = Pdom.^5;   % columna 2x1
+
+    L_rapido = acker(A', (C*A)',p_obs' ).';   % segundo estimador para comparar
+    L_obs{i}=L_rapido;
+    p_kal = eig(A - L_kal*C);
+
+
+    % ======== SIMULACIÓN CON KALMAN (ruido) ========
+    [Xi_kal, Xhi_kal, Ui_kal, y_true_kal, y_meas_kal] = ...
+        sim_lqr_kalman(A,B,C,K1{i},K2{i},L_kal,Ts,N,r,off,[0,0],0);
+    
+    % ======== SIMULACIÓN CON OBSERVADOR "RÁPIDO" (ACKER) ========
+    [Xi_lu, Xhi_lu, Ui_lu, y_true_lu, y_meas_lu] = ...
+        sim_lqr_kalman(A,B,C,K1{i},K2{i},L_rapido,Ts,N,r,off,[0,0],0);
+
+    % ====== Graficar comparación ======
+    plot_comparacion_estimadores( ...
+        t, r+off,[0,0],0, ...
+        Xi_kal, Xhi_kal, Ui_kal, y_true_kal, y_meas_kal, ...
+        Xi_lu,  Xhi_lu,  Ui_lu,  y_true_lu,  y_meas_lu, ...
+        C, Acl, Bcl, p_obs, p_kal, Ts, i);
+
+
+    % ======== SIMULACIÓN CON KALMAN (ruido) ========
     [Xi_kal, Xhi_kal, Ui_kal, y_true_kal, y_meas_kal] = ...
         sim_lqr_kalman(A,B,C,K1{i},K2{i},L_kal,Ts,N,r,off,sigma_w,sigma_v);
     
@@ -73,10 +159,9 @@ for i = 1:length(Q2)
     [Xi_lu, Xhi_lu, Ui_lu, y_true_lu, y_meas_lu] = ...
         sim_lqr_kalman(A,B,C,K1{i},K2{i},L_rapido,Ts,N,r,off,sigma_w,sigma_v);
 
-    p_kal = eig(A - L_kal*C);
     % ====== Graficar comparación ======
     plot_comparacion_estimadores( ...
-        t, r+off, ...
+        t, r+off,sigma_w,sigma_v, ...
         Xi_kal, Xhi_kal, Ui_kal, y_true_kal, y_meas_kal, ...
         Xi_lu,  Xhi_lu,  Ui_lu,  y_true_lu,  y_meas_lu, ...
         C, Acl, Bcl, p_obs, p_kal, Ts, i);

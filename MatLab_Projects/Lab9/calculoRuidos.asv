@@ -1,0 +1,25 @@
+Vpp_adc = 4.8;    % ±2.4 V
+Nbits_adc = 12;
+
+C2 = 103.07e-9;  C1 = 211.1e-9;
+R3 = 6.74e3;     R4 = 14.760e3;
+R1 = 46.4e3;     R2 = 81.09e3;
+
+Vpp_dac = 4.024;
+Nbits_dac = 8;
+
+[lsb_adc, sigmaq_adc, snr_adc] = quant_noise_from_bits(Nbits_adc, Vpp_adc);
+[lsb_dac, sigmaq_dac, snr_dac] = quant_noise_from_bits(Nbits_dac, Vpp_dac);
+
+
+
+f_pts  = [0.01 0.1 2 10 100 1000]*1e3;      % Hz, ejemplo
+S_nV   = [700 300 100 60 50 45];     % nV/sqrt(Hz), ejemplo
+S_pts  = S_nV * 1e-9;                       % V/sqrt(Hz)
+
+poles_plant = [-1/(C1*R2), -1/(C2*R4)];           % rad/s
+
+[vrms_unf, vrms_filt] = noise_from_psd_with_poles(f_pts, S_pts, poles_plant);
+
+B = 500;
+K1 = R2/R1;K2=R4/R3

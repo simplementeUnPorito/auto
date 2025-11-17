@@ -8,8 +8,8 @@ function L = disenar_kalman_simple(A,C,G,sigma_w,sigma_v)
     n  = size(A,1);
     ny = size(C,1);
 
-    Q = (sigma_w^2)*eye(n);            % covarianza proceso
-    R = (sigma_v^2)*eye(ny);           % covarianza medición
+    Q = diag((sigma_w.^2));            % covarianza proceso
+    R = diag((sigma_v.^2));           % covarianza medición
 
     [L,~,~] = dlqe(A,G,C,Q,R);         % LQE discreto -> ganancia de Kalman
 
