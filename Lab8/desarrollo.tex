@@ -112,9 +112,9 @@ H =
 \insertarfigura{Otros/Diagramas1.png}{Diagrama de bloques del sistema continuo.}{fig:diag_continuo}{1}
 
 
-\subsection{Discretización del Sistema}
+\section{Discretización del Sistema}
 
-\subsubsection{Elección del tiempo de muestreo $T_s = 1.1948~\text{ms}$, usado en laboratorios anteriores}
+\subsection{Elección del tiempo de muestreo $T_s = 1.1948~\text{ms}$, usado en laboratorios anteriores}
 
 Para la discretización del sistema continuo descrito por las ecuaciones~(\ref{eq:1}) y~(\ref{eq:2}), se busca obtener un modelo equivalente en tiempo discreto que relacione las variables de estado y la señal de entrada en instantes de muestreo definidos.  
 Las ecuaciones del sistema discreto se expresan como:
@@ -140,7 +140,7 @@ C = H \qquad
 \[
 \& \quad D = J
 \]
-\subsubsection{Obtención de las matrices discretas $A$, $B$, $C$ y $D$}
+\subsection{Obtención de las matrices discretas $A$, $B$, $C$ y $D$}
 
 Con un tiempo de muestreo $T_s = 1~\text{ms}$, se obtienen las siguientes matrices discretizadas:
 
@@ -167,14 +167,14 @@ B =
 
 Estas matrices representan el modelo digital equivalente del sistema continuo, y serán utilizadas posteriormente para el diseño del controlador e implementación en el \texttt{PSoC}.
 
-\subsubsection{Diagrama de bloques del sistema discretizado}
+\subsection{Diagrama de bloques del sistema discretizado}
 
 En la Figura~\ref{fig:diag_discreto} se presenta el diagrama de bloques correspondiente al sistema discretizado, donde se observa la relación entre las variables de estado, la entrada $u(k)$ y la salida $Y(k)$.
 
 \insertarfigura{Otros/Diagramas2.png}{Diagrama de bloques del sistema discretizado.}{fig:diag_discreto}{1}
 
 
-\subsubsection{Verificación de la controlabilidad y observabilidad del sistema}
+\subsection{Verificación de la controlabilidad y observabilidad del sistema}
 
 La matriz de controlabilidad se obtiene a partir de la siguiente relación general:
 
@@ -255,30 +255,7 @@ Sustituyendo los valores del sistema:
 El rango de la matriz de observabilidad también resulta ser $n = 2$.\\  
 Por lo tanto, se concluye que el sistema es **completamente controlable y observable**, cumpliendo con las condiciones necesarias para el diseño de control mediante realimentación de estados.
 
-\subsubsection{Comparar los resultados obtenidos con las simulaciones realizadas en \texttt{MATLAB}}
-\textbf{Resultados de las matrices continuas:}
-\[
-F =
-\begin{bmatrix}
-	-58.42 & 0 \\[4pt]
-	-652.10 & -657.30
-\end{bmatrix}, \quad
-G =
-\begin{bmatrix}
-	-58.81 \\[4pt]
-	0
-\end{bmatrix}, \quad
-H =
-\begin{bmatrix}
-	0 & 1
-\end{bmatrix}
-\]
-
-\[
-\& \quad
-J = [\,0\,]
-\]
-
+\subsection{Comparar los resultados obtenidos con las simulaciones realizadas en \texttt{MATLAB}}
 \textbf{Resultados de las matrices discretas:}
 \[
 A =

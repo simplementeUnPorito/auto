@@ -1,7 +1,18 @@
 
 \section{Modificación de la Dinámica de la Planta}
 
-\subsection{Modificar la dinámica de la planta con integrador considerando 3 matrices de pesos distintas.}
+\subsection{Modificar la dinámica de la planta con integrador considerando 3 matrices de pesos distintas}
+
+Para asegurar error nulo en régimen permanente ante referencias tipo escalón, se emplea un regulador LQI (LQR con integrador del error). Esto se logra aumentando el modelo con el estado integrador $\xi$ que acumula $e=r-y$, y diseñando la realimentación óptima sobre el par aumentado. En discreto, con período $T_s$, el modelo queda:
+\[
+A_{ad}=\begin{bmatrix}A_d & 0\\ -T_s\,C & I\end{bmatrix},\qquad
+B_{ad}=\begin{bmatrix}B_d\\ 0\end{bmatrix},
+\]
+\[
+K_a=\begin{bmatrix}K & K_i\end{bmatrix}=\mathrm{dlqr}(A_{ad},B_{ad},Q_a,R),
+\]
+y la ley de control es $u_k=-K\,\hat{x}_k - K_i\,\xi_k$ (no se requiere pre-filtro para escalones). 
+Para mantener la notación del enunciado, tomamos \(Q_1 \equiv Q_a\) y \(Q_2 \equiv R\).
 
 \subsection{Modificar la dinámica de la planta con integrador considerando las siguientes matrices de pesos:}
 \[
@@ -36,8 +47,125 @@ Q_{1}=\begin{bmatrix}
 Q_{2}=0{,}01
 \]
 
-\section{Implementación del Sistema}
-\subsection{Implementar el estimador en el PSoC.}
 
+\subsection{Barrido de ponderaciones y síntesis LQR (discreto) con integrador}
+
+Con el fin de comparar el compromiso rapidez/esfuerzo/robustez, se sintetizaron tres controladores LQR sobre el modelo aumentado empleado en los laboratorios anteriores. Para automatizar el proceso, se organizaron los pesos en arreglos de celdas y se computaron en lote las ganancias, los polos y las matrices de lazo cerrado asociadas a cada caso.
+
+\paragraph{Conjuntos de pesos.}
+Se definieron tres configuraciones de ponderaciones \((Q_1,Q_2)\), donde \(Q_1\) penaliza los estados del modelo aumentado y \(Q_2\) penaliza el esfuerzo de control:
+\[
+Q_{1}^{(1)}=\mathrm{diag}\!\big(0{,}01,\;0{,}01,\;0{,}001\big),\quad Q_{2}^{(1)}=1,
+\]
+\[
+Q_{1}^{(2)}=\mathrm{diag}\!\big(0{,}01,\;0{,}01,\;0{,}1\big),\quad Q_{2}^{(2)}=0{,}1,
+\]
+\[
+Q_{1}^{(3)}=\mathrm{diag}\!\big(0{,}01,\;0{,}01,\;0{,}001\big),\quad Q_{2}^{(3)}=0{,}01.
+\]
+
+\paragraph{Estructura de datos y cálculo en lote.}
+Para facilitar el barrido se utilizaron celdas de \texttt{MATLAB} que almacenan, para cada caso \(i\), la ganancia \(K^{(i)}\), su partición sobre estados e integrador \((K_2^{(i)},K_1^{(i)})\), la solución de Riccati \(P^{(i)}\) y las matrices de lazo cerrado.
+
+
+\paragraph{Observador (predictivo y actual).}
+Para la estimación de estado se empleó, por sencillez, un mismo par de observadores en los tres casos: uno predictivo y otro actual. Los polos del observador se seleccionaron como un par complejo conjugado amortiguado en el interior del círculo unidad.
+
+\paragraph{Simulación y graficación.}
+El esquema de simulación reutiliza la infraestructura de prácticas anteriores: para cada configuración \((Q_1^{(i)},Q_2^{(i)})\) se cierra el lazo con \(K^{(i)}\), se integra la dinámica y se registran respuesta temporal, esfuerzo de control y ubicación de polos. 
+
+\insertarfigurawide{Sim/Q1_1.png}{Simulación en \textsc{MATLAB}: predictivo vs.\ actual; esfuerzo de control y círculo unitario (C1).}{fig:sim-c1}{1}
+
+\insertarfigurawide{Sim/Q1_2.png}{Simulación en \textsc{MATLAB}: predictivo vs.\ actual; esfuerzo de control y círculo unitario (C2).}{fig:sim-c2}{1}
+
+\insertarfigurawide{Sim/Q1_3.png}{Simulación en \textsc{MATLAB}: predictivo vs.\ actual; esfuerzo de control y círculo unitario (C3).}{fig:sim-c3}{1}
+
+En dichas imágenes (\ref{fig:sim-c1}, \ref{fig:sim-c2} y \ref{fig:sim-c3}), los \emph{triángulos rosados} indican los polos del sistema en lazo cerrado y los \emph{cuadrados azules} indican los polos del estimador.
+
+
+\newpage
+
+\section{Implementación del Sistema}
+\label{sec:impl}
+
+\subsection{Implementar el estimador en el PSoC}
+Esta sección describe el montaje hardware–software utilizado para ejecutar el estimador y el controlador en tiempo real sobre la plataforma PSoC, así como la lógica de temporización y los recursos auxiliares empleados.
+
+\paragraph{Planta y periféricos auxiliares.}
+La planta bajo control se muestra en la Fig.~\ref{fig:planta}. Los circuitos auxiliares empleados para referencia, adquisición y conmutación de modos se ilustran en la Fig.~\ref{fig:circ_aux}.
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.78\linewidth]{../planta.png}
+	\caption{Planta bajo control.}
+	\label{fig:planta}
+\end{figure}
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.78\linewidth]{../circuito_auxiliar.png}
+	\caption{Periféricos y lógica auxiliar implementados en el PSoC.}
+	\label{fig:circ_aux}
+\end{figure}
+
+\paragraph{Generación de referencia (\texttt{timer\_ref}).}
+Un temporizador \texttt{timer\_ref} genera una referencia tipo escalón. Para permitir que el procesador lea su estado, se utiliza un registro \texttt{ref\_state}. La combinación de una compuerta XOR y un biestable tipo D implementa un \textit{flip-flop} tipo T: a cada evento \texttt{TC} (terminal count) del temporizador, el T-FF conmuta y, por ende, alterna el nivel lógico de la referencia (útil para secuencias de ensayo).
+
+\paragraph{Interfaz con PC (\texttt{PC} por UART).}
+Se dispone de un puerto UART (\texttt{PC}) para comunicación por USB. Habitualmente permite ajustar amplitud y período de la referencia, así como abrir/cerrar el lazo para pruebas. En este laboratorio no se utilizó funcionalmente, pero permanece disponible.
+
+\paragraph{Adquisición (\texttt{VADC} SAR).}
+La señal de salida de la planta se digitaliza con el ADC SAR (\texttt{VADC}) en \textbf{modo diferencial} para mejorar el rechazo del offset de continua. Un pulso \texttt{soc} (start of conversion) inicia cada conversión a \(\,1~\text{kHz}\). Al finalizar, el ADC activa \texttt{eoc} (end of conversion), que dispara la ISR de control.
+
+\paragraph{Conmutación de estimador (botón + \texttt{Debouncer}).}
+El botón del kit conmuta el modo de estimación entre \emph{predictivo} y \emph{actual}. Para evitar rebotes se emplea \texttt{Debouncer} y, de forma análoga a la referencia, un biestable \texttt{mode} que opera como T-FF. El firmware lee \texttt{mode} en cada ciclo y selecciona el estimador correspondiente.
+
+\paragraph{Ciclo de control (ISR a 1~kHz).}
+Cada interrupción \texttt{eoc} ejecuta la siguiente secuencia:
+\begin{enumerate}
+	\item Lectura de \(y_k\) desde \texttt{VADC}.
+	\item Actualización del estimador (\emph{predictivo} o \emph{actual}, según \texttt{mode}) para obtener \(\hat{x}_k\).
+	\item Actualización del integrador del error \(\xi_k\) (servo con LQI).
+	\item Cálculo del control \(u_k = -K\,\hat{x}_k - K_i\,\xi_k\) y aplicación de saturaciones físicas.
+	\item Escritura de \(u_k\) al DAC (esfuerzo aplicado a la planta).
+	\item Registro de variables para trazas/osciloscopio si corresponde.
+\end{enumerate}
+
+
+\paragraph{Trazas experimentales.}
+
+En las figuras (\ref{fig:exp-act-c1}, \ref{fig:exp-act-c2} y \ref{fig:exp-act-c3}), la \textbf{curva superior} (sonda~1) corresponde a la \emph{salida de la planta} y la \textbf{curva inferior} (sonda~2) al \emph{esfuerzo de control}. Se muestran fotografías del estimador \emph{actual}; las diferencias visuales con el \emph{predictivo} resultaron poco apreciables en estas condiciones de prueba.
+
+\insertarfigura{./Exp/Q1_1.jpg}{Experimento — Estimador actual (Caso C1).}{fig:exp-act-c1}{1}
+
+\insertarfigura{./Exp/Q1_2.jpg}{Experimento — Estimador actual (Caso C2).}{fig:exp-act-c2}{1}
+
+\insertarfigura{./Exp/Q1_3.jpg}{Experimento — Estimador actual (Caso C3).}{fig:exp-act-c3}{1}
+
+\newpage
 \section{Resultados}
 \subsection{Comparar los resultados obtenidos con Matlab.}
+
+% Requiere \usepackage{booktabs}
+\begin{table}[!h]
+	\centering
+	\caption{Comparación de OverShoot (OS) y tiempo de subida \(t_r\) entre experimento (PSoC) y simulación.}
+	\label{tab:os-tr-psoc-sim}
+	\begin{tabular}{lcccccc}
+		\toprule
+		\multirow{2}{*}{Caso} & \multicolumn{3}{c}{OS [\%]} & \multicolumn{3}{c}{$t_r$ [ms]} \\
+		\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+		& PSoC & Sim. & $|\Delta|$ & PSoC & Sim. & $|\Delta|$ \\
+		\midrule
+		C1 & 0 & 0 & 0 & 65.4 & 101 & 35.6 \\
+		C2 & 20 & 13.071 & 6.929 & 20.8 & 26 & 5.2 \\
+		C3 & 25 & 18.717 & 6.28 & 7 & 9 & 2 \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+
+Los resultados del laboratorio confirman que el control óptimo con integrador (LQI) cumple el objetivo de \textbf{seguimiento con error estacionario nulo}, manteniendo una dinámica global coherente con la simulación. Tanto el \emph{observador predictivo} como el \emph{actual} reprodujeron la tendencia teórica: al pasar de C1, C2 a C3 y tornar el diseño más agresivo (mayor peso al integrador y/o menor $R$), el \textbf{tiempo de subida} disminuye y el \textbf{sobreimpulso} aumenta. En la Tabla~\ref{tab:os-tr-psoc-sim} se observa, por ejemplo, que $t_r$ en PSoC es sistemáticamente menor que en simulación (C1: 65.4~ms vs.\ 101~ms; C3: 7~ms vs.\ 9~ms), mientras que el OS medido resulta mayor en los casos más exigentes (C2: 20\% vs.\ 13.071\%; C3: 25\% vs.\ 18.717\%). Estas discrepancias se explican por \emph{tolerancias de componentes}, \emph{desajustes de ganancia}, \emph{cuantización y latencias DAC/ADC}, \emph{detalles de discretización} ($T_s$ efectivo y retardo de ZOH), \emph{saturación} (y la gestión de \emph{anti-windup}) y ligeros \emph{desvíos de polos} respecto a los ubicados por diseño. Aun así, el LQI mostró \textbf{estabilidad robusta} y esfuerzo de control acotado en los tres casos; en particular, \textbf{C2} ofrece un compromiso práctico entre rapidez y OS para esta planta.
+
+
+
