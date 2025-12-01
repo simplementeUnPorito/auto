@@ -1,0 +1,80 @@
+close all; clear all;
+
+[F,G,H,J] = tf2ss(1,[1 10 0]);
+wn = max(abs(eig(F)));
+Ts = pi/(wn*4);
+sys_c = ss(F,G,H,J);
+[A,B,C,D] = ssdata(c2d(sys_c,Ts));
+
+% ==== DLQR con integrador ====
+Aaug = [A B; zeros(1,3)];
+Baug = [zeros(2,1); 1];
+Q = diag([1 100 0.01]);
+R = 1;
+Kaug = dlqr(Aaug,Baug,Q,R);     % [K2 K1]
+Aux = [A-eye(2),B;C*A,C*B];
+K2K1 = (Kaug+[0,0,1])*inv(Aux);
+K2 = K2K1(1:2);K1=K2K1(3);
+
+% ==== DLQE ====
+Rw = 0.1e-3*eye(2);
+Rv = 0.1e-3;
+[L,~,~,p_obs] = dlqe(A,eye(2),C,Rw,Rv);    % estimador discreto
+
+
+
+sys_ol = ss(A,B,C,D,Ts);
+sys_obs = ss(A-L*C*A,B,C,D,Ts);
+Acl = [A,B;K2-K2*A-K1*C*A,eye(1)-K2*B-K1*C*B];
+Bcl = [B;0];
+Ccl = [C 0];
+Dcl = D;
+sys_cl = ss(Acl,Bcl,Ccl,Dcl,Ts);
+
+
+% ==== Simulación ====
+N=ceil(stepinfo(sys_cl).SettlingTime*2/Ts);
+t = 0:Ts:(N-1)*Ts;
+X = zeros(2,N);
+Xhat = [1;-1];
+Z = Xhat; 
+v = 0;
+r = 1;
+U = zeros(1,N);
+
+for k=1:N-1
+    %Medicion
+    Y = C*X(:,k);
+
+   
+    % Corrección
+    Xhat = Z + L*(Y - C*Z);
+
+    % Integrador con error estimado
+    e = r - C*Xhat;
+    v = v + e;
+
+    % Control
+    U(k) = -K2*Xhat + K1*v;
+
+    % Planta real
+    X(:,k+1) = A*X(:,k) + B*U(k);
+
+     % Predicción
+    Z = A*Xhat + B*U(k);
+end
+
+%%
+Uc = repelem(U,100);
+tc = linspace(0,Ts*length(U),length(Uc));
+sys_c = ss(F,G,[1,0;0,1],J);
+[Yc,tc] = lsim(sys_c,Uc,tc);
+
+fig = figure;
+fig.Theme = "light";
+subplot(1,2,1); stairs(t,X'); title('Estados');grid on;grid minor; hold on; plot(tc,Yc);
+subplot(1,2,2); stairs(t,U);   title('Control');grid on;grid minor;
+fig = figure;
+fig.Theme = "light";
+zgrid;
+pzmap(sys_ol,sys_obs,sys_cl); title('PZ-Map'); hold on; grid on; zgrid;

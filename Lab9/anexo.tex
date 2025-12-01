@@ -1,0 +1,84 @@
+% ======================= APÉNDICE =======================
+\clearpage
+\onecolumn
+\appendix
+\section{Códigos fuente}
+
+En esta sección se incluyen los archivos utilizados para el diseño, simulación y
+la implementación del controlador LQG.
+
+\subsection{Scripts de diseño y simulación (\texttt{MATLAB})}
+
+\IfFileExists{../MatLab_Projects/Lab9/HojaDeCalculos.m}{%
+	\lstinputlisting[
+	style=matlabstyle,
+	caption={\texttt{HojaDeCalculos.m}: script principal de diseño.},
+	label={lst:hojadecalculos}
+	]{../MatLab_Projects/Lab9/HojaDeCalculos.m}
+}{\textnormal{\textbf{(Archivo no encontrado: MatLab_Projects/Lab9/HojaDeCalculos.m)}}}
+
+\IfFileExists{../MatLab_Projects/Lab9/sim_lqr_kalman.m}{%
+	\lstinputlisting[
+	style=matlabstyle,
+	caption={\texttt{sim\_lqr\_kalman.m}: simulación del LQR + Kalman.},
+	label={lst:simlqrkalman}
+	]{../MatLab_Projects/Lab9/sim_lqr_kalman.m}
+}{\textnormal{\textbf{(Archivo no encontrado: sim\_lqr\_kalman.m)}}}
+
+\IfFileExists{../MatLab_Projects/Lab9/plot_comparacion_estimadores.m}{%
+	\lstinputlisting[
+	style=matlabstyle,
+	caption={\texttt{plot\_comparacion\_estimadores.m}: generación automática de figuras.},
+	label={lst:plotobs}
+	]{../MatLab_Projects/Lab9/plot_comparacion_estimadores.m}
+}{\textnormal{\textbf{(Archivo no encontrado: plot\_comparacion\_estimadores.m)}}}
+
+\IfFileExists{../MatLab_Projects/Lab9/disenar_kalman_simple.m}{%
+	\lstinputlisting[
+	style=matlabstyle,
+	caption={\texttt{disenar\_kalman\_simple.m}: cálculo del filtro de Kalman con dlqe.},
+	label={lst:kalmanfunc}
+	]{../MatLab_Projects/Lab9/disenar_kalman_simple.m}
+}{\textnormal{\textbf{(Archivo no encontrado: disenar\_kalman\_simple.m)}}}
+
+\IfFileExists{../MatLab_Projects/Lab9/quanti_noise_from_bits.m}{%
+	\lstinputlisting[
+	style=matlabstyle,
+	caption={\texttt{quanti\_noise\_from\_bits.m}: ruido de cuantización ADC/DAC.},
+	label={lst:quanti}
+	]{../MatLab_Projects/Lab9/quanti_noise_from_bits.m}
+}{\textnormal{\textbf{(Archivo no encontrado: quanti\_noise\_from\_bits.m)}}}
+
+\IfFileExists{../MatLab_Projects/Lab9/resistor_noise.m}{%
+	\lstinputlisting[
+	style=matlabstyle,
+	caption={\texttt{resistor\_noise.m}: cálculo de ruido térmico.},
+	label={lst:resistor}
+	]{../MatLab_Projects/Lab9/resistor_noise.m}
+}{\textnormal{\textbf{(Archivo no encontrado: resistor\_noise.m)}}}
+
+\IfFileExists{../MatLab_Projects/Lab9/noise_from_psd_with_poles.m}{%
+	\lstinputlisting[
+	style=matlabstyle,
+	caption={\texttt{noise\_from\_psd\_with\_poles.m}: filtrado del ruido según polos.},
+	label={lst:psd}
+	]{../MatLab_Projects/Lab9/noise_from_psd_with_poles.m}
+}{\textnormal{\textbf{(Archivo no encontrado: noise\_from\_psd\_with\_poles.m)}}}
+
+\IfFileExists{../MatLab_Projects/Lab9/plantaLabs.m}{%
+	\lstinputlisting[
+	style=matlabstyle,
+	caption={\texttt{plantaLabs.m}: modelo continuo y discretización.},
+	label={lst:plantalabs}
+	]{../MatLab_Projects/Lab9/plantaLabs.m}
+}{\textnormal{\textbf{(Archivo no encontrado: plantaLabs.m)}}}
+
+\subsection{Código en \texttt{PSoC} (C)}
+
+\IfFileExists{../PSoC_Projects/Labo9.cydsn/main.c}{%
+	\lstinputlisting[
+	style=cstyle,
+	caption={\texttt{main.c}: implementación del algoritmo LQG en el PSoC.},
+	label={lst:psocmain}
+	]{../PSoC_Projects/Labo9.cydsn/main.c}
+}{\textnormal{\textbf{(Archivo no encontrado: main.c)}}}

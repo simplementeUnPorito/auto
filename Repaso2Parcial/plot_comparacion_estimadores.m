@@ -2,7 +2,7 @@ function plot_comparacion_estimadores( ...
     t, r_plot,sigma_w,sigma_v, ...
     X_kal, Xhat_kal, U_kal, y_true_kal, y_meas_kal, ...
     X_lu,  Xhat_lu,  U_lu,  y_true_lu,  y_meas_lu, ...
-    C, Acl, Bcl, p_obs, p_kal, Ts, idx_case,sysC)
+    C, Acl, Bcl, p_obs, p_kal, Ts, idx_case)
 
 % Polos sistemas cerrados (control) – IGUAL para ambos estimadores
 p_aug_cl = eig(Acl);
@@ -14,18 +14,14 @@ tr     = info.RiseTime*1000;    % ms
 os     = info.Overshoot;        % %
 ts     =info.SettlingTime*1000;
 
-
 fig = figure('Name',sprintf('Caso LQR %d — Kalman vs rápido',idx_case), ...
              'Position',[100 100 1200 800]);
 fig.Theme = "light"; %or
 tlo = tiledlayout(fig,3,2,'TileSpacing','compact','Padding','compact');
 
-
 % ===== (1) Kalman: y vs ŷ vs y_meas =====
 nexttile(tlo);
-tc = linspace(0,t(end),length(U_kal)*40);
-y_true_kal = interp1(t,y_true_kal,tc,'spline');
-plot(tc,y_true_kal,'r','LineWidth',1.3); hold on; grid on; grid minor;
+plot(t,y_true_kal,'r','LineWidth',1.3); hold on; grid on; grid minor;
 plot(t,y_meas_kal,'b.');
 stairs(t,r_plot,'k--');
 xlabel('t [ms]'); ylabel('Salida');
@@ -34,8 +30,7 @@ legend('y real','y medida','r','Location','best');
 
 % ===== (2) Rápido: y vs ŷ vs y_meas =====
 nexttile(tlo);
-y_true_lu = interp1(t,y_true_lu,tc,'spline');
-plot(tc,y_true_lu,'r','LineWidth',1.3); hold on; grid on; grid minor;
+plot(t,y_true_lu,'r','LineWidth',1.3); hold on; grid on; grid minor;
 plot(t,y_meas_lu,'b.');
 stairs(t,r_plot,'k--');
 xlabel('t [ms]'); ylabel('Salida');

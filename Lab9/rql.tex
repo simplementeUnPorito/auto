@@ -1,0 +1,129 @@
+\section{Diseño del Regulador LQR}
+
+El diseño del regulador óptimo se realizó sobre el sistema aumentado, siguiendo exactamente la misma metodología empleada en los laboratorios anteriores. El objetivo es incluir un integrador que garantice error estacionario nulo ante entradas de referencia tipo escalón. Para ello, se construyó el sistema aumentado utilizado en MATLAB.
+
+\subsection{Sistema aumentado utilizado}
+
+El sistema aumentado empleado en el diseño del LQR se definió de acuerdo con el código MATLAB:
+
+\begin{equation}
+	\hat{A} =
+	\begin{bmatrix}
+		A & B \\
+		0 & 0
+	\end{bmatrix}, \qquad
+	\hat{B} =
+	\begin{bmatrix}
+		0 \\ I
+	\end{bmatrix}, \qquad
+	\hat{C} =
+	\begin{bmatrix}
+		C & 0
+	\end{bmatrix}.
+\end{equation}
+
+Esto se corresponde con:
+
+\begin{lstlisting}[style=matlabstyle]
+	Ahat = [A B; zeros(m,n+m)];
+	Bhat = [zeros(n,m); eye(m)];
+	Chat = [C zeros(1,m)];
+\end{lstlisting}
+
+Este aumento incorpora explícitamente el estado del integrador \(z\), pero la implementación final de la realimentación se realiza mediante la matriz de transformación \texttt{Aux}, tal como establece la metodología de la cátedra.
+
+\subsection{Normalización de estados}
+
+Debido a las ganancias distintas en cada etapa de la planta, se utilizó un vector de normalización para equilibrar la contribución de cada estado en la función de costo del LQR. Dicho vector se definió como:
+
+\begin{equation}
+	S_x = 
+	\begin{bmatrix}
+		\dfrac{1}{k_1},\;
+		\dfrac{1}{k_1 k_2},\;
+		1
+	\end{bmatrix},
+	\qquad
+	k_1 = \left|\dfrac{R_2}{R_1}\right|,
+	\qquad
+	k_2 = \left|\dfrac{R_4}{R_3}\right|.
+\end{equation}
+
+Código MATLAB correspondiente:
+
+\begin{lstlisting}[style=matlabstyle]
+	k1 = abs(R2/R1);
+	k2 = abs(R4/R3);
+	Sx = [1/k1, 1/(k1*k2), 1];
+\end{lstlisting}
+
+\subsection{Definición de pesos \(Q_1\) y \(Q_2\)}
+
+Siguiendo los requerimientos del laboratorio, se diseñaron dos controladores distintos:
+
+\begin{itemize}
+	\item \textbf{Diseño rápido}: penaliza fuertemente los estados para obtener la respuesta más veloz posible.
+	\item \textbf{Diseño de bajo esfuerzo de control}: penaliza más la entrada para obtener una acción más suave.
+\end{itemize}
+
+Los pesos utilizados fueron:
+
+\[
+Q_{\text{fast}} = [100,\;100,\;1], \qquad
+Q_{\text{soft}} = [2,\;4,\;1.5].
+\]
+
+Las matrices finales empleadas en el LQR fueron:
+
+\begin{equation}
+	Q_1^{(i)} = \mathrm{diag}(Q_i \odot S_x),
+	\qquad
+	Q_2 = \{20,\;4\}.
+\end{equation}
+
+Código MATLAB:
+
+\begin{lstlisting}[style=matlabstyle]
+	Q_fast = [100 100 1];
+	Q_soft = [2 4 1.5];
+	
+	Q1{1} = diag(Q_fast .* Sx);
+	Q1{2} = diag(Q_soft .* Sx);
+	
+	Q2 = {20, 4};
+\end{lstlisting}
+
+\subsection{Cálculo de la ganancia \(K\)}
+
+Para cada par \((Q_1, Q_2)\), se calculó la ganancia LQR del sistema aumentado:
+
+\begin{equation}
+	\hat{K_i} = \mathrm{dlqr}(\hat{A}, \hat{B}, Q_1^{(i)}, Q_2^{(i)}).
+\end{equation}
+
+Luego, siguiendo la metodología del curso, se transformó la ganancia hacia su forma final:
+
+\begin{equation}
+	K_i = \left(\hat{K_i} + [0 \; 0 \; 1]\right)
+	\begin{bmatrix}
+		A-I_n & B \\
+		CA & CB
+	\end{bmatrix}^{-1}
+\end{equation}
+
+obteniéndose finalmente:
+
+\[
+K_2^{(i)} = K_i(1,1:n), \qquad
+K_1^{(i)} = K_i(1,n+1).
+\]
+
+Código MATLAB exacto:
+
+\begin{lstlisting}[style=matlabstyle]
+	[Ki,~,Pi] = dlqr(Ahat, Bhat, Q1{i}, Q2{i});
+	Ki = (Ki + [zeros(1,n) eye(m)]) * Aux;
+	
+	K2{i} = Ki(1,1:n);
+	K1{i} = Ki(1,n+1:end);
+\end{lstlisting}

@@ -1,0 +1,115 @@
+\section{Diseño del Filtro de Kalman}
+
+El diseño del estimador óptimo se realizó utilizando el comando \texttt{dlqe}, que implementa el estimador lineal cuadrático discreto (LQE). A diferencia del diseño manual mediante la ecuación de Riccati, \texttt{dlqe} calcula la ganancia óptima del filtro de Kalman resolviendo internamente la ecuación de Riccati mediante el método de augmentación del sistema, garantizando estabilidad y convergencia del estimador.
+
+\subsection{Modelo estocástico utilizado}
+
+El sistema en tiempo discreto se modeló como:
+
+\begin{equation}
+	x(k+1) = A x(k) + B u(k) + w(k),
+\end{equation}
+\begin{equation}
+	y(k) = C x(k) + v(k),
+\end{equation}
+
+donde:
+
+\[
+w(k) \sim \mathcal{N}(0, Q), \qquad
+v(k) \sim \mathcal{N}(0, R).
+\]
+
+\subsection{Construcción de las covarianzas \(Q\) y \(R\)}
+
+Los desvíos estándar del ruido de proceso \(\sigma_{x1}\), \(\sigma_{x2}\) se obtuvieron a partir de:
+
+\begin{itemize}
+	\item ruido térmico de resistores,
+	\item ruido filtrado por los polos de la planta,
+	\item ruido de cuantización del DAC,
+	\item ruido externo inyectado a la planta.
+\end{itemize}
+
+El desvío estándar del ruido de medición \(\sigma_v\) proviene del ruido de cuantización del ADC del PSoC.
+
+Así, las matrices de covarianza utilizadas fueron:
+
+\[
+Q = \mathrm{diag}(\sigma_{x1}^2,\, \sigma_{x2}^2),
+\qquad
+R = \sigma_v^2.
+\]
+
+Código correspondiente:
+
+\begin{lstlisting}[style=matlabstyle]
+	Q = diag((sigma_w.^2));   % [sigma_x1^2, sigma_x2^2]
+	R = diag((sigma_v.^2));   % sigma_v^2
+\end{lstlisting}
+
+\subsection{Cálculo de la ganancia óptima de Kalman}
+
+La función utilizada fue:
+
+\begin{lstlisting}[style=matlabstyle]
+	L_kal = disenar_kalman_simple(A, C, B1, sigma_w, sigma_v);
+\end{lstlisting}
+
+donde el diseño se implementa como:
+
+\begin{lstlisting}[style=matlabstyle]
+	function L = disenar_kalman_simple(A,C,G,sigma_w,sigma_v)
+	Q = diag((sigma_w.^2));
+	R = diag((sigma_v.^2));
+	[L,~,~] = dlqe(A,G,C,Q,R);   % LQE discreto
+	end
+\end{lstlisting}
+
+La ganancia obtenida:
+
+\[
+L_\text{kal} =
+\mathrm{dlqe}(A,\,G,\,C,\,Q,\,R),
+\]
+
+corresponde al estimador óptimo que minimiza el error cuadrático medio:
+
+\[
+\hat{x}(k+1) = A\hat{x}(k) + B u(k)
++ L_\text{kal}\left( y(k) - C\hat{x}(k) \right).
+\]
+
+Este filtro representa la mejor estimación posible en presencia de ruido, ponderada según la relación \(S/R\) entre ruido de proceso y ruido de medición.
+
+\section{Diseño del Observador Determinístico Rápido}
+
+Para comparar con el estimador óptimo, también se implementó un observador determinístico mediante Ackermann, con los polos ubicados cinco veces más rápidos que los polos dominantes del lazo cerrado con LQR.
+
+Primero se obtuvieron los polos del sistema aumentado en lazo cerrado:
+
+\[
+p_\mathrm{cl} = \mathrm{eig}(A_\mathrm{cl}).
+\]
+
+En MATLAB:
+
+\begin{lstlisting}[style=matlabstyle]
+	Pcl = eig(Acl);
+	[~, idx] = sort(abs(Pcl), 'descend');
+	Pdom = Pcl(idx(1:n));
+	p_obs = Pdom.^5;   % polos 5x más rápidos
+\end{lstlisting}
+
+Luego se diseñó la ganancia del observador:
+
+\begin{equation}
+	L_{\mathrm{rap}} =
+	\mathrm{acker}(A^\top,\,(CA)^\top,\,p_{\mathrm{obs}}^\top)^\top.
+\end{equation}
+
+Código correspondiente:
+
+\begin{lstlisting}[style=matlabstyle]
+	L_rapido = acker(A', (C*A)', p_obs').';
+\end{lstlisting}

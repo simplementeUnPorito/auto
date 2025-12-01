@@ -3,7 +3,7 @@
 <!--This file is machine generated and read. It is not intended to be edited by hand.-->
 <!--Due to this, there is no schema for this file.-->
 <CyGuid_2867d519-54d2-4c01-9830-c51cb08bc3dd type_name="CyDesigner.Common.ProjMgmt.Model.CyPrjMgmtWorkspaceSerialize" version="5" xml_contents_version="3" name="template-000" persistent="template-000.cywrk" platform="NOT_USED">
-<current_project name="..\Lab8.cydsn\Lab8.cyprj" />
+<current_project name="..\Labo9.cydsn\Labo9.cyprj" />
 <wrkspc_folders />
 <files />
 <projects>
@@ -19,6 +19,7 @@
 <v>..\Lab7.predict.cydsn\Lab7.predict.cyprj</v>
 <v>..\Lab7.current.cydsn\Lab7.current.cyprj</v>
 <v>..\Lab8.cydsn\Lab8.cyprj</v>
+<v>..\Labo9.cydsn\Labo9.cyprj</v>
 </projects>
 <workspace_id v="01fe52c4-bf65-40dc-a859-72abb3a9dd07" />
 <WriteAppVersionLastSavedWith v="4.4.0.80" />

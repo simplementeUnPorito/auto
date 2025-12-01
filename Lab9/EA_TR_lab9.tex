@@ -1,0 +1,292 @@
+% !TeX program = pdflatex
+\documentclass[conference]{IEEEtran}
+
+% ======= Idioma y codificación =======
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish, es-nodecimaldot]{babel}
+\usepackage{microtype}
+
+% ======= Matemática =======
+\usepackage{amsmath, amssymb, amsfonts}
+
+% ======= Colores y gráficos =======
+\usepackage{xcolor}
+\usepackage{graphicx}
+% \usepackage{subcaption}
+\usepackage[caption=false,font=footnotesize]{subfig}
+\usepackage{float}
+\usepackage{booktabs}
+
+% ======= Números y unidades =======
+\usepackage{siunitx}
+\sisetup{
+	output-decimal-marker = {,},
+	group-separator = {.},
+	group-minimum-digits = 4,
+	per-mode = symbol,
+	round-mode = places,
+	round-precision = 3,
+	table-number-alignment = center
+}
+
+% ======= Maquetación =======
+\usepackage{cuted}
+\usepackage{balance}
+
+% ======= Listas =======
+\usepackage{enumitem}
+\setlist{leftmargin=*, itemsep=2pt, topsep=4pt}
+
+% ======= Bibliografía =======
+\usepackage[numbers]{natbib}
+\bibliographystyle{IEEEtranN}
+
+% ======= Listados =======
+\usepackage{listings}
+\usepackage{listingsutf8}
+
+% Config listings
+\lstset{
+	inputencoding=utf8/latin1,
+	extendedchars=true,
+	upquote=true,
+	breaklines=true,
+	columns=fullflexible,
+	keepspaces=true,
+	frame=single,
+	numbers=left, numberstyle=\tiny, numbersep=6pt,
+	xleftmargin=1em,
+	captionpos=b,
+	literate=
+	{á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'\i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+	{Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1 {Ú}{{\'U}}1
+	{ñ}{{\~n}}1 {Ñ}{{\~N}}1
+	{ü}{{\"u}}1 {Ü}{{\"U}}1
+	{¿}{{\textquestiondown}}1 {¡}{{\textexclamdown}}1
+	{º}{{$^\circ$}}1
+	{“}{{``}}1 {”}{{''}}1 {‘}{{`}}1 {’}{{'}}1
+	{—}{{---}}1 {–}{{--}}1
+	{→}{{\textrightarrow}}1
+	{≈}{{$\approx$}}1
+	{µ}{{\textmu}}1
+}
+
+% Lenguaje Matlab
+\lstdefinelanguage{Matlab}{
+	morekeywords={break,case,catch,continue,else,elseif,end,for,function,global,if,otherwise,persistent,return,switch,try,while,classdef,properties,methods},
+	sensitive=true,
+	morecomment=[l]\%,
+	morecomment=[s]{\%\{} {\%},
+	morestring=[m]'
+}
+
+\lstdefinestyle{matlabstyle}{
+	language=Matlab,
+	basicstyle=\ttfamily\small,
+	keywordstyle=\bfseries\color{blue!70!black},
+	commentstyle=\itshape\color{green!40!black},
+	stringstyle=\color{red!60!black},
+	numbers=left, numberstyle=\tiny, numbersep=6pt,
+	frame=single,
+	breaklines=true,
+	columns=fullflexible,
+	keepspaces=true,
+	captionpos=b,
+	linewidth=\columnwidth,
+	xleftmargin=1em
+}
+
+% ======= Macros =======
+\newcommand{\zetaD}{\zeta}
+\newcommand{\wn}{\omega_n}
+\newcommand{\Ts}{T_s}
+\newcommand{\ESS}{\mathrm{ESS}}
+\newcommand{\Gz}{G(z)}
+\newcommand{\Gs}{G(s)}
+\newcommand{\Nbar}{N_{\mathrm{bar}}}
+\newcommand{\Ki}{K_i}
+\newcommand{\Aaug}{A_{\mathrm{aug}}}
+\newcommand{\Baug}{B_{\mathrm{aug}}}
+\newcommand{\Caug}{C_{\mathrm{aug}}}
+
+% ======= Macros figuras =======
+\newcommand{\insertarfigura}[4]{%
+	\begin{figure}[!t]
+		\centering
+		\includegraphics[width=#4\linewidth]{#1}
+		\caption{#2}
+		\label{#3}
+	\end{figure}
+}
+
+% ======= Hyperref =======
+\usepackage[unicode,hidelinks]{hyperref}
+
+% ======= Metadatos LAB 9 =======
+\title{Práctica de Laboratorio 9: Filtro de Kalman y Regulador LQG}
+
+\author{
+	\IEEEauthorblockN{Elías Álvarez}
+	\IEEEauthorblockA{Carrera de Ing. Electrónica\\Universidad Católica Nuestra Señora de la Asunción\\Asunción, Paraguay\\Email: elias.alvarez@universidadcatolica.edu.py}
+	\and
+	\IEEEauthorblockN{Tania Romero}
+	\IEEEauthorblockA{Carrera de Ing. Electrónica\\Universidad Católica Nuestra Señora de la Asunción\\Asunción, Paraguay\\Email: tania.romero@universidadcatolica.edu.py}
+}
+
+\begin{document}
+	\maketitle
+	
+	\section{Objetivos}
+	Los objetivos de esta práctica consisten en aplicar las técnicas de control óptimo y estimación estocástica para el diseño de un controlador LQG implementado sobre la planta analógica utilizada en laboratorios anteriores. En particular, se busca:
+	
+	\begin{itemize}
+		\item Comprender el funcionamiento y la formulación del regulador óptimo LQR, así como su relación con el criterio cuadrático.
+		\item Diseñar un controlador por realimentación de estados que permita obtener respuestas rápidas y estables, considerando diferentes elecciones de matrices de peso.
+		\item Comprender el funcionamiento del filtro de Kalman y su rol como estimador óptimo en presencia de ruido de proceso y de medición.
+		\item Implementar dos estimadores: uno obtenido mediante el cálculo del valor óptimo de la ganancia de Kalman a partir de relaciones S/R conocidas, y otro cuya dinámica sea cinco veces más rápida que la del sistema en lazo cerrado.
+		\item Integrar el controlador LQR y el filtro de Kalman para conformar un esquema LQG completo, evaluando su desempeño.
+		\item Comparar los resultados obtenidos mediante simulación con los resultados experimentales obtenidos a través del PSoC.
+		\item Analizar ventajas, limitaciones y sensibilidad del controlador LQG frente al ruido y variaciones de la planta.
+	\end{itemize}
+	
+	\section{Materiales}
+	Para el desarrollo de esta práctica se utilizaron los siguientes materiales y herramientas:
+	
+	\begin{itemize}
+		\item Computadora personal con \texttt{MATLAB}.
+		\item Planta analógica utilizada en los laboratorios anteriores (sistema de dos etapas RC con amplificadores operacionales).
+		\item Sistema de adquisición e implementación digital basado en \texttt{PSoC}.
+		\item Osciloscopio y generador de señales para la inyección de señales y verificación de comportamiento real.
+	\end{itemize}
+	
+	\section{Modelo de la Planta}
+	En este laboratorio se continúa utilizando el modelo dinámico obtenido y validado experimentalmente en los Laboratorios 7 y 8. Dicho modelo corresponde a la planta analógica compuesta por dos etapas RC en cascada, implementadas con amplificadores operacionales en configuración no inversora. 
+	
+	El sistema se modeló previamente mediante las ecuaciones en espacio de estados, considerando como variables de estado los voltajes en los capacitores de cada etapa. El análisis mediante leyes de Kirchhoff permitió obtener las ecuaciones diferenciales del sistema continuo, cuya forma general es:
+	\begin{equation}
+		\dot{x}(t) = F x(t) + G u(t),
+	\end{equation}
+	\begin{equation}
+		y(t) = H x(t) + J u(t),
+	\end{equation}
+	donde las matrices \textit{F}, \textit{G}, \textit{H} y \textit{J} ya fueron derivadas, verificadas y utilizadas exitosamente en laboratorios anteriores.
+	
+	En este laboratorio no se repite el proceso completo de modelado, ya que la planta real no sufrió modificaciones y el modelo fue validado tanto analítica como experimentalmente. Por lo tanto, se toma como punto de partida el modelo continuo ya establecido, y su correspondiente versión discretizada, añadiendo únicamente el integrador que ya venía siendo utilizado en prácticas previas para garantizar error estacionario nulo ante entradas de referencia escalón.
+	
+	Este modelo, junto con su versión digital, será utilizado para el diseño del LQR, del filtro de Kalman y, en consecuencia, del regulador LQG.
+	
+	\section{Selección del Tiempo de Muestreo}
+	El tiempo de muestreo utilizado en esta práctica es \boldmath$T_s = 1~\text{ms}$, correspondiente a una frecuencia de muestreo de 1 kHz. Esta elección no se realizó de manera arbitraria, sino que fue determinada y justificada en los laboratorios anteriores.
+	
+	Durante las prácticas previas, se evaluaron los polos del sistema continuo y se verificó que la dinámica de la planta posee constantes de tiempo suficientemente pequeñas como para que una frecuencia de muestreo del orden de 1 kHz permita capturar adecuadamente su comportamiento. En particular, se contrastó con el criterio general de muestreo:
+	\begin{equation}
+		T_s < \frac{\pi}{ \omega_n},
+	\end{equation}
+	donde \textit{$\omega_n$} representa la frecuencia natural dominante del sistema. 
+	
+	Los resultados obtenidos en los Laboratorios 7 y 8 demostraron que un muestreo de 1 kHz garantiza:
+	\begin{itemize}
+		\item Una discretización adecuada del sistema continuo.
+		\item Ausencia de aliasing relevante en la señal medida.
+		\item Suficiente tiempo disponible para el cálculo de control dentro del PSoC.
+		\item Estabilidad y precisión en los reguladores diseñados (LQR e integral anteriormente).
+	\end{itemize}
+	
+	Dado que el objetivo de este laboratorio no es reestudiar la discretización, sino diseñar el filtro de Kalman y el LQG sobre una base sólida, se mantiene el valor ya verificado de \boldmath$T_s = 1~\text{ms}$ como tiempo de muestreo oficial para el diseño y posterior implementación.
+	
+	\input{rql}	
+	
+	
+	\input{estimador}
+	
+	\section{Simulaciones}
+	
+	En esta sección se presentan las simulaciones obtenidas a partir del código desarrollado en \texttt{MATLAB}.  
+	Se comparan dos estimadores:
+	
+	\begin{itemize}
+		\item El \textbf{filtro de Kalman}, diseñado mediante \texttt{dlqe} a partir de las covarianzas reales S/R.
+		\item Un \textbf{observador de Luenberger rápido}, cuyos polos se fijan como los polos dominantes del lazo cerrado elevados a la quinta potencia (\(p_{\text{obs}} = p_{\text{cl}}^{5}\)).
+	\end{itemize}
+	
+	A continuación se insertan todas las figuras provistas en la carpeta \texttt{Sim/}.
+	
+	% ================= FIGURA 1 =================
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.95\linewidth]{Sim/Kalman_vs__Obs_rapido_conRuido_1}
+		\caption{Comparación entre Kalman y observador rápido — Caso 1, con ruido.}
+		\label{fig:sim_conruido1}
+	\end{figure}
+	
+	% ================= FIGURA 2 =================
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.95\linewidth]{Sim/Kalman_vs__Obs_rapido_sinRuido_1}
+		\caption{Comparación entre Kalman y observador rápido — Caso 1, sin ruido.}
+		\label{fig:sim_sinruido1}
+	\end{figure}
+	
+	% ================= FIGURA 3 =================
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.95\linewidth]{Sim/Kalman_vs__Obs_rapido_sinRuido_2}
+		\caption{Comparación entre Kalman y observador rápido — Caso 2, sin ruido.}
+		\label{fig:sim_sinruido2}
+	\end{figure}
+	
+	% ================= FIGURA 4 =================
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.95\linewidth]{Sim/Kalman_vs__Obs_rapido_conRuido_2}
+		\caption{Comparación entre Kalman y observador rápido — Caso 2, con ruido.}
+		\label{fig:sim_conruido2}
+	\end{figure}
+	
+	
+
+	\section{Implementación}
+	
+	En esta sección se presentan las capturas obtenidas con el osciloscopio Tektronix TDS1012B durante la implementación real del controlador.  
+	Se muestran tanto los casos con filtro de Kalman como los casos sin Kalman (observador rápido).  
+	Las señales corresponden al al primer y seguno estado de la planta.
+	
+	% =============== FIG 1 ===============
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.95\linewidth]{Exp/Kalman_1}
+		\caption{Implementación — caso con Kalman y primer LQR.}
+		\label{fig:exp_kalman1}
+	\end{figure}
+	
+	% =============== FIG 2 ===============
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.95\linewidth]{Exp/Kalman_2}
+		\caption{Implementación — caso con Kalman y segundo LQR.}
+		\label{fig:exp_kalman2}
+	\end{figure}
+	
+	% =============== FIG 3 ===============
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.95\linewidth]{Exp/No_Kalman_1}
+		\caption{Implementación — caso sin Kalman y primer LQR.}
+		\label{fig:exp_nokalman1}
+	\end{figure}
+	
+	% =============== FIG 4 ===============
+	\begin{figure}[H]
+		\centering
+		\includegraphics[width=0.95\linewidth]{Exp/No_Kalman_2}
+		\caption{Implementación — caso sin Kalman y segundo LQR.}
+		\label{fig:exp_nokalman2}
+	\end{figure}
+	
+	
+	\input{resultados}
+	
+	%\input{anexo}
+	\balance
+\end{document}

@@ -1,0 +1,70 @@
+% =========================================================
+\section{Resultados y Conclusiones}
+
+En esta sección se comparan los resultados simulados y experimentales para los dos diseños LQR evaluados: un caso rápido
+($t_r \approx 8$ ms, $t_s \approx 15$ ms, $OS = 0\%$ esperado) y un caso lento
+($t_r \approx 18$ ms, $t_s \approx 35$ ms, $OS = 0\%$ esperado).
+Se incluye la actuación del estimador de Kalman y el observador rápido ($\times 5$) en cada situación.
+
+\begin{table}[!t]
+	\centering
+	\caption{Desempeño observado: tiempos de respuesta y presencia de ruido.}
+	\label{tab:cmp_lqg}
+	\begin{tabular}{lccc}
+		\toprule
+		\textbf{Caso} & $t_r$ [ms] & $t_s$ [ms] & OS [\%] \\
+		\midrule
+		% ----- Caso 1 -----
+		\multicolumn{4}{c}{\textbf{Caso 1 (rápido): esperado } $t_r=8$ ms, $t_s=15$ ms, $OS=0\%$} \\
+		\midrule
+		Kalman (Sim)      & $\approx 8$ & $\approx 15$ & 0 \\
+		Obs. rápido (Sim) & $\approx 8$ & $\approx 15$ & 0 \\
+		Kalman (Exp)      & $\approx 8$--10 & $\approx 15$--20 & $\approx 3$--5 \\
+		Obs. rápido (Exp) & $\approx 8$--10 & $\approx 15$--20 & $\approx 3$--6 \\
+		\midrule
+		% ----- Caso 2 -----
+		\multicolumn{4}{c}{\textbf{Caso 2 (lento): esperado } $t_r=18$ ms, $t_s=35$ ms, $OS=0\%$} \\
+		\midrule
+		Kalman (Sim)      & $\approx 18$ & $\approx 35$ & 0 \\
+		Obs. rápido (Sim) & $\approx 18$ & $\approx 35$ & 0 \\
+		Kalman (Exp)      & $\approx 18$--20 & $\approx 35$--40 & $\approx 0$ \\
+		Obs. rápido (Exp) & $\approx 18$--20 & $\approx 35$--40 & $\approx 0$--2 \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\subsection*{Conclusiones}
+
+Para el \textbf{primer caso LQR} (dinámica rápida), tanto el estimador de Kalman como el observador rápido lograron tiempos de subida y asentamiento muy próximos a los valores esperados. Sin embargo, en las mediciones reales ambos presentan un leve sobreimpulso, atribuible a tolerancias de componentes, errores de cuantización y pequeñas variaciones de ganancia en la planta.
+
+En este régimen rápido se observa una diferencia importante entre ambos estimadores:  
+\begin{itemize}
+	\item El \textbf{observador rápido} muestra variaciones altas luego del transitorio, especialmente en el estado $x_1$, donde se inyecta el ruido.  
+	\item El \textbf{Kalman} suaviza significativamente la estimación y mantiene el estado más estable.  
+\end{itemize}
+
+En la salida $y$ (que corresponde al estado $x_2$), estas diferencias se atenúan porque el bloque físico entre $x_1$ y $x_2$ incluye un filtro RC que mitiga el ruido, aunque las oscilaciones siguen siendo apreciables en el observador rápido.
+
+\vspace{1em}
+
+Para el \textbf{segundo caso LQR} (dinámica más lenta), el desempeño del filtro de Kalman fue notablemente superior.  
+\begin{itemize}
+	\item El \textbf{estado $x_1$} casi no muestra ruido con Kalman, pero sí presenta oscilaciones importantes con el observador rápido.  
+	\item En el \textbf{estado $x_2$ (la salida)}, Kalman elimina prácticamente todo el ruido, mientras que el observador rápido deja ver pequeñas ondulaciones residuales.  
+\end{itemize}
+
+\vspace{1em}
+
+Algo interesante es que \textbf{en ninguno de los dos casos los observadores impusieron sus polos}.  
+Esto ocurre porque:
+\begin{itemize}
+	\item En el caso del \textbf{Kalman}, la varianza del ruido real ($V_{\text{pp}} = 10$ mV) no fue lo suficientemente alta como para forzar que el filtro privilegie al modelo antes que a la medición; por eso la planta dominó la dinámica del estimador.
+	\item En el \textbf{observador rápido}, sus polos siempre fueron mucho más rápidos que los de la planta, por lo que la dinámica dominante siguió siendo la de la planta física.
+\end{itemize}
+
+\vspace{1em}
+
+Finalmente, los resultados demuestran que un \textbf{buen modelo de la planta} permite obtener un estimador de alto desempeño mediante el filtro de Kalman.  
+Kalman se adapta a las condiciones reales sin necesidad de imponer polos artificialmente rápidos, y logra filtrar de manera efectiva el ruido sobre los estados, especialmente cuando la dinámica del sistema no es extremadamente rápida.
+
+
