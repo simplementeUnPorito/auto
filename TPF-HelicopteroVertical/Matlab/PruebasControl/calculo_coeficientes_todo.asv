@@ -1,0 +1,119 @@
+%% make_ctrls_psoc_tau.m
+clear; clc;
+
+%% ====== PLANTA (la que reiteraste) ======
+tau = 1e3*5e-9;     % [s]  = 5e-6
+Ts  = 1/100e3;      % 100 kHz
+
+s  = tf('s');
+G  = 1/(tau*s + 1)*;
+
+Gd   = c2d(G, Ts, 'zoh');
+sysD = ss(Gd);
+[A,B,C,D] = ssdata(sysD);
+n = size(A,1);      % n=1 para esta planta
+
+fprintf("tau=%.3g s | Ts=%.3g s | A=%.9f B=%.9f\n", tau, Ts, A, B);
+
+%% ====== Polos (no te importan, pero que sean estables) ======
+p_tf   = 0.85;   % “TF normal” -> acá va a ser un P puro u=Kp*e
+p_ctrl = 0.80;   % SS sin integrador
+p_obs  = 0.30;   % observador
+
+%% ============================================================
+%  (0) CONTROLADOR TF NORMAL (u = Kp * e)
+%  Cerrado: x[k+1] = (A - B*Kp*C) x[k] + B*Kp*r
+%  => polo = A - B*Kp*C  => Kp = (A - p_tf)/(B*C)
+%% ============================================================
+Kp = (A - p_tf)/(B*C);
+coeff_tf = tf16_gain(Kp);
+
+%% ============================================================
+%  (1) SS SIN INTEGRADOR (tu estructura)
+%      u = Kr*r - K*xhat
+%      Kr = Nbar por dcgain (como pediste)
+%% ============================================================
+K = acker(A,B,p_ctrl);
+
+sys_cl = ss(A - B*K, B, C, D, Ts);
+gdc = dcgain(sys_cl);
+if abs(gdc) < 1e-12, error("dcgain ~ 0 (Nbar revienta)."); end
+Nbar = 1/gdc;
+
+L_pred   = acker(A', C',    p_obs).';      % predictivo
+L_actual = acker(A', (C*A)', p_obs).';     % actual (tu estilo)
+
+coeff_ss_pred_noi = pack_ss16_1state(A,B,C,D, L_pred,   K,  0,    Nbar);
+coeff_ss_act_noi  = pack_ss16_1state(A,B,C,D, L_actual, K,  0,    Nbar);
+
+%% ============================================================
+%  (2) SS CON INTEGRADOR — Ogata (TU BLOQUE TAL CUAL)
+%  OJO: tu firmware integra con Ts: vint += e*Ts
+%       Ogata te da K1 para v += e (sin Ts)
+%       => Ki_psoc = K1/Ts  (esto no cambia Ogata, adapta tu implementación)
+%% ============================================================
+m = 1;
+Ahat = [A B; zeros(m,n+m)];
+Bhat = [zeros(n,m); eye(m)];
+Chat = [C zeros(1,m)];
+
+polos_i = [p_ctrl.' 0.9];    % para n=1 => [p_ctrl 0.9]
+Khat = acker(Ahat,Bhat,polos_i);
+
+Aux  = [A-eye(size(A))  B;
+        C*A             C*B];
+K2K1 = (Khat + [zeros(1,n) eye(m)]) / Aux;
+K2   = K2K1(1,1:n);          % sobre x
+K1   = K2K1(1,n+1:end);      % sobre integrador
+
+Ki_psoc = K1 / Ts;           % ADAPTACIÓN A TU firmware
+Kr_int  = 0;
+
+% Observadores (mismo p_obs)
+L_pred_i   = acker(A', C',     p_obs).';
+L_actual_i = acker(A', (C*A)', p_obs).';
+
+coeff_ss_pred_i = pack_ss16_1state(A,B,C,D, L_pred_i,   K2, Ki_psoc, Kr_int);
+coeff_ss_act_i  = pack_ss16_1state(A,B,C,D, L_actual_i, K2, Ki_psoc, Kr_int);
+
+%% ====== Imprimir arrays para C (16 floats) ======
+print_c_array("COEFF_TF",          coeff_tf);
+print_c_array("COEFF_SS_PRED_NOI", coeff_ss_pred_noi);
+print_c_array("COEFF_SS_ACT_NOI",  coeff_ss_act_noi);
+print_c_array("COEFF_SS_PRED_I",   coeff_ss_pred_i);
+print_c_array("COEFF_SS_ACT_I",    coeff_ss_act_i);
+
+%% ================== helpers ==================
+function v16 = tf16_gain(Kp)
+    % TF puro: u = Kp * e  => b0=Kp, a0=1
+    v16 = single([ ...
+        Kp 0 0 0 0 0, ...
+        1  0 0 0 0 0, ...
+        0 0 0 0 ]);
+end
+
+function v16 = pack_ss16_1state(A,B,C,D,L,K,Ki,Kr)
+    % Tu firmware SS espera 2 estados -> el 2do lo ponemos en 0
+    v16 = zeros(1,16,'single');
+    v16(1:4)   = single([A 0 0 0]);     % A11 A12 A21 A22
+    v16(5:6)   = single([B 0]);         % B1 B2
+    v16(7:8)   = single([C 0]);         % C1 C2
+    v16(9)     = single(D);             % D
+    v16(10:11) = single([L 0]);         % L1 L2
+    v16(12:13) = single([K 0]);         % K1 K2
+    v16(14)    = single(Ki);            % Ki
+    v16(15)    = single(Kr);            % Kr
+    v16(16)    = single(0);             % reservado
+end
+
+function print_c_array(name, v)
+    fprintf("\nstatic const float %s[16] = {\n", name);
+    for i=1:16
+        if i<16
+            fprintf("    %.9gf,\n", v(i));
+        else
+            fprintf("    %.9gf\n", v(i));
+        end
+    end
+    fprintf("};\n");
+end

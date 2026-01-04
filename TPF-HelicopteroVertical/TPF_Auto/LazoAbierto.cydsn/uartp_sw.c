@@ -228,10 +228,6 @@ void UARTP_EnterControlMode(void)
 
 
 /* (corrección del typo) */
-static void clear_coeffs(void)
-{
-    memset(UARTP_Coeffs, 0, sizeof(UARTP_Coeffs));
-}
 
 bool UARTP_ProcessOnce(void)
 {

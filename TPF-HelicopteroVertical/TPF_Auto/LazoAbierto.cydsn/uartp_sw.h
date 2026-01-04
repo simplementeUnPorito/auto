@@ -5,10 +5,8 @@
 #include "cytypes.h"
 #include <stdint.h>
 #include <string.h>
+#include <stdbool.h>
 
-typedef uint8 bool;
-#define true  (1u)
-#define false (0u)
 
 /* ===== UART mapping (ajustá si tu componente no se llama UART) ===== */
 #ifndef UARTP_UART_Start
@@ -97,15 +95,26 @@ typedef enum {
    apply_ss:  interpreta 16 floats (usa los que quieras)
 */
 typedef bool (*uartp_stop_step_fn_t)(void);
+typedef bool (*uartp_stop_step_fn)(void);
 typedef void (*uartp_start_fn_t)(float u0);
 typedef void (*uartp_apply_fn_t)(const float* coeffs, uint16_t n);
+
+
+
+typedef void  (*uartp_apply_tf_fn_t)(const float* c, uint16 n);
+typedef void  (*uartp_apply_ss_fn_t)(const float* c, uint16 n);
 
 typedef struct {
     uartp_stop_step_fn_t stop_step;
     uartp_start_fn_t     start;
-    uartp_apply_fn_t     apply_tf;
-    uartp_apply_fn_t     apply_ss;
+    uartp_apply_tf_fn_t  apply_tf;
+    uartp_apply_ss_fn_t  apply_ss;
 } uartp_cfg_t;
+
+
+
+
+
 
 /* ===== globals (extern) ===== */
 extern volatile uartp_sysmode_t     UARTP_SysMode;
@@ -132,5 +141,8 @@ void UARTP_ControlTick(void);
 
 void UARTP_EnterCommandMode(void);
 void UARTP_EnterControlMode(void);
+
+
+
 
 #endif
