@@ -2,17 +2,14 @@
 <CyXmlSerializer>
 <!--This file is machine generated and read. It is not intended to be edited by hand.-->
 <!--Due to this, there is no schema for this file.-->
-<CyGuid_2867d519-54d2-4c01-9830-c51cb08bc3dd type_name="CyDesigner.Common.ProjMgmt.Model.CyPrjMgmtWorkspaceSerialize" version="5" xml_contents_version="3" name="PruebasControl-000" persistent="PruebasControl-000.cywrk" platform="NOT_USED">
-<current_project name="..\PruebasControlTodo_Copy_01.cydsn\PruebasControlTodo_Copy_01.cyprj" />
+<CyGuid_2867d519-54d2-4c01-9830-c51cb08bc3dd type_name="CyDesigner.Common.ProjMgmt.Model.CyPrjMgmtWorkspaceSerialize" version="5" xml_contents_version="3" name="PruebasControlTodo_Copy_01-000" persistent="PruebasControlTodo_Copy_01-000.cywrk" platform="NOT_USED">
+<current_project name=".\PruebasControlTodo_Copy_01.cyprj" />
 <wrkspc_folders />
 <files />
 <projects>
-<v>.\PruebasControlTF.cyprj</v>
-<v>..\PruebasControlTodo.cydsn\PruebasControlTodo.cyprj</v>
-<v>..\LazoAbierto.cydsn\LazoAbierto.cyprj</v>
-<v>..\PruebasControlTodo_Copy_01.cydsn\PruebasControlTodo_Copy_01.cyprj</v>
+<v>.\PruebasControlTodo_Copy_01.cyprj</v>
 </projects>
-<workspace_id v="bcb7ef92-a779-4a40-9fa4-f0d6fcdcb955" />
+<workspace_id v="d0063409-1c74-4544-8734-d6f60139938d" />
 <WriteAppVersionLastSavedWith v="4.4.0.80" />
 <WriteAppMarketingVersionLastSavedWith v="4.4" />
 <CyGuid_dcbd9771-0334-43dc-9cc3-fe99dc3c5316 type_name="CyDesigner.Common.ProjMgmt.Model.CyPrjMgmtWorkspaceSerialize+CyPrjDependencyList" version="4">
