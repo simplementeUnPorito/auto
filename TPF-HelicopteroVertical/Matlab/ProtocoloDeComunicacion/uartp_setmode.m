@@ -6,7 +6,7 @@ function uartp_setmode(sp, mode, timeout_s)
 % 3 SS predictor con integrador
 % 4 SS actual con integrador
 if nargin < 3, timeout_s = 2.0; end
-assert(mode>=0 && mode<=4 && floor(mode)==mode, "mode debe ser entero 0..4");
+assert(mode>=0 && mode<=5 && floor(mode)==mode, "mode debe ser entero 0..5");
 
 rsp = uartp_ll_cmd_wait(sp, 'm', timeout_s);
 assert(rsp == uint8('R'), "m no devolvió R (rsp=%c)", char(rsp));

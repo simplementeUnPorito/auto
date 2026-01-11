@@ -19,8 +19,9 @@ fprintf("OK: setmode(TF)\n");
 % num/den de ejemplo (6 coef cada uno)
 num6 = [ 0.10  -0.20  0.30  -0.40  0.50  -0.60 ];
 den6 = [ 1.00   0.05 -0.03  0.02  -0.01  0.005 ];
-
-coeffs_tf = uartp_make_tf(num6, den6);
+N = 20;
+period = 1500;
+coeffs_tf = uartp_make_tf(num6, den6,N,period);
 
 uartp_send_coeffs(sp, coeffs_tf, true);
 fprintf("OK: TF coef enviados y verificados con 't'\n");
@@ -65,7 +66,7 @@ L  = [0.1; 0.2];
 K  = [1.1; 1.2];
 Ki = 0.5;
 
-coeffs_ss = uartp_make_ss(A,B,C,D,L,K,Ki);
+coeffs_ss = uartp_make_ss(A,B,C,D,L,K,Ki, N, period);
 
 uartp_send_coeffs(sp, coeffs_ss, true);
 fprintf("OK: SS coef enviados y verificados con 't'\n");
