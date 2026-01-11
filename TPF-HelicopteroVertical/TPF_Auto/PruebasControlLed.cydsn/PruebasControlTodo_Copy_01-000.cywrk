@@ -3,18 +3,18 @@
 <!--This file is machine generated and read. It is not intended to be edited by hand.-->
 <!--Due to this, there is no schema for this file.-->
 <CyGuid_2867d519-54d2-4c01-9830-c51cb08bc3dd type_name="CyDesigner.Common.ProjMgmt.Model.CyPrjMgmtWorkspaceSerialize" version="5" xml_contents_version="3" name="PruebasControlTodo_Copy_01-000" persistent="PruebasControlTodo_Copy_01-000.cywrk" platform="NOT_USED">
-<current_project name="..\FinalV1.5SiFunciona_Copy_01.cydsn\FinalV1.5SiFunciona_Copy_01.cyprj" />
+<current_project name="..\FinalV1.2.cydsn\FinalV1.2.cyprj" />
 <wrkspc_folders />
 <files />
 <projects>
 <v>.\PruebasControlLed.cyprj</v>
 <v>..\PruebasControlTodo.cydsn\PruebasControlTodo.cyprj</v>
 <v>..\PruebasComunicacionMatlab.cydsn\PruebasComunicacionMatlab.cyprj</v>
-<v>..\FinalV1.cydsn\FinalV1.cyprj</v>
+<v>..\FinalV1NoFunciona.cydsn\FinalV1NoFunciona.cyprj</v>
 <v>..\PruebasComunicacionMatlab_Copy_01.cydsn\PruebasComunicacionMatlab_Copy_01.cyprj</v>
-<v>..\FinalV1SiFunciona.cydsn\FinalV1SiFunciona.cyprj</v>
+<v>..\FinalV1.1.cydsn\FinalV1.1.cyprj</v>
 <v>..\FinalV1.5SiFunciona.cydsn\FinalV1.5SiFunciona.cyprj</v>
-<v>..\FinalV1.5SiFunciona_Copy_01.cydsn\FinalV1.5SiFunciona_Copy_01.cyprj</v>
+<v>..\FinalV1.2.cydsn\FinalV1.2.cyprj</v>
 </projects>
 <workspace_id v="d0063409-1c74-4544-8734-d6f60139938d" />
 <WriteAppVersionLastSavedWith v="4.4.0.80" />
