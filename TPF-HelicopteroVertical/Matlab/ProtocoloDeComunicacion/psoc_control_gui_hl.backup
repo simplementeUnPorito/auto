@@ -20,17 +20,14 @@ function psoc_control_gui_hl()
     S.isConnected = false;
 
     % --- Streaming state ---
-    S.streamTimer  = [];
-    S.t0           = [];            % (no usado para eje X, lo dejo)
-    S.nVec         = zeros(0,1);     % eje X: n samples (frames)
-    S.uVec         = zeros(0,1);
-    S.yVec         = zeros(0,1);
-    S.maxPoints    = 4000;
-    S.streamRxBuf  = uint8([]);     % buffer para resincronizar
-    S.framesTotal  = 0;             % contador global de frames parseados
-
-    % --- NEW: control de parseo ---
-    S.streamParseEnabled = true;    % si false: descarta UART y NO parsea frames
+    S.streamTimer = [];
+    S.t0 = [];
+    S.tVec = zeros(0,1);
+    S.uVec = zeros(0,1);
+    S.yVec = zeros(0,1);
+    S.maxPoints = 4000;
+    S.streamRxBuf = uint8([]);   % buffer para resincronizar
+    S.framesTotal = 0;
 
     % --------------------
     % UI
@@ -46,12 +43,12 @@ function psoc_control_gui_hl()
     ax.XGrid = 'on';
     ax.YGrid = 'on';
     title(ax, 'Streaming u,y');
-    xlabel(ax, 'n (samples)');
+    xlabel(ax, 't (s)');
     ylabel(ax, 'value');
 
     hold(ax, 'on');
-    hU = stairs(ax, nan, nan, 'DisplayName', 'u');  % u con stairs
-    hY = plot(ax,   nan, nan, 'DisplayName', 'y');
+    hU = plot(ax, nan, nan, 'DisplayName', 'u');
+    hY = plot(ax, nan, nan, 'DisplayName', 'y');
     legend(ax, 'show', 'Location', 'best');
     hold(ax, 'off');
 
@@ -276,10 +273,6 @@ function psoc_control_gui_hl()
                 % limpieza
                 try flush(S.sp); catch, end
 
-                % al conectar, habilitamos parseo y streaming
-                S.streamParseEnabled = true;
-                S.streamRxBuf = uint8([]);
-
                 logMsg("Connected to " + com);
                 startStreaming();
             catch e
@@ -310,15 +303,8 @@ function psoc_control_gui_hl()
             try flush(S.sp); catch, end
             uartp_reset(S.sp);
             try flush(S.sp); catch, end
-
-            % luego de reset, el stream puede arrancar en cualquier estado:
-            % habilitamos parseo solo cuando el usuario dé Start (más seguro),
-            % pero igual dejamos el timer leyendo para no acumular bytes.
-            S.streamParseEnabled = false;
-            S.streamRxBuf = uint8([]);
-
             startStreaming();
-            logMsg("reset OK (parsing disabled until Start)");
+            logMsg("reset OK");
         catch e
             logMsg("reset FAIL: " + string(e.message));
             startStreaming();
@@ -335,14 +321,9 @@ function psoc_control_gui_hl()
             uartp_setmode(S.sp, mode);
 
             try flush(S.sp); catch, end
-
-            % En COMMAND pueden entrar bytes ASCII -> no parsear frames.
-            % Rehabilitamos parseo al Start.
-            S.streamParseEnabled = false;
-            S.streamRxBuf = uint8([]);
-
             startStreaming();
-            logMsg(sprintf("setmode OK: mode=%d (%s) (parsing disabled until Start)", mode, ddType.Value));
+
+            logMsg(sprintf("setmode OK: mode=%d (%s)", mode, ddType.Value));
         catch e
             logMsg("setmode FAIL: " + string(e.message));
             startStreaming();
@@ -400,15 +381,10 @@ function psoc_control_gui_hl()
             uartp_send_coeffs(S.sp, coeffs, cbVerify.Value);
 
             try flush(S.sp); catch, end
-
-            % Tras enviar coeffs, aún estamos en COMMAND -> no parsear.
-            S.streamParseEnabled = false;
-            S.streamRxBuf = uint8([]);
-
             startStreaming();
 
             logMsg(sprintf( ...
-                "coeffs OK (%s) N=%g Fs=%.6g Hz Period=%g counts (parsing disabled until Start)", ...
+                "coeffs OK (%s) N=%g Fs=%.6g Hz Period=%g counts", ...
                 typ, double(Nval), fs, double(PeriodCounts) ...
             ));
         catch e
@@ -483,11 +459,6 @@ function psoc_control_gui_hl()
             end
 
             try flush(S.sp); catch, end
-
-            % seguimos en COMMAND -> no parsear frames
-            S.streamParseEnabled = false;
-            S.streamRxBuf = uint8([]);
-
             startStreaming();
 
         catch e
@@ -505,19 +476,19 @@ function psoc_control_gui_hl()
             u0 = double(edtU0.Value);
             uartp_init(S.sp, u0);
 
-            % Al arrancar CONTROL: habilitar parseo de frames
-            S.streamParseEnabled = true;
-
-            % limpiar buffer de re-sync (pero NO borrar el gráfico)
+            % reiniciar buffers de stream al arrancar
             S.streamRxBuf = uint8([]);
+            S.tVec = zeros(0,1);
+            S.uVec = zeros(0,1);
+            S.yVec = zeros(0,1);
+            S.framesTotal = 0;
 
             try flush(S.sp); catch, end
             startStreaming();
 
-            logMsg(sprintf("init OK: u0/ref=%.6g (CONTROL) (parsing enabled)", u0));
+            logMsg(sprintf("init OK: u0/ref=%.6g (CONTROL)", u0));
         catch e
             logMsg("init FAIL: " + string(e.message));
-            S.streamParseEnabled = true; % si falla, igual dejamos listo para el próximo intento
             startStreaming();
         end
     end
@@ -525,27 +496,18 @@ function psoc_control_gui_hl()
     function onStop(~,~)
         if ~requireConn(); return; end
         try
-            % STOP: deshabilitar parseo (descartar bytes numéricos/ASCII)
-            S.streamParseEnabled = false;
-
             stopStreaming();
             try flush(S.sp); catch, end
 
             uartp_stop(S.sp, cbWaitBack.Value);
 
-            % limpiar cualquier basura pendiente
             try flush(S.sp); catch, end
-            S.streamRxBuf = uint8([]);
-
-            % Importante: NO reactivar streaming parseable acá.
-            % Igual dejamos el timer corriendo para drenar, pero descartando.
             startStreaming();
 
-            logMsg("stop OK (parsing disabled; UART bytes discarded)");
+            logMsg("stop OK");
         catch e
             logMsg("stop FAIL: " + string(e.message));
-            S.streamParseEnabled = false;
-            stopStreaming();
+            startStreaming();
         end
     end
 
@@ -663,7 +625,7 @@ function psoc_control_gui_hl()
         end
 
         if isempty(S.t0)
-            S.t0 = tic; %#ok<NASGU>
+            S.t0 = tic;
         end
 
         S.streamTimer = timer( ...
@@ -674,11 +636,7 @@ function psoc_control_gui_hl()
         );
         start(S.streamTimer);
 
-        if S.streamParseEnabled
-            logMsg("Streaming reader ON (parsing ENABLED) (frames 8B: u,y)");
-        else
-            logMsg("Streaming reader ON (parsing DISABLED) (discarding UART bytes)");
-        end
+        logMsg("Streaming reader ON (frames 8B: u,y)");
     end
 
     function stopStreaming()
@@ -705,21 +663,15 @@ function psoc_control_gui_hl()
                 return;
             end
 
+            % Leemos todo lo que haya (rápido) y lo acumulamos
             raw = read(sp, nAvail, "uint8");
             if isempty(raw)
                 return;
             end
 
-            % Si parseo está deshabilitado (COMMAND/STOP), descartamos TODO lo que venga.
-            if ~S.streamParseEnabled
-                % importante: no acumular nada que desalineé
-                S.streamRxBuf = uint8([]);
-                return;
-            end
-
-            % Parseo habilitado: acumulamos y procesamos frames
             S.streamRxBuf = [S.streamRxBuf; uint8(raw(:))];
 
+            % Procesar SOLO múltiplos de 8; el resto queda en buffer.
             n = numel(S.streamRxBuf);
             nFrames = floor(n/8);
             if nFrames <= 0
@@ -746,23 +698,22 @@ function psoc_control_gui_hl()
             u = typecast(u_u32, 'single');
             y = typecast(y_u32, 'single');
 
-            % eje X por contador de frames
-            idx0 = S.framesTotal;
-            nIdx = (idx0 + (1:numel(u))).';
+            tNow = toc(S.t0);
+            t = repmat(tNow, numel(u), 1);
 
-            S.nVec = [S.nVec; nIdx];
+            S.tVec = [S.tVec; t];
             S.uVec = [S.uVec; double(u)];
             S.yVec = [S.yVec; double(y)];
 
-            if numel(S.nVec) > S.maxPoints
-                k0 = numel(S.nVec) - S.maxPoints + 1;
-                S.nVec = S.nVec(k0:end);
+            if numel(S.tVec) > S.maxPoints
+                k0 = numel(S.tVec) - S.maxPoints + 1;
+                S.tVec = S.tVec(k0:end);
                 S.uVec = S.uVec(k0:end);
                 S.yVec = S.yVec(k0:end);
             end
 
-            set(hU, 'XData', S.nVec, 'YData', S.uVec);
-            set(hY, 'XData', S.nVec, 'YData', S.yVec);
+            set(hU, 'XData', S.tVec, 'YData', S.uVec);
+            set(hY, 'XData', S.tVec, 'YData', S.yVec);
 
             S.framesTotal = S.framesTotal + numel(u);
 
@@ -776,6 +727,7 @@ function psoc_control_gui_hl()
             drawnow limitrate;
 
         catch e
+            % Si algo salió raro, limpiamos buffer y seguimos.
             S.streamRxBuf = uint8([]);
             try flush(sp); catch, end
             logMsg("stream WARN: " + string(e.message));

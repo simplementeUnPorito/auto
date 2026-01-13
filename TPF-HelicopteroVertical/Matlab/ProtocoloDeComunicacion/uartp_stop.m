@@ -2,7 +2,7 @@ function uartp_stop(sp, wait_back_to_command, timeout_s)
 % En CONTROL: ISR responde 'K' y luego vuelve a COMMAND cuando termina stop suave.
 % En COMMAND: devuelve 'K' inmediato.
 if nargin < 2 || isempty(wait_back_to_command), wait_back_to_command = false; end
-if nargin < 3, timeout_s = 2.0; end
+if nargin < 3, timeout_s = 10.0; end
 
 write(sp, uint8('s'), "uint8");
 b = uartp_ll_readexact(sp, 1, timeout_s);
