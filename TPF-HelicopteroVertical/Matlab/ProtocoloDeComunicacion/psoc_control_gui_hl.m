@@ -13,7 +13,7 @@ function psoc_control_gui_hl()
 %   El streaming reader es un timer que solo lee múltiplos de 8 bytes y,
 %   si encuentra basura, descarta hasta realinear (buffer simple).
 
-    timerClockHz = 1.491e6;
+    timerClockHz = 1.491e6;  %#ok<NASGU>
 
     S = struct();
     S.sp = [];
@@ -21,16 +21,24 @@ function psoc_control_gui_hl()
 
     % --- Streaming state ---
     S.streamTimer  = [];
-    S.t0           = [];            % (no usado para eje X, lo dejo)
-    S.nVec         = zeros(0,1);     % eje X: n samples (frames)
+    S.t0           = [];
+    S.nVec         = zeros(0,1);
     S.uVec         = zeros(0,1);
     S.yVec         = zeros(0,1);
-    S.maxPoints    = 4000;
-    S.streamRxBuf  = uint8([]);     % buffer para resincronizar
-    S.framesTotal  = 0;             % contador global de frames parseados
+    S.maxPoints    = 400000;
+    S.streamRxBuf  = uint8([]);
+    S.framesTotal  = 0;
 
-    % --- NEW: control de parseo ---
-    S.streamParseEnabled = true;    % si false: descarta UART y NO parsea frames
+    % --- Auto-stop state (frames) ---
+    S.autoStopEnabled   = false;
+    S.autoStopTarget    = 0;
+    S.autoStopArmed     = false;
+    S.autoStopStartBase = 0;
+    S.autoStopPending   = false;
+    S.autoStopReason    = "";
+
+    % --- control de parseo ---
+    S.streamParseEnabled = true;
 
     % --------------------
     % UI
@@ -46,11 +54,11 @@ function psoc_control_gui_hl()
     ax.XGrid = 'on';
     ax.YGrid = 'on';
     title(ax, 'Streaming u,y');
-    xlabel(ax, 'n (samples)');
+    xlabel(ax, 'frame index (telemetry frames)');
     ylabel(ax, 'value');
 
     hold(ax, 'on');
-    hU = stairs(ax, nan, nan, 'DisplayName', 'u');  % u con stairs
+    hU = stairs(ax, nan, nan, 'DisplayName', 'u');
     hY = plot(ax,   nan, nan, 'DisplayName', 'y');
     legend(ax, 'show', 'Location', 'best');
     hold(ax, 'off');
@@ -68,7 +76,7 @@ function psoc_control_gui_hl()
     edtCom = uieditfield(pConn, 'text', 'Value', 'COM9', 'Position', [50 35 90 22]);
 
     edtBaud = uieditfield( ...
-        pConn, 'numeric', 'Value', 115200, 'Limits', [1200 2000000], ...
+        pConn, 'numeric', 'Value', 921600, 'Limits', [1200 2000000], ...
         'Position', [150 35 90 22] ...
     );
     uilabel(pConn, 'Text', 'baud', 'Position', [245 35 40 22]);
@@ -120,8 +128,8 @@ function psoc_control_gui_hl()
         'ValueChangedFcn', @onFsChanged ...
     );
 
-    % --- Computed Period ---
-    lblPeriod = uilabel(pMode, 'Text', 'Period=1500 counts', 'Position', [10 60 260 20]);
+    % --- Computed Period (solo UI) ---
+    lblPeriod = uilabel(pMode, 'Text', 'Period=1500 counts', 'Position', [10 60 360 20]);
 
     btnSendMode = uibutton( ...
         pMode, 'Text', 'Send Mode (m)', 'Position', [280 85 110 24], ...
@@ -165,75 +173,183 @@ function psoc_control_gui_hl()
         'Position', [10 10 200 24] ...
     );
 
+    % --- Auto-stop ---
+    cbAutoStop = uicheckbox( ...
+        pRef, 'Text', 'Auto-stop', 'Value', false, ...
+        'Position', [220 10 80 24] ...
+    );
+
+    uilabel(pRef, 'Text', 'at frames', 'Position', [300 10 55 22]);
+    edtAutoStopN = uieditfield( ...
+        pRef, 'numeric', ...
+        'Limits', [0 1e12], 'RoundFractionalValues', 'on', ...
+        'Value', 0, ...
+        'Position', [355 10 70 24], ...
+        'Tooltip', '0=disabled. Counts TELEMETRY FRAMES.' ...
+    );
+
+    % --------------------
+    % Data panel
+    % --------------------
+    pData = uipanel(fig, 'Title', 'Data (Export / Clear)', 'Position', [860 20 400 65]);
+
+    btnExportMAT = uibutton( ...
+        pData, 'Text', 'Export .mat', ...
+        'Position', [10 10 120 28], ...
+        'Tooltip', 'Save current n,u,y vectors to a MAT-file', ...
+        'ButtonPushedFcn', @onExportMAT ...
+    );
+
+    btnClearData = uibutton( ...
+        pData, 'Text', 'Clear data', ...
+        'Position', [140 10 120 28], ...
+        'Tooltip', 'Clear plotted data (does not affect device)', ...
+        'ButtonPushedFcn', @onClearData ...
+    );
+
+    lblDataInfo = uilabel( ...
+        pData, 'Text', 'n=0', ...
+        'Position', [270 10 120 28] ...
+    );
+
     % --------------------
     % TF panel
     % --------------------
-    pTF = uipanel(fig, 'Title', 'TF Coeffs', 'Position', [860 20 400 280]);
+    pTF = uipanel(fig, 'Title', 'TF Coeffs', 'Position', [860 95 400 220]);
 
-    uilabel(pTF, 'Text', 'Numerator b0..b5', 'Position', [10 235 200 18]);
+    uilabel(pTF, 'Text', 'Numerator b0..b5', 'Position', [10 175 200 18]);
     bEdt = gobjects(1,6);
     for i = 1:6
-        bEdt(i) = uieditfield(pTF, 'text', 'Value', '0', 'Position', [10+63*(i-1) 210 60 22]);
+        bEdt(i) = uieditfield(pTF, 'text', 'Value', '0', 'Position', [10+63*(i-1) 150 60 22]);
     end
 
-    uilabel(pTF, 'Text', 'Denominator a0..a5', 'Position', [10 175 200 18]);
+    uilabel(pTF, 'Text', 'Denominator a0..a5', 'Position', [10 115 200 18]);
     aEdt = gobjects(1,6);
     for i = 1:6
-        aEdt(i) = uieditfield(pTF, 'text', 'Value', '0', 'Position', [10+63*(i-1) 150 60 22]);
+        aEdt(i) = uieditfield(pTF, 'text', 'Value', '0', 'Position', [10+63*(i-1) 90 60 22]);
     end
     aEdt(1).Value = '1';
 
-    uilabel(pTF, 'Text', 'Reserved (c13..c16)', 'Position', [10 115 140 18]);
-    edtC13 = uieditfield(pTF, 'numeric', 'Value', 0, 'Position', [10 90 80 22]);
-    edtC14 = uieditfield(pTF, 'numeric', 'Value', 0, 'Position', [100 90 80 22]);
-    uilabel(pTF, 'Text', 'c15=N, c16=Period', 'Position', [190 90 200 22]);
+    uilabel(pTF, 'Text', 'Reserved (c13..c16)', 'Position', [10 55 140 18]);
+    edtC13 = uieditfield(pTF, 'numeric', 'Value', 0, 'Position', [10 30 80 22]);
+    edtC14 = uieditfield(pTF, 'numeric', 'Value', 0, 'Position', [100 30 80 22]);
+    uilabel(pTF, 'Text', 'c15=N, c16=Fs(Hz)', 'Position', [190 30 200 22]);
 
     % --------------------
     % SS panel
     % --------------------
-    pSS = uipanel(fig, 'Title', 'SS Coeffs (2 estados)', 'Position', [860 20 400 280]);
+    pSS = uipanel(fig, 'Title', 'SS Coeffs (2 estados)', 'Position', [860 95 400 220]);
 
-    % A(2x2)
-    uilabel(pSS, 'Text', 'A (2x2)', 'Position', [10 235 60 18]);
-    edtA11 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [70 232 55 22]);
-    edtA12 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [130 232 55 22]);
-    edtA21 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [70 205 55 22]);
-    edtA22 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [130 205 55 22]);
+    uilabel(pSS, 'Text', 'A (2x2)', 'Position', [10 175 60 18]);
+    edtA11 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [70 172 55 22]);
+    edtA12 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [130 172 55 22]);
+    edtA21 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [70 145 55 22]);
+    edtA22 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [130 145 55 22]);
 
-    % B(2)
-    uilabel(pSS, 'Text', 'B (2)', 'Position', [200 235 40 18]);
-    edtB1 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [240 232 55 22]);
-    edtB2 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [300 232 55 22]);
+    uilabel(pSS, 'Text', 'B (2)', 'Position', [200 175 40 18]);
+    edtB1 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [240 172 55 22]);
+    edtB2 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [300 172 55 22]);
 
-    % C(2)
-    uilabel(pSS, 'Text', 'C (2)', 'Position', [200 205 40 18]);
-    edtC1 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [240 202 55 22]);
-    edtC2 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [300 202 55 22]);
+    uilabel(pSS, 'Text', 'C (2)', 'Position', [200 145 40 18]);
+    edtC1 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [240 142 55 22]);
+    edtC2 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [300 142 55 22]);
 
-    % D
-    uilabel(pSS, 'Text', 'D', 'Position', [10 175 20 18]);
-    edtD = uieditfield(pSS, 'text', 'Value', '0', 'Position', [35 172 55 22]);
+    uilabel(pSS, 'Text', 'D', 'Position', [10 115 20 18]);
+    edtD = uieditfield(pSS, 'text', 'Value', '0', 'Position', [35 112 55 22]);
 
-    % L(2)
-    uilabel(pSS, 'Text', 'L (2)', 'Position', [100 175 40 18]);
-    edtL1 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [140 172 55 22]);
-    edtL2 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [200 172 55 22]);
+    uilabel(pSS, 'Text', 'L (2)', 'Position', [100 115 40 18]);
+    edtL1 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [140 112 55 22]);
+    edtL2 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [200 112 55 22]);
 
-    % K(2)
-    uilabel(pSS, 'Text', 'K (2)', 'Position', [10 145 40 18]);
-    edtK1 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [50 142 55 22]);
-    edtK2 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [110 142 55 22]);
+    uilabel(pSS, 'Text', 'K (2)', 'Position', [10 85 40 18]);
+    edtK1 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [50 82 55 22]);
+    edtK2 = uieditfield(pSS, 'text', 'Value', '0', 'Position', [110 82 55 22]);
 
-    % Ki
-    uilabel(pSS, 'Text', 'Ki', 'Position', [200 145 20 18]);
-    edtKi = uieditfield(pSS, 'text', 'Value', '0', 'Position', [225 142 60 22]);
+    uilabel(pSS, 'Text', 'Ki', 'Position', [200 85 20 18]);
+    edtKi = uieditfield(pSS, 'text', 'Value', '0', 'Position', [225 82 60 22]);
 
     % init UI state
     onFsChanged();
     refreshVisibility();
+    updateDataInfo();
 
     % =====================================================================
-    % Callbacks
+    % UI callbacks (Data)
+    % =====================================================================
+    function updateDataInfo()
+        try
+            lblDataInfo.Text = sprintf("n=%d", numel(S.nVec));
+        catch
+        end
+    end
+
+    function onExportMAT(~,~)
+        try
+            if isempty(S.nVec)
+                uialert(fig, "No hay datos para exportar.", "Export");
+                return;
+            end
+
+            [file, path] = uiputfile("*.mat", "Guardar datos (.mat)", "psoc_stream.mat");
+            if isequal(file,0) || isequal(path,0)
+                logMsg("Export cancelado.");
+                return;
+            end
+
+            data = struct();
+            data.n = S.nVec;
+            data.u = S.uVec;
+            data.y = S.yVec;
+            data.framesTotal = S.framesTotal;
+            data.timerClockHz = timerClockHz;
+            data.timestamp = datestr(now, 'yyyy-mm-dd HH:MM:SS.FFF');
+
+            try
+                data.meta = struct();
+                data.meta.com = string(edtCom.Value);
+                data.meta.baud = double(edtBaud.Value);
+                data.meta.type = string(ddType.Value);
+                data.meta.mode = computeMode();
+                data.meta.N_ui = double(edtN.Value);
+                data.meta.Fs_ui = double(edtFs.Value);
+                data.meta.u0 = double(edtU0.Value);
+            catch
+            end
+
+            save(fullfile(path,file), "-struct", "data");
+            logMsg("Export OK: " + string(fullfile(path,file)));
+        catch e
+            logMsg("Export FAIL: " + string(e.message));
+            try uialert(fig, e.message, "Export error"); catch, end
+        end
+    end
+
+    function onClearData(~,~)
+        try
+            S.nVec = zeros(0,1);
+            S.uVec = zeros(0,1);
+            S.yVec = zeros(0,1);
+            S.streamRxBuf = uint8([]);
+            S.framesTotal = 0;
+
+            S.autoStopPending = false;
+            S.autoStopReason  = "";
+            S.autoStopStartBase = 0;
+            S.autoStopArmed = false;
+
+            set(hU, 'XData', nan, 'YData', nan);
+            set(hY, 'XData', nan, 'YData', nan);
+            drawnow limitrate;
+
+            updateDataInfo();
+            logMsg("Data cleared (plot + buffers).");
+        catch e
+            logMsg("Clear FAIL: " + string(e.message));
+        end
+    end
+
+    % =====================================================================
+    % Existing callbacks
     % =====================================================================
     function refreshVisibility()
         typ = ddType.Value;
@@ -242,21 +358,21 @@ function psoc_control_gui_hl()
 
         ddObserver.Enable   = strcmp(typ, 'SS');
         cbIntegrator.Enable = strcmp(typ, 'SS');
-
         btnSendCoeffs.Enable = true;
+
+        pData.Visible = true;
     end
 
     function onFsChanged(~,~)
         try
             fs = double(edtFs.Value);
             if ~isfinite(fs) || fs <= 0
-                lblPeriod.Text = "Period=? counts (Fs inválida)";
+                lblPeriod.Text = "Fs inválida";
                 return;
             end
-            per = computePeriodCounts(fs);
-            lblPeriod.Text = sprintf("Period=%d counts (Fs=%.6g Hz)", per, fs);
+            lblPeriod.Text = sprintf("Fs=%.6g Hz (PSoC calcula PeriodCounts)", fs);
         catch
-            lblPeriod.Text = "Period=? counts";
+            lblPeriod.Text = "Fs=?";
         end
     end
 
@@ -273,12 +389,12 @@ function psoc_control_gui_hl()
                 btnConnect.Text = "Disconnect";
                 lblStat.Text = "CONNECTED: " + com;
 
-                % limpieza
                 try flush(S.sp); catch, end
 
-                % al conectar, habilitamos parseo y streaming
                 S.streamParseEnabled = true;
                 S.streamRxBuf = uint8([]);
+                S.autoStopPending = false;
+                S.autoStopArmed = false;
 
                 logMsg("Connected to " + com);
                 startStreaming();
@@ -311,11 +427,10 @@ function psoc_control_gui_hl()
             uartp_reset(S.sp);
             try flush(S.sp); catch, end
 
-            % luego de reset, el stream puede arrancar en cualquier estado:
-            % habilitamos parseo solo cuando el usuario dé Start (más seguro),
-            % pero igual dejamos el timer leyendo para no acumular bytes.
             S.streamParseEnabled = false;
             S.streamRxBuf = uint8([]);
+            S.autoStopPending = false;
+            S.autoStopArmed = false;
 
             startStreaming();
             logMsg("reset OK (parsing disabled until Start)");
@@ -336,10 +451,10 @@ function psoc_control_gui_hl()
 
             try flush(S.sp); catch, end
 
-            % En COMMAND pueden entrar bytes ASCII -> no parsear frames.
-            % Rehabilitamos parseo al Start.
             S.streamParseEnabled = false;
             S.streamRxBuf = uint8([]);
+            S.autoStopPending = false;
+            S.autoStopArmed = false;
 
             startStreaming();
             logMsg(sprintf("setmode OK: mode=%d (%s) (parsing disabled until Start)", mode, ddType.Value));
@@ -363,7 +478,6 @@ function psoc_control_gui_hl()
             if ~isfinite(fs) || fs <= 0
                 error("Fs inválida (Hz).");
             end
-            PeriodCounts = single(computePeriodCounts(fs));
 
             if strcmp(typ, 'TF')
                 b = parse6(bEdt, 'b');
@@ -373,7 +487,7 @@ function psoc_control_gui_hl()
                 coeffs(13) = single(edtC13.Value);
                 coeffs(14) = single(edtC14.Value);
                 coeffs(15) = Nval;
-                coeffs(16) = PeriodCounts;
+                coeffs(16) = single(fs);
 
             elseif strcmp(typ, 'SS')
                 A = [ ...
@@ -389,28 +503,27 @@ function psoc_control_gui_hl()
 
                 coeffs = uartp_make_ss(A, B, C, D, L, K, Ki);
                 coeffs(15) = Nval;
-                coeffs(16) = PeriodCounts;
+                coeffs(16) = single(fs);
 
             else
                 coeffs = zeros(16,1,'single');
                 coeffs(15) = Nval;
-                coeffs(16) = PeriodCounts;
+                coeffs(16) = single(fs);
             end
 
             uartp_send_coeffs(S.sp, coeffs, cbVerify.Value);
 
             try flush(S.sp); catch, end
 
-            % Tras enviar coeffs, aún estamos en COMMAND -> no parsear.
             S.streamParseEnabled = false;
             S.streamRxBuf = uint8([]);
+            S.autoStopPending = false;
+            S.autoStopArmed = false;
 
             startStreaming();
 
-            logMsg(sprintf( ...
-                "coeffs OK (%s) N=%g Fs=%.6g Hz Period=%g counts (parsing disabled until Start)", ...
-                typ, double(Nval), fs, double(PeriodCounts) ...
-            ));
+            logMsg(sprintf("coeffs OK (%s) N=%g Fs=%.6g Hz (PSoC calcula PeriodCounts) (parsing disabled until Start)", ...
+                typ, double(Nval), fs));
         catch e
             logMsg("coeffs FAIL: " + string(e.message));
             startStreaming();
@@ -434,16 +547,13 @@ function psoc_control_gui_hl()
                 res13 = c(13);
                 res14 = c(14);
                 N = c(15);
-                Period = c(16);
-                fs = periodToFs(double(Period));
+                fs = double(c(16));
 
                 logMsg("t OK (TF)");
                 logMsg(" num6 = " + vecfmt(num6));
                 logMsg(" den6 = " + vecfmt(den6));
-                logMsg(sprintf( ...
-                    " meta: res13=%g res14=%g N=%g Period=%g counts Fs≈%.6g Hz", ...
-                    double(res13), double(res14), double(N), double(Period), fs ...
-                ));
+                logMsg(sprintf(" meta: res13=%g res14=%g N=%g Fs=%.6g Hz", ...
+                    double(res13), double(res14), double(N), fs));
 
             elseif strcmp(typ,'SS')
                 A = [c(1) c(2); c(3) c(4)];
@@ -454,8 +564,7 @@ function psoc_control_gui_hl()
                 K = [c(12); c(13)];
                 Ki = c(14);
                 N = c(15);
-                Period = c(16);
-                fs = periodToFs(double(Period));
+                fs = double(c(16));
 
                 logMsg("t OK (SS)");
                 logMsg(" A = " + matfmt(A));
@@ -465,31 +574,23 @@ function psoc_control_gui_hl()
                 logMsg(" L = " + vecfmt(L.'));
                 logMsg(" K = " + vecfmt(K.'));
                 logMsg(sprintf(" Ki = %g", double(Ki)));
-                logMsg(sprintf( ...
-                    " meta: N=%g Period=%g counts Fs≈%.6g Hz", ...
-                    double(N), double(Period), fs ...
-                ));
+                logMsg(sprintf(" meta: N=%g Fs=%.6g Hz", double(N), fs));
 
             else
                 N = c(15);
-                Period = c(16);
-                fs = periodToFs(double(Period));
-
+                fs = double(c(16));
                 logMsg("t OK (Open-loop / raw).");
-                logMsg(sprintf( ...
-                    " meta: N=%g Period=%g counts Fs≈%.6g Hz", ...
-                    double(N), double(Period), fs ...
-                ));
+                logMsg(sprintf(" meta: N=%g Fs=%.6g Hz", double(N), fs));
             end
 
             try flush(S.sp); catch, end
 
-            % seguimos en COMMAND -> no parsear frames
             S.streamParseEnabled = false;
             S.streamRxBuf = uint8([]);
+            S.autoStopPending = false;
+            S.autoStopArmed = false;
 
             startStreaming();
-
         catch e
             logMsg("t FAIL: " + string(e.message));
             startStreaming();
@@ -505,10 +606,23 @@ function psoc_control_gui_hl()
             u0 = double(edtU0.Value);
             uartp_init(S.sp, u0);
 
-            % Al arrancar CONTROL: habilitar parseo de frames
-            S.streamParseEnabled = true;
+            S.autoStopEnabled = logical(cbAutoStop.Value);
+            tgt = round(double(edtAutoStopN.Value));
+            if ~isfinite(tgt) || tgt < 0, tgt = 0; end
 
-            % limpiar buffer de re-sync (pero NO borrar el gráfico)
+            S.autoStopTarget    = tgt;
+            S.autoStopStartBase = S.framesTotal;
+            S.autoStopPending   = false;
+            S.autoStopReason    = "";
+
+            S.autoStopArmed = (S.autoStopEnabled && S.autoStopTarget > 0);
+            if S.autoStopArmed
+                logMsg(sprintf("Auto-stop ARMED: stop after %d frames (from Start)", S.autoStopTarget));
+            else
+                logMsg("Auto-stop OFF");
+            end
+
+            S.streamParseEnabled = true;
             S.streamRxBuf = uint8([]);
 
             try flush(S.sp); catch, end
@@ -517,7 +631,7 @@ function psoc_control_gui_hl()
             logMsg(sprintf("init OK: u0/ref=%.6g (CONTROL) (parsing enabled)", u0));
         catch e
             logMsg("init FAIL: " + string(e.message));
-            S.streamParseEnabled = true; % si falla, igual dejamos listo para el próximo intento
+            S.streamParseEnabled = true;
             startStreaming();
         end
     end
@@ -525,22 +639,19 @@ function psoc_control_gui_hl()
     function onStop(~,~)
         if ~requireConn(); return; end
         try
-            % STOP: deshabilitar parseo (descartar bytes numéricos/ASCII)
-            S.streamParseEnabled = false;
+            S.autoStopPending = false;
+            S.autoStopArmed = false;
 
+            S.streamParseEnabled = false;
             stopStreaming();
             try flush(S.sp); catch, end
 
             uartp_stop(S.sp, cbWaitBack.Value);
 
-            % limpiar cualquier basura pendiente
             try flush(S.sp); catch, end
             S.streamRxBuf = uint8([]);
 
-            % Importante: NO reactivar streaming parseable acá.
-            % Igual dejamos el timer corriendo para drenar, pero descartando.
             startStreaming();
-
             logMsg("stop OK (parsing disabled; UART bytes discarded)");
         catch e
             logMsg("stop FAIL: " + string(e.message));
@@ -578,14 +689,8 @@ function psoc_control_gui_hl()
     function mode = computeMode()
         typ = ddType.Value;
 
-        if strcmp(typ,'TF')
-            mode = 0;
-            return;
-        end
-        if strcmp(typ,'Open-loop')
-            mode = 5;
-            return;
-        end
+        if strcmp(typ,'TF'),        mode = 0; return; end
+        if strcmp(typ,'Open-loop'), mode = 5; return; end
 
         isAct = strcmp(ddObserver.Value,'Actual');
         hasI  = cbIntegrator.Value;
@@ -598,25 +703,6 @@ function psoc_control_gui_hl()
             mode = 3;
         else
             mode = 4;
-        end
-    end
-
-    function per = computePeriodCounts(fsHz)
-        per = round(double(timerClockHz) / double(fsHz) / 2);
-
-        if ~isfinite(per) || per < 1
-            per = 1;
-        end
-        if per > 2^31-1
-            per = 2^31-1;
-        end
-    end
-
-    function fs = periodToFs(periodCounts)
-        if ~isfinite(periodCounts) || periodCounts <= 0
-            fs = NaN;
-        else
-            fs = double(timerClockHz) / double(periodCounts) / 2;
         end
     end
 
@@ -656,7 +742,7 @@ function psoc_control_gui_hl()
     % Streaming (nested)
     % =====================================================================
     function startStreaming()
-        stopStreaming();  % por si ya estaba
+        stopStreaming();
 
         if ~S.isConnected || isempty(S.sp)
             return;
@@ -696,10 +782,15 @@ function psoc_control_gui_hl()
         if ~S.isConnected || isempty(S.sp)
             return;
         end
-
         sp = S.sp;
 
         try
+            if S.autoStopPending
+                S.autoStopPending = false;
+                doAutoStopNow();
+                return;
+            end
+
             nAvail = sp.NumBytesAvailable;
             if nAvail <= 0
                 return;
@@ -710,14 +801,11 @@ function psoc_control_gui_hl()
                 return;
             end
 
-            % Si parseo está deshabilitado (COMMAND/STOP), descartamos TODO lo que venga.
             if ~S.streamParseEnabled
-                % importante: no acumular nada que desalineé
                 S.streamRxBuf = uint8([]);
                 return;
             end
 
-            % Parseo habilitado: acumulamos y procesamos frames
             S.streamRxBuf = [S.streamRxBuf; uint8(raw(:))];
 
             n = numel(S.streamRxBuf);
@@ -730,9 +818,8 @@ function psoc_control_gui_hl()
             blk = S.streamRxBuf(1:take);
             S.streamRxBuf = S.streamRxBuf(take+1:end);
 
-            frames = reshape(blk, 8, []).';   % nFrames x 8
+            frames = reshape(blk, 8, []).';
 
-            % Parse little endian float32
             u_u32 = uint32(frames(:,1)) ...
                 + bitshift(uint32(frames(:,2)), 8) ...
                 + bitshift(uint32(frames(:,3)),16) ...
@@ -746,7 +833,6 @@ function psoc_control_gui_hl()
             u = typecast(u_u32, 'single');
             y = typecast(y_u32, 'single');
 
-            % eje X por contador de frames
             idx0 = S.framesTotal;
             nIdx = (idx0 + (1:numel(u))).';
 
@@ -765,12 +851,21 @@ function psoc_control_gui_hl()
             set(hY, 'XData', S.nVec, 'YData', S.yVec);
 
             S.framesTotal = S.framesTotal + numel(u);
+            updateDataInfo();
+
+            if S.autoStopArmed
+                framesSinceStart = S.framesTotal - S.autoStopStartBase;
+                if framesSinceStart >= S.autoStopTarget
+                    S.autoStopArmed   = false;
+                    S.autoStopPending = true;
+                    S.autoStopReason  = sprintf("framesSinceStart=%d >= %d", framesSinceStart, S.autoStopTarget);
+                    logMsg("Auto-stop TRIGGER (deferred): " + S.autoStopReason);
+                end
+            end
 
             if mod(S.framesTotal, 50) == 0
-                logMsg(sprintf( ...
-                    "stream: framesTotal=%d (último u=%.4g y=%.4g)", ...
-                    S.framesTotal, S.uVec(end), S.yVec(end) ...
-                ));
+                logMsg(sprintf("stream: framesTotal=%d (último u=%.4g y=%.4g)", ...
+                    S.framesTotal, S.uVec(end), S.yVec(end)));
             end
 
             drawnow limitrate;
@@ -779,6 +874,34 @@ function psoc_control_gui_hl()
             S.streamRxBuf = uint8([]);
             try flush(sp); catch, end
             logMsg("stream WARN: " + string(e.message));
+        end
+    end
+
+    function doAutoStopNow()
+        if ~requireConn()
+            return;
+        end
+
+        try
+            S.streamParseEnabled = false;
+            S.streamRxBuf = uint8([]);
+
+            stopStreaming();
+            try flush(S.sp); catch, end
+
+            logMsg("Auto-stop: sending STOP... (" + S.autoStopReason + ")");
+            uartp_stop(S.sp, cbWaitBack.Value);
+
+            try flush(S.sp); catch, end
+            S.streamRxBuf = uint8([]);
+
+            startStreaming();
+            logMsg("Auto-stop: stop OK (parsing disabled; draining UART).");
+
+        catch e
+            logMsg("Auto-stop: stop FAIL: " + string(e.message));
+            S.streamParseEnabled = false;
+            try startStreaming(); catch, end
         end
     end
 
