@@ -33,7 +33,7 @@ ip = inputParser;
 ip.addParameter('polesK',[],@(v)isnumeric(v) && (isempty(v) || isvector(v)));
 ip.addParameter('polesL',[],@(v)isnumeric(v) && (isempty(v) || isvector(v)));
 
-ip.addParameter('algo','menu',@(s)ischar(s)||isstring(s));
+ip.addParameter('metodo','menu',@(s)ischar(s)||isstring(s));
 ip.addParameter('observer','actual',@(s)ischar(s)||isstring(s));
 ip.addParameter('N',400,@(x)isnumeric(x)&&isscalar(x)&&x>=10);
 ip.addParameter('subN',30,@(x)isnumeric(x)&&isscalar(x)&&x>=2);
@@ -45,6 +45,8 @@ ip.addParameter('R',[],@(v)isnumeric(v) && (isempty(v) || (isscalar(v) || ismatr
 ip.addParameter('Qn',[],@(v)isnumeric(v) && (isempty(v) || ismatrix(v)));
 ip.addParameter('Rn',[],@(v)isnumeric(v) && (isempty(v) || (isscalar(v) || ismatrix(v))));
 ip.addParameter('Gk',[],@(v)isnumeric(v) && (isempty(v) || ismatrix(v)));
+
+ip.addParameter('x0',[],@(v)isnumeric(v) && (isempty(v) || isvector(v)));
 
 ip.parse(varargin{:});
 P = ip.Results;
@@ -67,6 +69,7 @@ Qn_user = P.Qn;
 Rn_user = P.Rn;
 Gk_user = P.Gk;
 
+x0_user = P.x0;
 
 N     = P.N;
 subN  = P.subN;
@@ -150,12 +153,15 @@ switch algo
         polesL = get_poles_param(polesL_user, n, default_poles(n,0.4,0.4), 'polesL');
 
         K  = acker(Ad,Bd,polesK(:).');
-        if obsType == 
-        L  = acker(Ad',Cd_',polesL(:).')';
+        if strcmp(obsType,'predictor')
+            L  = acker(Ad',Cd_',polesL(:).')';
+        else
+            L  = acker(Ad',(Cd_*Ad)',polesL(:).')';
+        end
         Kr = calcular_Kr(Ad,Bd,Cd_,Dd_,K,Ts);
 
         S.ctrl = struct('type','pp_obs','K',K,'L',L,'Kr',Kr,'observer',obsType,'integrator',false);
-        S = sim_estado_espacio(S, Ad,Bd,Cd_,Dd_, K,L,Kr, obsType, false, [], u_sat, N, subN);
+        S = sim_estado_espacio(S, Ad,Bd,Cd_,Dd_, K,L,Kr, obsType, false, [],x0_user ,u_sat, N, subN);
 
     case "pp_obs_int"
         % Integrador clásico v[k+1] = v[k] + (r - y)
@@ -175,13 +181,17 @@ switch algo
         K  = Kaug(1:n);
         Ki = Kaug(n+1);
 
-        L  = acker(Ad',Cd_',polesL(:).')';
+        if strcmp(obsType,'predictor')
+            L  = acker(Ad',Cd_',polesL(:).')';
+        else
+            L  = acker(Ad',(Cd_*Ad)',polesL(:).')';
+        end
 
         % Kr "opcional": por default lo calculo para ayudar al tracking/ganancia
         Kr = 1;
 
         S.ctrl = struct('type','pp_obs_int','K',K,'Ki',Ki,'L',L,'Kr',Kr,'observer',obsType,'integrator',true);
-        S = sim_estado_espacio(S, Ad,Bd,Cd_,Dd_, K,L,Kr, obsType, true, Ki, u_sat, N, subN);
+        S = sim_estado_espacio(S, Ad,Bd,Cd_,Dd_, K,L,Kr, obsType, true, Ki,x0_user, u_sat, N, subN);
 
     case "dlqr"
         [Ad,Bd,Cd_,Dd_] = ssdata(ss(Gd));
@@ -196,7 +206,7 @@ switch algo
         Kr = calcular_Kr(Ad,Bd,Cd_,Dd_,K,Ts);
 
         S.ctrl = struct('type','dlqr','K',K,'Kr',Kr,'Q',Q,'R',R,'observer',"measured",'integrator',false);
-        S = sim_estado_espacio_puro(S, Ad,Bd,Cd_,Dd_, K,Kr, u_sat, N, subN);
+        S = sim_estado_espacio_puro(S, Ad,Bd,Cd_,Dd_, K,Kr,x0_user, u_sat, N, subN);
 
    case "lqg"
         [Ad,Bd,Cd_,Dd_] = ssdata(ss(Gd));
@@ -244,7 +254,7 @@ switch algo
         S.ctrl = struct('type','lqg','K',K,'Kr',Kr,'L',Lk,'Q',Q,'R',R,'Qn',Qn,'Rn',Rn,'Gk',Gk, ...
                         'observer',obsType,'integrator',false);
     
-        S = sim_estado_espacio(S, Ad,Bd,Cd_,Dd_, K,Lk,Kr, obsType, false, [], u_sat, N, subN);
+        S = sim_estado_espacio(S, Ad,Bd,Cd_,Dd_, K,Lk,Kr, obsType, false, [],x0_user, u_sat, N, subN);
     case "dlqr_int"
         % DLQR con integrador clásico: v[k+1] = v[k] + (r - y)
         % u = Kr*r - K*x - Ki*v   (acá asumimos estado medido)
@@ -274,7 +284,7 @@ switch algo
     
         % usamos sim_estado_espacio_puro? No, porque acá hay integrador en la ley.
         % Reutilizamos sim_estado_espacio con L=[], obsType ignorado, useInt=true.
-        S = sim_estado_espacio(S, Ad,Bd,Cd_,Dd_, K,[],Kr, "predictor", true, Ki, u_sat, N, subN);
+        S = sim_estado_espacio(S, Ad,Bd,Cd_,Dd_, K,[],Kr, obsType, true, Ki,x0_user, u_sat, N, subN);
     
 
     case "lqg_int"
@@ -330,7 +340,7 @@ switch algo
                         'Q',Qaug,'R',R,'Qn',Qn,'Rn',Rn,'Gk',Gk, ...
                         'observer',obsType,'integrator',true);
     
-        S = sim_estado_espacio(S, Ad,Bd,Cd_,Dd_, K,Lk,Kr, obsType, true, Ki, u_sat, N, subN);
+        S = sim_estado_espacio(S, Ad,Bd,Cd_,Dd_, K,Lk,Kr, obsType, true, Ki,x0_user, u_sat, N, subN);
 
         otherwise
             error('algo no reconocido: %s', algo);
@@ -477,7 +487,7 @@ end
 %                   State-space controllers sim
 % =====================================================================
 
-function S = sim_estado_espacio(S, A,B,C,D, K,L,Kr, obsType, useInt, Ki, u_sat, N, subN)
+function S = sim_estado_espacio(S, A,B,C,D, K,L,Kr, obsType, useInt, Ki,x0_user, u_sat, N, subN)
     Ts = S.Ts;
 
         % Polos (lazo cerrado y observador) - plano z
@@ -519,15 +529,24 @@ function S = sim_estado_espacio(S, A,B,C,D, K,L,Kr, obsType, useInt, Ki, u_sat, 
 
         % --- Polos del observador ---
         if ~isempty(L)
-            p_obs = eig(A - L*C);
+            if strcmp(obsType,'predictor')
+                p_obs = eig(A - L*C);
+            else
+                p_obs = eig(A - L*C*A);
+            end
+                
             plot(real(p_obs), imag(p_obs), 'o', 'LineWidth', 1.6, 'MarkerSize', 7);
             %legend({'Círculo unidad', 'Polos lazo cerrado', 'Polos observador (A-LC)'}, ...
             %       'Location','best');
         else
             %legend({'Círculo unidad', 'Polos lazo cerrado'}, 'Location','best');
         end
-
-        title({ttl, 'y polos del observador: eig(A-LC)'});
+        if strcmp(obsType,'predictor')
+            title({ttl, 'y polos del observador: eig(A-LC)'});
+        else
+            title({ttl, 'y polos del observador: eig(A-LAC)'});
+        end
+        
         xlabel('Re\{z\}');
         ylabel('Im\{z\}');
 
@@ -537,12 +556,12 @@ function S = sim_estado_espacio(S, A,B,C,D, K,L,Kr, obsType, useInt, Ki, u_sat, 
 
     % STEP
     r_step = ones(N,1);
-    R = sim_obs(A,B,C,D,K,L,Kr,obsType,useInt,Ki,Ts,r_step,u_sat);
+    R = sim_obs(A,B,C,D,K,L,Kr,obsType,useInt,Ki,Ts,r_step,u_sat,x0_user);
     S.step = paquete_step(S.G, Ts, r_step, R, subN);
 
     % RAMP
     r_ramp = (0:N-1)'*Ts;
-    R2 = sim_obs(A,B,C,D,K,L,Kr,obsType,useInt,Ki,Ts,r_ramp,u_sat);
+    R2 = sim_obs(A,B,C,D,K,L,Kr,obsType,useInt,Ki,Ts,r_ramp,u_sat,x0_user);
     S.ramp = paquete_ramp(S.G, Ts, r_ramp, R2, subN);
 
     % CL lineal aproximado (sin saturación, ignorando dinámica del estimador)
@@ -554,17 +573,17 @@ function S = sim_estado_espacio(S, A,B,C,D, K,L,Kr, obsType, useInt, Ki, u_sat, 
     if ~isempty(S.CL), print_pz(S.CL, 'Lazo cerrado lineal (SS aprox)'); end
 end
 
-function S = sim_estado_espacio_puro(S, A,B,C,D, K,Kr, u_sat, N, subN)
+function S = sim_estado_espacio_puro(S, A,B,C,D, K,Kr,x0_user, u_sat, N, subN)
     Ts = S.Ts;
 
     % STEP
     r_step = ones(N,1);
-    R = sim_puro(A,B,C,D,K,Kr,Ts,r_step,u_sat);
+    R = sim_puro(A,B,C,D,K,Kr,Ts,r_step,u_sat,x0_user);
     S.step = paquete_step(S.G, Ts, r_step, R, subN);
 
     % RAMP
     r_ramp = (0:N-1)'*Ts;
-    R2 = sim_puro(A,B,C,D,K,Kr,Ts,r_ramp,u_sat);
+    R2 = sim_puro(A,B,C,D,K,Kr,Ts,r_ramp,u_sat,x0_user);
     S.ramp = paquete_ramp(S.G, Ts, r_ramp, R2, subN);
 
     try
@@ -591,7 +610,8 @@ function P = paquete_step(Gc, Ts, r, R, subN)
     catch
     end
 
-    figure('Name','Step (discreto)'); tiledlayout(3,1);
+    figure('Name','Step (discreto)'); tiledlayout(4,1);
+
 
     nexttile; grid on; hold on;grid minor;
     stairs(t, r, 'LineWidth',1.0);
@@ -602,12 +622,17 @@ function P = paquete_step(Gc, Ts, r, R, subN)
     nexttile; grid on; hold on;grid minor;
     stairs(t, R.u, 'LineWidth',1.2);
     title('u[k] (con saturación)'); ylabel('u');
+    
+    nexttile; grid on; hold on; grid minor;
+    e = r - y;
+    stairs(t, e, 'LineWidth',1.2);
+    title('Error e[k]=r[k]-y[k]'); ylabel('e');
 
     nexttile; grid on; hold on;grid minor;
     if ~isempty(R.x)
-        plot(t, R.x.', 'LineWidth',1.0);
+        stairs(t, R.x.', 'LineWidth',1.0);
         if ~isempty(R.xhat)
-            plot(t, R.xhat.','--','LineWidth',1.0);
+            stairs(t, R.xhat.','--','LineWidth',1.0);
             title('x (línea) y x\_hat (punteada)');
         else
             title('x');
@@ -618,7 +643,7 @@ function P = paquete_step(Gc, Ts, r, R, subN)
     end
 
     % intersample desde u[k] (ZOH real)
-    Si = ver_intersample_desde_u(Gc, Ts, R.u, 0, subN);
+    Si = ver_intersample_desde_u(Gc,y,r, Ts, R.u, 0, subN);
 
     P = struct();
     P.t          = t;
@@ -640,7 +665,8 @@ function P = paquete_ramp(Gc, Ts, r, R, subN)
     e = r - y;
     ess = abs(e(end));
 
-    figure('Name','Rampa (discreto)'); tiledlayout(3,1);
+    figure('Name','Rampa (discreto)'); tiledlayout(4,1);
+
 
     nexttile; grid on; hold on;grid minor;
     stairs(t, r, 'LineWidth',1.0);
@@ -655,9 +681,20 @@ function P = paquete_ramp(Gc, Ts, r, R, subN)
     nexttile; grid on; hold on;grid minor;
     stairs(t, e, 'LineWidth',1.2);
     title('Error e[k]=r[k]-y[k]'); ylabel('e');
+    
+
+    nexttile; grid on; hold on; grid minor;
+    if ~isempty(R.x)
+        stairs(t, R.x.', 'LineWidth',1.0);
+        title('Estados x[k] (discreto)'); ylabel('x');
+    else
+        stairs(t, y, 'LineWidth',1.0);
+        title('y[k]'); ylabel('y');
+    end
+    xlabel('t [s]');
 
     % intersample desde u[k] (ZOH real)
-    Si = ver_intersample_desde_u(Gc, Ts, R.u, 0, subN);
+    Si = ver_intersample_desde_u(Gc,y,r, Ts, R.u, 0, subN);
 
     P = struct();
     P.t          = t;
@@ -706,11 +743,24 @@ function R = sim_loop_tf(Gd_ss, Cd_ss, Ts, r, u_sat) %#ok<INUSD>
     R = struct('u',u,'y',y,'x',xp,'xhat',[],'v',[]);
 end
 
-function R = sim_puro(A,B,C,D,K,Kr,Ts,r,u_sat) %#ok<INUSD>
+function R = sim_puro(A,B,C,D,K,Kr,Ts,r,u_sat,x0_user) %#ok<INUSD>
     N  = numel(r);
     nx = size(A,1);
+    nx = size(A,1);
+
+    if isempty(x0_user)
+        x0 = zeros(nx,1);
+    else
+        x0 = x0_user(:);
+        if numel(x0) ~= nx
+            error('x0 debe tener %d elementos (recibí %d).', nx, numel(x0));
+        end
+    end
+
 
     x = zeros(nx,N);
+    x(:,1)    = x0;
+
     y = zeros(N,1);
     u = zeros(N,1);
 
@@ -727,13 +777,22 @@ function R = sim_puro(A,B,C,D,K,Kr,Ts,r,u_sat) %#ok<INUSD>
     R = struct('u',u,'y',y,'x',x,'xhat',x,'v',[]);
 end
 
-function R = sim_obs(A,B,C,D,K,L,Kr,obsType,useInt,Ki,Ts,r,u_sat) %#ok<INUSD>
+function R = sim_obs(A,B,C,D,K,L,Kr,obsType,useInt,Ki,Ts,r,u_sat,x0_user) %#ok<INUSD>
     N  = numel(r);
     nx = size(A,1);
-
+    if isempty(x0_user)
+        x0 = zeros(nx,1);
+    else
+        x0 = x0_user(:);
+        if numel(x0) ~= nx
+            error('x0 debe tener %d elementos (recibí %d).', nx, numel(x0));
+        end
+    end
     useObs = ~isempty(L);   % <-- NUEVO: si no hay L, estado medido
 
     x    = zeros(nx,N);
+    x(:,1)    = x0;
+
     xhat = zeros(nx,N);
 
     y    = zeros(N,1);
@@ -794,44 +853,92 @@ end
 %                    Intersample (ZOH real)
 % =====================================================================
 
-function S = ver_intersample_desde_u(G, Ts, ud, M, N)
-    if nargin < 5 || isempty(N), N = 30; end
-    if nargin < 4 || isempty(M), M = 0;  end
+function S = ver_intersample_desde_u(G, yk_disc, rk_disc, Ts, ud, M, N)
+    % VER_INTERSAMPLE_DESDE_U
+    % Reconstruye y_c(t) aplicando ZOH sobre u[k] y simula la planta continua G.
+    % Además grafica y[k] (discreta) y r[k] sobre la misma figura.
+    %
+    % Uso:
+    %   S = ver_intersample_desde_u(G, yk, rk, Ts, u, M, N)
+    %
+    % Entradas:
+    %   G       : planta continua
+    %   yk_disc : y[k] discreta (del simulador)
+    %   rk_disc : r[k] discreta (referencia usada)
+    %   Ts      : periodo de muestreo
+    %   ud      : u[k] discreta aplicada
+    %   M       : si >0, recorta a M muestras (incluye hasta ese k)
+    %   N       : submuestras por Ts para reconstrucción ZOH
+    %
+    % Nota importante:
+    %   Para evitar el "drop" artificial, NO usamos el último u(N) (a menudo queda
+    %   sin asignar en simulaciones que corren k=1:N-1). Se usa u(1:end-1).
+
+    if nargin < 7 || isempty(N), N = 30; end
+    if nargin < 6 || isempty(M), M = 0;  end
     if Ts <= 0, error('Ts debe ser > 0.'); end
 
+    % --- asegurar vectores columna ---
     uk = ud(:);
+    yk = yk_disc(:);
+    rk = rk_disc(:);
+
+    % --- recorte coherente ---
+    L = min([numel(uk), numel(yk), numel(rk)]);
+    uk = uk(1:L);
+    yk = yk(1:L);
+    rk = rk(1:L);
+
     if M > 0
-        M = min(M, numel(uk));
+        M = min(M, L);
         uk = uk(1:M);
+        yk = yk(1:M);
+        rk = rk(1:M);
+        L  = M;
     end
 
-    K  = numel(uk) - 1;
-    tk = (0:K).' * Ts;
+    % --- EVITAR DROP: usar solo intervalos reales (u[1..L-1]) ---
+    if L < 2
+        error('Necesito al menos 2 muestras para intersample.');
+    end
+    uk_int = uk(1:end-1);          % u[k] que define los intervalos
+    K      = numel(uk_int) - 1;    % K intervalos -> (K+1) muestras en tk
+    tk     = (0:K).' * Ts;         % tiempos de las muestras y[k]
 
-    [tc, uc] = zoh_stretch(uk, Ts, N);
+    % --- ZOH (alta resolución) ---
+    [tc, uc] = zoh_stretch(uk_int, Ts, N);
     yc       = lsim(G, uc, tc);
 
-    yk = yc(1:N:end);
+    % y[k] "muestrado" de la reconstrucción continua (para referencia)
+    yk_from_cont = yc(1:N:end);
 
     figure('Name','Intersample desde u[k]');
     tiledlayout(2,1);
 
+    % ---- salida ----
     nexttile; hold on; grid on; grid minor;
-    plot(tc*1e3, yc, 'LineWidth', 1.2);
-    stairs(tk*1e3, yk, 'k.', 'LineWidth', 1.0);
+    plot(tc*1e3, yc, 'LineWidth', 1.2);                 % y_c(t)
+    stairs(tk*1e3, yk(1:numel(tk)), 'k.', 'LineWidth', 1.0); % y[k] discreta real
+    stairs(tk*1e3, rk(1:numel(tk)), '--', 'LineWidth', 1.0); % r[k]
     xlabel('t [ms]'); ylabel('y');
-    title(sprintf('Salida continua y_c(t) y muestras y[k]  (T_s = %.4g ms)', Ts*1e3));
-    legend('y_c(t)','y[k]','Location','best');
+    title(sprintf('Salida continua y_c(t) + y[k] + r[k]  (T_s = %.4g ms)', Ts*1e3));
+    legend('y_c(t)','y[k]','r[k]','Location','best');
 
+    % ---- entrada ----
     nexttile; hold on; grid on; grid minor;
-    stairs(tk*1e3, uk, 'LineWidth', 1.2);
+    stairs(tk*1e3, uk_int, 'LineWidth', 1.2);
     xlabel('t [ms]'); ylabel('u[k]');
-    title('Esfuerzo aplicado');
+    title('Esfuerzo aplicado (ZOH)');
 
     S = struct('Ts', Ts, ...
-               'tk', tk, 'uk', uk, 'yk', yk, ...
+               'tk', tk, ...
+               'uk', uk_int, ...
+               'yk_disc', yk(1:numel(tk)), ...
+               'rk_disc', rk(1:numel(tk)), ...
+               'yk_from_cont', yk_from_cont, ...
                'tc', tc, 'uc', uc, 'yc', yc);
 end
+
 
 function [t_hi, u_hi] = zoh_stretch(u_k, T, M)
     if size(u_k,2) > 1, u_k = u_k(:); end
