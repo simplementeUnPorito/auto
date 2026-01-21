@@ -23,12 +23,12 @@ int main(void)
     uint32_t t_ms = 0u, last_hb = 0u, last_meas = 0u;
 
     CyGlobalIntEnable;
-
+    
     uart_PC_Start();
     uart_PC_PutString("\r\nTFMiniPlus ISR test\r\n");
 
     tfmini_init();
-    tfmini_set_range_cm(10u, 150u);
+    tfmini_set_range_cm(0u, 400u);
 
     (void)tfmini_disable();
     CyDelay(20u);
@@ -36,8 +36,10 @@ int main(void)
     (void)tfmini_set_fps(1000u);
     CyDelay(20u);
 
+   
     (void)tfmini_enable();
-
+    CyDelay(20u);
+   
     for (;;) {
         CyDelay(1u);
         t_ms++;
@@ -58,12 +60,16 @@ int main(void)
         if ((t_ms - last_meas) >= 200u) {
             tfmini_data_t d;
             last_meas = t_ms;
+            int16_t tc10 = tfmini_temp_c10_from_raw(d.temp_raw);
+
 
             if (tfmini_get(&d)) {
-                pc_printf("dist=%u cm strength=%u temp=%d C\r\n",
-                          (unsigned)d.dist_cm,
-                          (unsigned)d.strength,
-                          (int)d.temp_c);
+               pc_printf("dist=%u cm strength=%u temp=%d.%d C\r\n",
+                  (unsigned)d.dist_cm,
+                  (unsigned)d.strength,
+                  (int)(tc10 / 10),
+                  (int)((tc10 < 0) ? -(tc10 % 10) : (tc10 % 10)),
+                  (unsigned)d.temp_raw);
             }
         }
 

@@ -305,6 +305,9 @@
       <Data key="6b2f8119-720c-404a-ab62-b28211a078a5" value="Rx_PC" />
       <Data key="8e6eb876-e71b-48d0-b35a-3a9d10d84a11" value="Tx_TFMINI" />
       <Data key="1425177d-0d0e-4468-8bcc-e638e5509a9b" value="Rx_TFMINI" />
+      <Data key="d86c9feb-e4bd-42ad-af14-ff8c09e7294c" value="isr_out" />
+      <Data key="e2b19f39-ff7b-488f-87f1-ed8bd44f95c2" value="isr_out_1" />
+      <Data key="e851a3b9-efb8-48be-bbb8-b303b216c393" value="contadorPruebas" />
       <Data key="ed092b9b-d398-4703-be89-cebf998501f6" value="Tx_1" />
       <Data key="f7ddb192-87e6-460f-a31b-7b9894f86216" value="Tx_PC" />
     </Group>
@@ -3406,6 +3409,21 @@
     <Group key="1425177d-0d0e-4468-8bcc-e638e5509a9b">
       <Group key="0">
         <Data key="Port Format" value="12,2" />
+      </Group>
+    </Group>
+    <Group key="d86c9feb-e4bd-42ad-af14-ff8c09e7294c">
+      <Group key="0">
+        <Data key="Port Format" value="0,1" />
+      </Group>
+    </Group>
+    <Group key="e2b19f39-ff7b-488f-87f1-ed8bd44f95c2">
+      <Group key="0">
+        <Data key="Port Format" value="0,0" />
+      </Group>
+    </Group>
+    <Group key="e851a3b9-efb8-48be-bbb8-b303b216c393">
+      <Group key="0">
+        <Data key="Port Format" value="0,0" />
       </Group>
     </Group>
     <Group key="ed092b9b-d398-4703-be89-cebf998501f6">

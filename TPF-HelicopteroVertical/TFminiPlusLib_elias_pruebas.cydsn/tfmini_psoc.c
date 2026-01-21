@@ -1,5 +1,7 @@
 #include "tfmini_psoc.h"
+#include "Control_Reg.h"
 #include <string.h>
+
 
 volatile uint8_t tfmini_sample_pending = 0u;
 
@@ -88,10 +90,10 @@ static bool send_cmd(uint8_t id, const uint8_t* payload, uint8_t plen)
 
 static void on_frame(const uint8_t* f)
 {
+    Control_Reg_Write(~Control_Reg_Read());
     uint16_t dist;
     uint16_t str;
-    int16_t  traw;
-    int16_t  temp_c;
+    int16_t  temp_raw;
     uint8_t  sum;
 
     sum = sum8_first8(f);
@@ -102,9 +104,8 @@ static void on_frame(const uint8_t* f)
 
     dist = (uint16_t)f[2] | ((uint16_t)f[3] << 8);
     str  = (uint16_t)f[4] | ((uint16_t)f[5] << 8);
-    traw = (int16_t)((uint16_t)f[6] | ((uint16_t)f[7] << 8));
-
-    temp_c = (int16_t)((traw >> 3) - 256);
+    
+    temp_raw = (uint16_t)f[6] | ((uint16_t)f[7] << 8);
 
     /* clamp simple */
     if (dist < s_min_cm) dist = s_min_cm;
@@ -115,11 +116,12 @@ static void on_frame(const uint8_t* f)
 
     s_last.dist_cm = dist;
     s_last.strength = str;
-    s_last.temp_c = temp_c;
+    s_last.temp_raw = temp_raw;
     s_last.frames_ok++;
     s_last.valid = 1u;
 
     tfmini_sample_pending = 1u;
+    
 }
 
 static void parser_push(uint8_t b)
@@ -161,6 +163,7 @@ static void parser_push(uint8_t b)
 /* ISR por RX On Byte Received */
 CY_ISR(isr_rx_tfmini_handler)
 {
+    isr_rx_TFminiPlus_ClearPending();
 #if defined(uart_TFminiPlus_RX_STS_FIFO_NOTEMPTY)
     for (;;) {
         uint8_t st = uart_TFminiPlus_ReadRxStatus();
@@ -189,7 +192,7 @@ CY_ISR(isr_rx_tfmini_handler)
     (void)uart_TFminiPlus_ReadRxStatus();
 #endif
 
-    isr_rx_TFminiPlus_ClearPending();
+    
 }
 
 void tfmini_init(void)

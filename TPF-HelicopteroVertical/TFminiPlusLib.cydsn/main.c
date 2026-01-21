@@ -36,7 +36,7 @@ int main(void)
 
     /* Arrancar librería */
     tfmini_init();
-    tfmini_set_range(1, 1200); /* ajustá según tu rango real */
+    tfmini_set_range(0, 4000); /* ajustá según tu rango real */
 
     uart_dbg_PutString("\r\nTFMini lib test\r\n");
 
