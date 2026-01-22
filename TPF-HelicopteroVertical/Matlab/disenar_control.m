@@ -1,7 +1,7 @@
-function S = disenar_control(G, fs, metodo, varargin)
+function S = disenar_control(G, fs, varargin)
 %DISENAR_CONTROL  Diseña y evalúa controladores digitales SISO (simple y robusto).
 %
-%   S = disenar_control(G, fs, metodo, Name,Value,...)
+%   S = disenar_control(G, fs, Name,Value,...)
 %
 % Entradas:
 %   G      : planta continua SISO (tf/ss/zpk). Si viene discreta, se convierte con d2c(zoh) (warning).
@@ -14,12 +14,12 @@ function S = disenar_control(G, fs, metodo, varargin)
 %   'N'             : muestras de simulación (default 400)
 %   'subN'          : submuestras por Ts para intersample (default 30)
 %   'u_sat'         : [umin umax] saturación (default [-Inf Inf])
-%   'designer_mode' : 'rlocus' (default) | 'default'
+%   'designer_mode' : 'rlocus' (default) | 'bode' | 'default'
 %   'polesK'        : polos deseados K (si aplica)
 %   'polesL'        : polos deseados L (si aplica)
 %   'x0'            : valor inicial de la planta
 % Salida struct S:
-%   .Ts,.fs,.G,.Gd,.Gd_zoh
+%   .Ts,.fs,.G,.Gd,.Gd_w
 %   .Cd (si TF) o .ctrl (si estado-espacio)
 %   .step, .ramp  (señales, métricas, intersample)
 %
@@ -32,6 +32,8 @@ ip = inputParser;
 
 ip.addParameter('polesK',[],@(v)isnumeric(v) && (isempty(v) || isvector(v)));
 ip.addParameter('polesL',[],@(v)isnumeric(v) && (isempty(v) || isvector(v)));
+ip.addParameter('l_db',[],@(x)isnumeric(x)&&isscalar(x)&&x==floor(x)&&x>=1); % l para deadbeat ripple-free
+ip.addParameter('rf_min_l','auto',@(s)ischar(s)||isstring(s)); % 'auto' | 'degD' | 'degD+1'
 
 ip.addParameter('tecnica','menu',@(s)ischar(s)||isstring(s));
 ip.addParameter('observer','actual',@(s)ischar(s)||isstring(s));
@@ -52,13 +54,15 @@ ip.parse(varargin{:});
 P = ip.Results;
 
 tecnica = lower(string(P.tecnica));
-tecnica = validatestring(tecnica, {'menu','designer','opt_intra','pp_obs','pp_obs_int','dlqr','dlqr_int','lqg','lqg_int'});
+
+tecnica = validatestring(tecnica, ...
+    {'menu','designer','opt_intra','opt_no_intra','pp_obs','pp_obs_int','dlqr','dlqr_int','lqg','lqg_int'});
 
 obsType = lower(string(P.observer));
 obsType = validatestring(obsType, {'actual','predictor'});
 
 designer_mode = lower(string(P.designer_mode));
-designer_mode = validatestring(designer_mode, {'rlocus','default'});
+designer_mode = validatestring(designer_mode, {'rlocus','bode','default'});
 
 polesK_user   = P.polesK;
 polesL_user   = P.polesL;
@@ -70,6 +74,9 @@ Rn_user = P.Rn;
 Gk_user = P.Gk;
 
 x0_user = P.x0;
+l_db = P.l_db;
+rf_min_l = lower(string(P.rf_min_l));
+rf_min_l = validatestring(rf_min_l, {'auto','degd','degd+1'});
 
 N     = P.N;
 subN  = P.subN;
@@ -78,7 +85,8 @@ u_sat = P.u_sat(:).';
 if fs <= 0, error('fs debe ser > 0 (Hz).'); end
 Ts = 1/fs;
 
-% =================== Normalizar planta ===================
+
+% Normalizar planta (asegura continua ss y evita Ts raro)
 G = normalize_plant_local(G);
 
 if ~is_siso_local(G)
@@ -86,10 +94,9 @@ if ~is_siso_local(G)
 end
 
 % Discretizaciones
-metodo = lower(string(metodo));
-metodo = validatestring(metodo, {'zoh','tustin'});
-Gd     = c2d(G, Ts, char(metodo));
-Gd_zoh = c2d(G, Ts, 'zoh');   % útil para RLocus y para "actuador real"
+Gd     = c2d(G, Ts, 'zoh');
+
+G_w = d2c(Gd, 'tustin'); 
 
 % struct salida base
 S = struct();
@@ -97,7 +104,7 @@ S.fs    = fs;
 S.Ts    = Ts;
 S.G     = G;
 S.Gd    = Gd;
-S.Gd_zoh= Gd_zoh;
+S.G_w= G_w;
 
 S.Cd    = [];     % si controlador TF
 S.ctrl  = [];     % si controlador estado-espacio
@@ -108,28 +115,41 @@ S.ramp  = [];
 S.note  = "";
 
 % =================== Menú si corresponde ===================
+% =================== Menú si corresponde ===================
 if tecnica == "menu"
-    k = menu('Elegí acción',...
-        'Abrir Control System Designer (planta discreta)',...
-        'Óptimo con oscilaciones intramuestra: C = inv(Gd) * 1/(z-1)',...
-        'Polos + observador (sin integrador, con Kr)',...
-        'Polos + observador (integrador clásico, con Kr opcional)',...
-        'DLQR (estado medido, con Kr)',...
+    k = menu('Elegí acción', ...
+        'Abrir Control System Designer (planta discreta)', ...
+        'Óptimo con oscilaciones intramuestra: C = inv(Gd) * 1/(z-1)', ...
+        'Óptimo SIN oscilaciones intramuestra (ripple-free deadbeat)', ...
+        'Polos + observador (sin integrador, con Kr)', ...
+        'Polos + observador (integrador clásico, con Kr opcional)', ...
+        'DLQR (estado medido, con Kr)', ...
         'LQG (DLQR + Kalman, con Kr)');
-    map = ["designer","opt_intra","pp_obs","pp_obs_int","dlqr","lqg"];
+
+    if k <= 0
+        S.note = "Menú cancelado.";
+        return;
+    end
+
+    map = ["designer","opt_intra","opt_no_intra","pp_obs","pp_obs_int","dlqr","lqg"];
     tecnica = map(k);
 end
 
 % =================== Ejecutar opción ===================
 switch tecnica
     case "designer"
-        sys_open = Gd_zoh; % para RLocus suele tener más sentido con ZOH
+        sys_open = Gd; % para RLocus suele tener más sentido con ZOH
         if strcmp(designer_mode, "default")
             controlSystemDesigner(sys_open);
-        else
+            S.note = "Control System Designer abierto con Gd_zoh. Exportá el compensador si querés analizarlo luego.";
+        elseif  strcmp(designer_mode, "rlocus")
             controlSystemDesigner('rlocus', sys_open);
+            S.note = "Control System Designer abierto con Gd_zoh. Exportá el compensador si querés analizarlo luego.";
+        elseif  strcmp(designer_mode, "bode")
+            controlSystemDesigner('bode', G_w);
+            S.note = "Control System Designer abierto con Gd_w. Exportá el compensador si querés analizarlo luego.";
         end
-        S.note = "Control System Designer abierto con Gd_zoh. Exportá el compensador si querés analizarlo luego.";
+        
         return;
 
     case "opt_intra"
@@ -139,6 +159,17 @@ switch tecnica
 
         if ~isproper(Cd)
             warning('Cd salió impropio/no causal. Puede explotar u[k]. Sigo igual (como pediste).');
+        end
+
+        S.Cd = Cd;
+        S = analizar_y_simular_tf(S, Cd, u_sat, N, subN);
+    case "opt_no_intra"
+        % Ripple-free deadbeat (Sección 6.7.1, forma Ej 6.23/6.24)
+        % Diseña Cd para que u[k] sea constante luego de l muestras y e[k]=0 luego de l.
+        if isempty(l_db)
+            Cd = design_ripplefree_deadbeat(S.Gd, Ts, 'min_l_mode', rf_min_l);
+        else
+            Cd = design_ripplefree_deadbeat(S.Gd, Ts, 'l', l_db, 'min_l_mode', rf_min_l);
         end
 
         S.Cd = Cd;
@@ -447,8 +478,11 @@ function S = analizar_y_simular_tf(S, Cd, u_sat, N, subN)
     try
         Cd_ss = ss(Cd);
     catch
-        error('No se pudo convertir Cd a ss.');
+        % Si es impropio, usar descriptor (para que al menos puedas ver algo)
+        warning('Cd impropio: uso dss() para inspección; simulación puede no ser física.');
+        Cd_ss = dss(Cd);
     end
+
     if Cd_ss.Ts == 0
         Cd_ss = c2d(Cd_ss, Ts, 'tustin');
     end
@@ -461,13 +495,50 @@ function S = analizar_y_simular_tf(S, Cd, u_sat, N, subN)
     end
     if ~isempty(S.CL), print_pz(S.CL, 'Lazo cerrado lineal (TF)'); end
 
-    % Root locus (solo si Cd es TF usable)
+        % Polos ubicados (L(z) y CL(z)) + grilla en plano-z
+    
+        % Bode: L(z) y CL(z)
     try
-        figure('Name','Root Locus (TF Controller): L(z)=C(z)G(z)'); grid on;
-        rlocus(series(tf(Cd), tf(S.Gd_zoh)));
-        title('Lugar de raíces usando Gd\_zoh');
+        Lz  = series(tf(Cd), tf(S.Gd));
+        CLz = feedback(Lz, 1);
+    
+        figure('Name','Bode: L(z) y CL(z)'); clf; grid on;
+        bode(Lz); hold on;
+        bode(CLz);
+        grid on;
+        legend('L(z)=C(z)G(z)','CL(z)=feedback(L,1)','Location','best');
+        title('Bode discreto (Gd\_zoh)');
     catch
     end
+
+    try
+        Lz = series(tf(Cd), tf(S.Gd));
+        CLz = feedback(Lz, 1);
+    
+        pL  = pole(Lz);
+        pCL = pole(CLz);
+    
+        figure('Name','Plano-z: polos de L(z) y CL(z)'); clf;
+        ax = axes; hold(ax,'on'); grid(ax,'on'); axis(ax,'equal');
+    
+        % zgrid (si existe en tu MATLAB)
+        try, zgrid; catch, end
+    
+        % círculo unidad
+        th = linspace(0,2*pi,600);
+        plot(ax, cos(th), sin(th), 'k--', 'LineWidth', 1.0);
+    
+        % polos
+        plot(ax, real(pL),  imag(pL),  'o', 'LineWidth', 1.6, 'MarkerSize', 7);
+        plot(ax, real(pCL), imag(pCL), 'x', 'LineWidth', 1.8, 'MarkerSize', 9);
+    
+        xlabel(ax,'Re\{z\}');
+        ylabel(ax,'Im\{z\}');
+        title(ax,'Polos: L(z)=C(z)G(z) (o)  y  CL(z)=feedback(L,1) (x)');
+        legend(ax, {'Círculo unidad','Polos L(z)','Polos CL(z)'}, 'Location','best');
+    catch
+    end
+
 
     % STEP
     r_step = ones(N,1);
@@ -479,7 +550,7 @@ function S = analizar_y_simular_tf(S, Cd, u_sat, N, subN)
     R2 = sim_loop_tf(ss(S.Gd), Cd_ss, Ts, r_ramp, u_sat);
     S.ramp = paquete_ramp(S.G, Ts, r_ramp, R2, subN);
 
-    print_pz(S.Gd_zoh, 'Planta discreta Gd\_zoh');
+    print_pz(S.Gd, 'Planta discreta Gd\_zoh');
 end
 
 
@@ -563,6 +634,25 @@ function S = sim_estado_espacio(S, A,B,C,D, K,L,Kr, obsType, useInt, Ki,x0_user,
     r_ramp = (0:N-1)'*Ts;
     R2 = sim_obs(A,B,C,D,K,L,Kr,obsType,useInt,Ki,Ts,r_ramp,u_sat,x0_user);
     S.ramp = paquete_ramp(S.G, Ts, r_ramp, R2, subN);
+    
+
+    % Bode (SS): planta discreta y CL aprox
+    try
+        Gdss = ss(A,B,C,D,Ts);   % planta discreta
+        CLss = S.CL;
+    
+        figure('Name','Bode (SS): Gd y CL aprox'); clf; grid on;
+        bode(Gdss); hold on;
+        if ~isempty(CLss)
+            bode(CLss);
+            legend('Gd(z)','CL aprox(z)','Location','best');
+        else
+            legend('Gd(z)','Location','best');
+        end
+        title('Bode discreto (estado-espacio)');
+    catch
+    end
+
 
     % CL lineal aproximado (sin saturación, ignorando dinámica del estimador)
     try
@@ -585,6 +675,24 @@ function S = sim_estado_espacio_puro(S, A,B,C,D, K,Kr,x0_user, u_sat, N, subN)
     r_ramp = (0:N-1)'*Ts;
     R2 = sim_puro(A,B,C,D,K,Kr,Ts,r_ramp,u_sat,x0_user);
     S.ramp = paquete_ramp(S.G, Ts, r_ramp, R2, subN);
+    
+
+    % Bode (SS puro): Gd y CL
+    try
+        Gdss = ss(A,B,C,D,Ts);
+        CLss = S.CL;
+    
+        figure('Name','Bode (SS puro): Gd y CL'); clf; grid on;
+        bode(Gdss); hold on;
+        if ~isempty(CLss)
+            bode(CLss);
+            legend('Gd(z)','CL(z)','Location','best');
+        else
+            legend('Gd(z)','Location','best');
+        end
+        title('Bode discreto (estado medido)');
+    catch
+    end
 
     try
         S.CL = ss(A - B*K, B*Kr, C, D, Ts);
@@ -610,25 +718,27 @@ function P = paquete_step(Gc, Ts, r, R, subN)
     catch
     end
 
-    figure('Name','Step (discreto)'); tiledlayout(4,1);
+    figure('Name','Step (discreto)'); tl = tiledlayout(4,1);
+    axs = gobjects(4,1);
 
 
-    nexttile; grid on; hold on;grid minor;
+
+    axs(1) = nexttile; grid on; hold on; grid minor;
     stairs(t, r, 'LineWidth',1.0);
     stairs(t, y, 'LineWidth',1.2);
     legend('r[k]','y[k]','Location','best');
     title('Step: salida discreta');
 
-    nexttile; grid on; hold on;grid minor;
+    axs(2) = nexttile; grid on; hold on;grid minor;
     stairs(t, R.u, 'LineWidth',1.2);
     title('u[k] (con saturación)'); ylabel('u');
     
-    nexttile; grid on; hold on; grid minor;
+    axs(3) = nexttile; grid on; hold on; grid minor;
     e = r - y;
     stairs(t, e, 'LineWidth',1.2);
     title('Error e[k]=r[k]-y[k]'); ylabel('e');
 
-    nexttile; grid on; hold on;grid minor;
+    axs(4) = nexttile; grid on; hold on;grid minor;
     if ~isempty(R.x)
         stairs(t, R.x.', 'LineWidth',1.0);
         if ~isempty(R.xhat)
@@ -644,6 +754,11 @@ function P = paquete_step(Gc, Ts, r, R, subN)
 
     % intersample desde u[k] (ZOH real)
     Si = ver_intersample_desde_u(Gc,y,r, Ts, R.u, 0, subN);
+    % Link de ejes en X para pan/zoom sincronizado
+    try
+        linkaxes(axs,'x');
+    catch
+    end
 
     P = struct();
     P.t          = t;
@@ -665,25 +780,27 @@ function P = paquete_ramp(Gc, Ts, r, R, subN)
     e = r - y;
     ess = abs(e(end));
 
-    figure('Name','Rampa (discreto)'); tiledlayout(4,1);
+    figure('Name','Rampa (discreto)'); tl = tiledlayout(4,1);
+    axs = gobjects(4,1);
 
 
-    nexttile; grid on; hold on;grid minor;
+
+    axs(1) = nexttile; grid on; hold on;grid minor;
     stairs(t, r, 'LineWidth',1.0);
     stairs(t, y, 'LineWidth',1.2);
     legend('r[k]','y[k]','Location','best');
     title('Rampa: salida discreta');
 
-    nexttile; grid on; hold on;grid minor;
+    axs(2) = nexttile; grid on; hold on;grid minor;
     stairs(t, R.u, 'LineWidth',1.2);
     title('u[k] (con saturación)'); ylabel('u');
 
-    nexttile; grid on; hold on;grid minor;
+    axs(3) = nexttile; grid on; hold on;grid minor;
     stairs(t, e, 'LineWidth',1.2);
     title('Error e[k]=r[k]-y[k]'); ylabel('e');
     
 
-    nexttile; grid on; hold on; grid minor;
+    axs(4) = nexttile; grid on; hold on; grid minor;
     if ~isempty(R.x)
         stairs(t, R.x.', 'LineWidth',1.0);
         title('Estados x[k] (discreto)'); ylabel('x');
@@ -695,6 +812,10 @@ function P = paquete_ramp(Gc, Ts, r, R, subN)
 
     % intersample desde u[k] (ZOH real)
     Si = ver_intersample_desde_u(Gc,y,r, Ts, R.u, 0, subN);
+    try
+        linkaxes(axs,'x');
+    catch
+    end
 
     P = struct();
     P.t          = t;
@@ -716,7 +837,12 @@ end
 
 function R = sim_loop_tf(Gd_ss, Cd_ss, Ts, r, u_sat) %#ok<INUSD>
     [Ap,Bp,Cp,Dp] = ssdata(Gd_ss);
-    [Ac,Bc,Cc,Dc] = ssdata(Cd_ss);
+    if isa(Cd_ss,'dss')
+        [Ac,Bc,Cc,Dc] = dssdata(Cd_ss);
+    else
+        [Ac,Bc,Cc,Dc] = ssdata(Cd_ss);
+    end
+
 
     N  = numel(r);
     nxp = size(Ap,1);
@@ -901,9 +1027,11 @@ function S = ver_intersample_desde_u(G, yk_disc, rk_disc, Ts, ud, M, N)
     if L < 2
         error('Necesito al menos 2 muestras para intersample.');
     end
-    uk_int = uk(1:end-1);          % u[k] que define los intervalos
-    K      = numel(uk_int) - 1;    % K intervalos -> (K+1) muestras en tk
-    tk     = (0:K).' * Ts;         % tiempos de las muestras y[k]
+    % --- EVITAR DROP y armar tiempos coherentes ---
+% Usamos intervalos definidos por u[1..L-1]. Eso genera (L-1) intervalos,
+% y las muestras y[k] asociadas son k = 0..L-2 (mismo largo que uk_int).
+uk_int = uk(1:end-1);                 % length = L-1
+tk     = (0:numel(uk_int)-1).' * Ts;  % length = L-1
 
     % --- ZOH (alta resolución) ---
     [tc, uc] = zoh_stretch(uk_int, Ts, N);
@@ -994,4 +1122,216 @@ function Qaug = get_Qaug_param(Q_user, n, name)
         error('%s debe ser %dx%d o %dx%d (recibí %dx%d).', ...
               name, n, n, n+1, n+1, size(Q,1), size(Q,2));
     end
+end
+function [N, D, Gtf] = tfnumden_z(Gd, Ts)
+    % Fuerza TF discreta con variable z, y devuelve polinomios en potencias de z (descendentes).
+    % Devuelve N, D como vectores fila: [a_n ... a_0]
+
+    % 1) Forzar representación discreta
+    Gss = ss(Gd);
+    if Gss.Ts == 0
+        error('tfnumden_z: Gd debe ser discreta (Ts>0).');
+    end
+
+    % 2) Convertir a TF (ojo con cancelaciones numéricas)
+    % Recomendación: pasar por zpk para evitar ciertos problemas de ss->tf
+    try
+        Gtf = tf(zpk(Gss));
+    catch
+        Gtf = tf(Gss);
+    end
+
+    % 3) Asegurar Ts y variable
+    if Gtf.Ts == 0, Gtf.Ts = Ts; end
+    z = tf('z', Ts);
+
+    % 4) Re-expresar en z si MATLAB la dejó en z^-1 (a veces pasa)
+    % Truco: evaluar con z y reconstruir: aquí lo evitamos usando tf('z',Ts) desde inicio.
+    % Igual, hacemos numden y normalizamos.
+    [num, den] = tfdata(Gtf, 'v');
+    % ---- FIX: si MATLAB está en z^-1, convertir coeficientes a z ----
+    % En z^-1, los coeficientes vienen en potencias ascendentes de z^-1,
+    % equivalente a polinomios en z al revés.
+    try
+        if isprop(Gtf,'Variable')
+            try
+    varstr = "";
+    if isprop(Gtf,'Variable')
+        v = Gtf.Variable;
+        if iscell(v), v = v{1}; end
+        varstr = string(v);
+    end
+    if contains(varstr, "z^-1")
+        num = fliplr(num);
+        den = fliplr(den);
+    end
+catch
+end
+
+        end
+    catch
+    end
+
+    % Normalizar para que den(1)=1
+    if abs(den(1)) < 1e-14
+        error('tfnumden_z: den(1) ~ 0 (mal condicionado).');
+    end
+    num = num / den(1);
+    den = den / den(1);
+
+    % Limpiar ceros muy chicos
+    num(abs(num) < 1e-14) = 0;
+    den(abs(den) < 1e-14) = 0;
+
+    N = num(:).';
+    D = den(:).';
+end
+
+function Cd = design_ripplefree_deadbeat(Gd_zoh, Ts, varargin)
+% Ripple-free deadbeat (Sección 6.7.1)
+% Resuelve:  K*N(z) + (z-1)*B(z) = z^l   con B mónico grado l-1
+% y arma:
+%   - Si hay polo en z=1 (type 1): Cd = K*Dbar(z)/B(z)
+%   - Si NO hay polo en z=1 (type 0): Cd = K*D(z)/((z-1)*B(z))
+%
+% Name-Value:
+%   'l'          : entero >= 1 (si [], se usa l_min)
+%   'min_l_mode' : 'auto' | 'degd' | 'degd+1'
+%     - 'degd'   : l_min = deg(D)
+%     - 'auto'   : l_min = max(deg(D),deg(N))  (seguro)
+%
+% Nota: Para que te coincida con el libro en Ej 6.24, típicamente querés l = deg(D).
+
+    ip = inputParser;
+    ip.addParameter('l',[],@(x) isempty(x) || (isnumeric(x)&&isscalar(x)&&x==floor(x)&&x>=1));
+    ip.addParameter('min_l_mode','degd',@(s)ischar(s)||isstring(s));
+    ip.parse(varargin{:});
+    l_user     = ip.Results.l;
+    min_l_mode = lower(string(ip.Results.min_l_mode));
+    min_l_mode = validatestring(min_l_mode, {'auto','degd','degd+1'});
+
+    % --- N(z), D(z) en potencias de z (descendentes) ---
+    [N, D, ~] = tfnumden_z(Gd_zoh, Ts);
+
+    degD = numel(D) - 1;
+    degN = numel(N) - 1;
+
+    % polo en z=1?
+    hasPoleAt1 = abs(polyval(D, 1)) < 1e-8;
+
+    % si hay polo en 1, factorizar D(z) = (z-1)*Dbar(z)
+    if hasPoleAt1
+        [Dbar, remD] = deconv(D, [1 -1]);
+        Dbar(abs(Dbar) < 1e-12) = 0;
+        remD(abs(remD) < 1e-12) = 0;
+        if any(remD ~= 0)
+            warning('No pude factorizar limpio (z-1) de D(z). Continuo igual.');
+            Dbar = D; % fallback
+            hasPoleAt1 = false;
+        end
+    else
+        Dbar = D;
+    end
+
+    % --- l mínimo recomendado ---
+    switch min_l_mode
+        case "degd"
+            l_min = degD;
+        case "degd+1"
+            l_min = degD + 1;
+        otherwise % "auto"
+            l_min = max(degD, degN);
+    end
+
+    if isempty(l_user)
+        l = l_min;
+    else
+        l = l_user;
+    end
+
+    % validación dura
+    l_min_safe = max(l_min, degN);  % nunca menor que degN
+    if l < l_min_safe
+        error('Ripple-free deadbeat: l=%d < l_min_safe=%d (degD=%d, degN=%d).', ...
+              l, l_min_safe, degD, degN);
+    end
+
+    % --- Construcción matricial ---
+    % B(z) mónico de grado (l-1):  B = z^(l-1) + b_{l-2} z^(l-2)+...+b0
+    degB = l - 1;
+    nb   = degB;              % cantidad de b desconocidos (sin el líder 1)
+
+    % objetivo z^l
+    rhs = zeros(l+1,1); rhs(1) = 1;
+
+    % N padded a grado l
+    Npad = pad_to_degree(N, l).';   % (l+1)x1
+
+    % M * [K; b] = rhs - const
+    % (z-1)B aporta:
+    %   z^l      : +1
+    %   z^(l-1)  : (b_{l-2} - 1)
+    %   z^(l-2)  : (b_{l-3} - b_{l-2})
+    %   ...
+    %   z^1      : (b0 - b1)
+    %   z^0      : (-b0)
+
+    M = zeros(l+1, 1+nb);
+    M(:,1) = Npad;   % columna de K
+
+    % constantes de (z-1)B por el término líder "1" de B
+    const = zeros(l+1,1);
+    const(1) = 1;    % + z^l
+    const(2) = -1;   % - z^(l-1)
+
+    % b_{l-2} ... b0 (en ese orden)
+    if nb >= 1
+        % fila 2 (z^(l-1)): +b_{l-2}
+        M(2,2) = 1;
+
+        % filas 3..l (z^(l-2)..z^1): +b_{...} - b_{...}
+        for i = 3:l
+            idx_plus  = i-1;  % b_{l-i+1}
+            idx_minus = i-2;  % b_{l-i+2}
+            M(i, 1+idx_plus)  =  1;
+            M(i, 1+idx_minus) = -1;
+        end
+
+        % fila l+1 (z^0): -b0
+        M(l+1, 1+nb) = -1;
+    end
+
+    bvec = rhs - const;
+
+    theta = M \ bvec;
+    K = theta(1);
+    b = theta(2:end).';   % [b_{l-2} ... b0]
+    Bfull = [1 b];
+
+    % --- Armar Cd ---
+    z  = tf('z', Ts);
+    Btf = tf(Bfull, 1, Ts, 'variable','z');
+
+    if hasPoleAt1
+        % type 1: usar Dbar
+        Dtf = tf(Dbar, 1, Ts, 'variable','z');
+        Cd  = (K * Dtf) / Btf;
+    else
+        % type 0: usar D
+        Dtf = tf(D, 1, Ts, 'variable','z');
+        Cd  = (K * Dtf) / ((z - 1) * Btf);
+    end
+
+    if ~isproper(Cd)
+        warning('Ripple-free: Cd impropio. (Puede pasar si N/D mal expresados en z vs z^-1).');
+    end
+end
+
+function P = pad_to_degree(p, deg)
+    % p viene como [a_n ... a_0] con grado n
+    n = numel(p) - 1;
+    if n > deg
+        error('pad_to_degree: grado del polinomio (%d) > deg objetivo (%d).', n, deg);
+    end
+    P = [zeros(1, deg - n), p];
 end
