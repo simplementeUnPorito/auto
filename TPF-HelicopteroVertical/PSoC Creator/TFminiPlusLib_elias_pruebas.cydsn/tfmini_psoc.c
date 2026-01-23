@@ -107,7 +107,7 @@ static void on_frame(const uint8_t* f)
     str  = (uint16_t)f[4] | ((uint16_t)f[5] << 8);
     
     temp_raw = (uint16_t)f[6] | ((uint16_t)f[7] << 8);
-
+    
     
 
     /* calibración (editable por vos) */
@@ -273,18 +273,23 @@ uint8_t tfmini_get(tfmini_data_t* out)
 // y si el header incluye tfmini_ln_lut.h, también debe estar en el include path
 
 
-uint16_t tfmini_calibrate_cm(uint16_t dist_cm, uint16_t strength, uint16_t fps_hz,uint16_t temp_c)
+uint16_t tfmini_calibrate_cm(uint16_t dist_cm, uint16_t strength, uint16_t fps_hz, uint16_t temp_raw)
 {
-     float32_t y = tfmini_correct_distance_cm((float32_t)dist_cm,
-                                             (float32_t)fps_hz,
-                                             (float32_t)temp_c,
-                                             (uint16_t)strength);
+    /* temp_raw -> °C (float) */
+    int16_t tc10 = tfmini_temp_c10_from_raw(temp_raw);  // décimas de °C
+    float32_t temp_C = ((float32_t)tc10) * 0.1f;
 
-    /* Clamp + redondeo */
+   
+
+    float32_t y = tfmini_correct_distance_cm((float32_t)dist_cm,
+                                             (float32_t)fps_hz,
+                                             temp_C,
+                                             strength);
+
     if (y < 0.0f) y = 0.0f;
     if (y > 65535.0f) y = 65535.0f;
 
+    (void)strength; /* por ahora no se usa */
+
     return (uint16_t)(y + 0.5f);
-    
-    //return dist_cm;
 }
