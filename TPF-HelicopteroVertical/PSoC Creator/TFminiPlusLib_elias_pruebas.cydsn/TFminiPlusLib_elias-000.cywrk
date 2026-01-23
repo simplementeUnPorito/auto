@@ -9,6 +9,8 @@
 <projects>
 <v>.\TFminiPlusLib_elias_pruebas.cyprj</v>
 <v>..\TFminiPlusLib.cydsn\TFminiPlusLib.cyprj</v>
+<v>..\FinalV1.6.cydsn\FinalV1.6.cyprj</v>
+<v>..\FinalV1.6b_solo_sensor.cydsn\FinalV1.6b_solo_sensor.cyprj</v>
 </projects>
 <workspace_id v="25f35006-bbf8-43ef-9213-ec622c8ff7f1" />
 <WriteAppVersionLastSavedWith v="4.4.0.80" />

@@ -32,8 +32,8 @@ int main(void)
 
     (void)tfmini_disable();
     CyDelay(20u);
-
-    (void)tfmini_set_fps(1000u);
+    
+    (void)tfmini_set_fps(50u);
     CyDelay(20u);
 
    

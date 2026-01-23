@@ -1,5 +1,6 @@
 #include "tfmini_psoc.h"
 #include "Control_Reg.h"
+#include "tfmini_calib_coeffs.h"   // donde está tfmini_correct_distance_cm
 #include <string.h>
 
 
@@ -107,13 +108,15 @@ static void on_frame(const uint8_t* f)
     
     temp_raw = (uint16_t)f[6] | ((uint16_t)f[7] << 8);
 
+    
+
+    /* calibración (editable por vos) */
+    dist = tfmini_calibrate_cm(dist, str, s_fps_hz,temp_raw);
     /* clamp simple */
     if (dist < s_min_cm) dist = s_min_cm;
     if (dist > s_max_cm) dist = s_max_cm;
-
-    /* calibración (editable por vos) */
-    dist = tfmini_calibrate_cm(dist, str, s_fps_hz);
-
+    
+    
     s_last.dist_cm = dist;
     s_last.strength = str;
     s_last.temp_raw = temp_raw;
@@ -121,6 +124,7 @@ static void on_frame(const uint8_t* f)
     s_last.valid = 1u;
 
     tfmini_sample_pending = 1u;
+    Control_Reg_Write(~Control_Reg_Read());
     
 }
 
@@ -264,9 +268,23 @@ uint8_t tfmini_get(tfmini_data_t* out)
 }
 
 /* Default: identidad. Vos tocás SOLO esto */
-uint16_t tfmini_calibrate_cm(uint16_t dist_cm, uint16_t strength, uint16_t fps_hz)
+
+
+// y si el header incluye tfmini_ln_lut.h, también debe estar en el include path
+
+
+uint16_t tfmini_calibrate_cm(uint16_t dist_cm, uint16_t strength, uint16_t fps_hz,uint16_t temp_c)
 {
-    (void)strength;
-    (void)fps_hz;
-    return dist_cm;
+     float32_t y = tfmini_correct_distance_cm((float32_t)dist_cm,
+                                             (float32_t)fps_hz,
+                                             (float32_t)temp_c,
+                                             (uint16_t)strength);
+
+    /* Clamp + redondeo */
+    if (y < 0.0f) y = 0.0f;
+    if (y > 65535.0f) y = 65535.0f;
+
+    return (uint16_t)(y + 0.5f);
+    
+    //return dist_cm;
 }

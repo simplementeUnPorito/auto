@@ -55,6 +55,6 @@ static inline int16_t tfmini_temp_c10_from_raw(uint16_t raw)
 }
 
 /* ÚNICA función que vos tocás para calibración */
-uint16_t tfmini_calibrate_cm(uint16_t dist_cm, uint16_t strength, uint16_t fps_hz);
+uint16_t tfmini_calibrate_cm(uint16_t dist_cm, uint16_t strength, uint16_t fps_hz,uint16_t temp_c);
 
 #endif /* TFMINI_PSOC_H */
