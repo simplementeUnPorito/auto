@@ -1,8 +1,8 @@
 #include "tfmini_psoc.h"
-#include "Control_Reg.h"
-
 #include <string.h>
 
+/* Tu modelo exportado (si lo usás) */
+#include "tfmini_calib_coeffs.h"   /* tfmini_correct_distance_cm(...) */
 
 volatile uint8_t tfmini_sample_pending = 0u;
 
@@ -41,7 +41,6 @@ static void rx_flush_nolock(void)
 {
     while (uart_TFminiPlus_GetRxBufferSize() > 0u) {
         (void)uart_TFminiPlus_ReadRxData();
-        s_last.bytes++;
     }
     (void)uart_TFminiPlus_ReadRxStatus(); /* limpia flags sticky */
 }
@@ -91,7 +90,6 @@ static bool send_cmd(uint8_t id, const uint8_t* payload, uint8_t plen)
 
 static void on_frame(const uint8_t* f)
 {
-    Control_Reg_Write(~Control_Reg_Read());
     uint16_t dist;
     uint16_t str;
     int16_t  temp_raw;
@@ -99,39 +97,30 @@ static void on_frame(const uint8_t* f)
 
     sum = sum8_first8(f);
     if (sum != f[8]) {
-        s_last.frames_bad++;
-        return;
+        return; /* frame inválido */
     }
 
-    dist = (uint16_t)f[2] | ((uint16_t)f[3] << 8);
-    str  = (uint16_t)f[4] | ((uint16_t)f[5] << 8);
-    
-    temp_raw = (uint16_t)f[6] | ((uint16_t)f[7] << 8);
-    
-    
+    dist     = (uint16_t)f[2] | ((uint16_t)f[3] << 8);
+    str      = (uint16_t)f[4] | ((uint16_t)f[5] << 8);
+    temp_raw = (int16_t)((uint16_t)f[6] | ((uint16_t)f[7] << 8));
 
-    /* calibración (editable por vos) */
-    dist = tfmini_calibrate_cm(dist, str, s_fps_hz,temp_raw);
-    /* clamp simple */
+    /* calibración (tu función) */
+    dist = tfmini_calibrate_cm(dist, str, s_fps_hz, temp_raw);
+
+    /* clamp final */
     if (dist < s_min_cm) dist = s_min_cm;
     if (dist > s_max_cm) dist = s_max_cm;
-    
-    
-    s_last.dist_cm = dist;
-    s_last.strength = str;
-    s_last.temp_raw = temp_raw;
-    s_last.frames_ok++;
-    s_last.valid = 1u;
+
+    s_last.dist_cm   = dist;
+    s_last.strength  = str;
+    s_last.temp_raw  = temp_raw;
+    s_last.valid     = 1u;
 
     tfmini_sample_pending = 1u;
-    Control_Reg_Write(~Control_Reg_Read());
-    
 }
 
 static void parser_push(uint8_t b)
 {
-    s_last.bytes++;
-
     if (s_state == 0u) {
         if (b == TF_DATA_HDR) {
             s_frame[0] = b;
@@ -158,7 +147,7 @@ static void parser_push(uint8_t b)
     if (s_idx >= TFMINI_FRAME_SIZE) {
         uint8_t fcopy[TFMINI_FRAME_SIZE];
         uint8_t i;
-        for (i = 0u; i < TFMINI_FRAME_SIZE; i++) fcopy[i] = s_frame[i];
+        for (i = 0u; i < TFMINI_FRAME_SIZE; i++) fcopy[i] = (uint8_t)s_frame[i];
         on_frame(fcopy);
         parser_reset();
     }
@@ -168,14 +157,14 @@ static void parser_push(uint8_t b)
 CY_ISR(isr_rx_tfmini_handler)
 {
     isr_rx_TFminiPlus_ClearPending();
+
 #if defined(uart_TFminiPlus_RX_STS_FIFO_NOTEMPTY)
     for (;;) {
         uint8_t st = uart_TFminiPlus_ReadRxStatus();
 
     #if defined(uart_TFminiPlus_RX_STS_OVERRUN)
         if (st & uart_TFminiPlus_RX_STS_OVERRUN) {
-            s_last.frames_bad++;
-            rx_flush_and_reset_locked(); /* limpia y resync */
+            rx_flush_and_reset_locked();
             break;
         }
     #endif
@@ -185,18 +174,15 @@ CY_ISR(isr_rx_tfmini_handler)
             parser_push(b);
             continue;
         }
-        break; /* FIFO vacío */
+        break;
     }
 #else
-    /* fallback: si tu componente no tiene FIFO_NOTEMPTY */
     while (uart_TFminiPlus_GetRxBufferSize() > 0u) {
         uint8_t b = (uint8_t)uart_TFminiPlus_ReadRxData();
         parser_push(b);
     }
     (void)uart_TFminiPlus_ReadRxStatus();
 #endif
-
-    
 }
 
 void tfmini_init(void)
@@ -267,34 +253,24 @@ uint8_t tfmini_get(tfmini_data_t* out)
     return out->valid;
 }
 
-/* Default: identidad. Vos tocás SOLO esto */
-#include "tfmini_poly_calib.h"
-//uint16_t tfmini_calibrate_cm(uint16_t dist_cm, uint16_t strength, uint16_t fps_hz, uint16_t temp_raw){
-//    //return dist_cm;
-//    return tfmini_calibrate_cm_poly(dist_cm);
-//}
-// y si el header incluye tfmini_ln_lut.h, también debe estar en el include path
-//
-#include "tfmini_calib_coeffs.h"   // donde está tfmini_correct_distance_cm
-uint16_t tfmini_calibrate_cm(uint16_t dist_cm, uint16_t strength, uint16_t fps_hz, uint16_t temp_raw)
+/* =========================================================
+   Calibración (la única parte “editable”)
+   ========================================================= */
+uint16_t tfmini_calibrate_cm(uint16_t dist_cm, uint16_t strength, uint16_t fps_hz, int16_t temp_raw)
 {
-    
-    /* temp_raw -> °C (float) */
-    int16_t tc10 = tfmini_temp_c10_from_raw(temp_raw);  // décimas de °C
+    /* raw -> décimas de °C -> float °C */
+    int16_t tc10 = tfmini_temp_c10_from_raw(temp_raw);
     float32_t temp_C = ((float32_t)tc10) * 0.1f;
 
-   
-
+    /* OJO: tu modelo “best” usaba (Dist_cm, Freq_prom, Temp_C, Lux/intensidad)
+       Acá pasamos strength como “Lux” (intensidad) */
     float32_t y = tfmini_correct_distance_cm((float32_t)dist_cm,
                                              (float32_t)fps_hz,
                                              temp_C,
-                                             strength);
+                                             (uint16_t)strength);
 
     if (y < 0.0f) y = 0.0f;
     if (y > 65535.0f) y = 65535.0f;
 
-    (void)strength; /* por ahora no se usa */
-
     return (uint16_t)(y + 0.5f);
 }
-//

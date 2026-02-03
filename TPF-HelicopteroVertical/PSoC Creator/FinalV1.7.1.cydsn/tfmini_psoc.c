@@ -1,10 +1,10 @@
 #include "tfmini_psoc.h"
-#include "Control_Reg.h"
+//#include "Control_Reg.h"
 
 #include <string.h>
 
 
-volatile uint8_t tfmini_sample_pending = 0u;
+
 
 /* ===== Comandos TFMini Plus ===== */
 #define TF_CMD_HDR   (0x5Au)
@@ -15,6 +15,8 @@ volatile uint8_t tfmini_sample_pending = 0u;
 #define CMD_SAVE     (0x11u) /* no payload */
 
 static tfmini_data_t       s_last;
+static volatile uint8_t tfmini_sample_pending = 0u;
+
 static volatile uint8_t    s_frame[TFMINI_FRAME_SIZE];
 static volatile uint8_t    s_state = 0u; /* 0:wait H1, 1:wait H2, 2:collect */
 static volatile uint8_t    s_idx = 0u;
@@ -91,7 +93,7 @@ static bool send_cmd(uint8_t id, const uint8_t* payload, uint8_t plen)
 
 static void on_frame(const uint8_t* f)
 {
-    Control_Reg_Write(~Control_Reg_Read());
+    //Control_Reg_Write(~Control_Reg_Read());
     uint16_t dist;
     uint16_t str;
     int16_t  temp_raw;
@@ -124,7 +126,7 @@ static void on_frame(const uint8_t* f)
     s_last.valid = 1u;
 
     tfmini_sample_pending = 1u;
-    Control_Reg_Write(~Control_Reg_Read());
+    //Control_Reg_Write(~Control_Reg_Read());
     
 }
 
@@ -268,33 +270,64 @@ uint8_t tfmini_get(tfmini_data_t* out)
 }
 
 /* Default: identidad. Vos tocás SOLO esto */
-#include "tfmini_poly_calib.h"
+//#include "tfmini_poly_calib.h"
 //uint16_t tfmini_calibrate_cm(uint16_t dist_cm, uint16_t strength, uint16_t fps_hz, uint16_t temp_raw){
 //    //return dist_cm;
 //    return tfmini_calibrate_cm_poly(dist_cm);
 //}
 // y si el header incluye tfmini_ln_lut.h, también debe estar en el include path
 //
-#include "tfmini_calib_coeffs.h"   // donde está tfmini_correct_distance_cm
+//#include "tfmini_calib_coeffs.h"   // donde está tfmini_correct_distance_cm
 uint16_t tfmini_calibrate_cm(uint16_t dist_cm, uint16_t strength, uint16_t fps_hz, uint16_t temp_raw)
 {
-    
-    /* temp_raw -> °C (float) */
-    int16_t tc10 = tfmini_temp_c10_from_raw(temp_raw);  // décimas de °C
-    float32_t temp_C = ((float32_t)tc10) * 0.1f;
-
-   
-
-    float32_t y = tfmini_correct_distance_cm((float32_t)dist_cm,
-                                             (float32_t)fps_hz,
-                                             temp_C,
-                                             strength);
-
-    if (y < 0.0f) y = 0.0f;
-    if (y > 65535.0f) y = 65535.0f;
-
-    (void)strength; /* por ahora no se usa */
-
-    return (uint16_t)(y + 0.5f);
+    return dist_cm;
+//    
+//    /* temp_raw -> °C (float) */
+//    int16_t tc10 = tfmini_temp_c10_from_raw(temp_raw);  // décimas de °C
+//    float32_t temp_C = ((float32_t)tc10) * 0.1f;
+//
+//   
+//
+//    float32_t y = tfmini_correct_distance_cm((float32_t)dist_cm,
+//                                             (float32_t)fps_hz,
+//                                             temp_C,
+//                                             strength);
+//
+//    if (y < 0.0f) y = 0.0f;
+//    if (y > 65535.0f) y = 65535.0f;
+//
+//    (void)strength; /* por ahora no se usa */
+//
+//    return (uint16_t)(y + 0.5f);
 }
 //
+
+bool tfmini_pop(tfmini_data_t* out)
+{
+    uint8_t intr;
+
+    if (!out) return false;
+
+    intr = CyEnterCriticalSection();
+    if (!tfmini_sample_pending) {
+        CyExitCriticalSection(intr);
+        return false;
+    }
+
+    tfmini_sample_pending = 0u;
+    *out = s_last;              /* copia snapshot de la última */
+    CyExitCriticalSection(intr);
+
+    return (out->valid != 0u);
+}
+
+bool tfmini_pop_cm(uint16_t* dist_cm)
+{
+    tfmini_data_t d;
+    if (!dist_cm) return false;
+
+    if (!tfmini_pop(&d)) return false;
+
+    *dist_cm = d.dist_cm;
+    return true;
+}
