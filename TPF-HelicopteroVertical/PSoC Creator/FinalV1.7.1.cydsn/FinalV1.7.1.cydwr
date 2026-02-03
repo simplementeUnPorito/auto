@@ -351,10 +351,12 @@
       <Data key="c0fb34bd-1044-4931-9788-16b01ce89812" value="timer_clock" />
     </Group>
     <Group key="Pin">
+      <Data key="0b32859a-5828-432c-a141-df5f52173a88" value="pwm_out" />
       <Data key="1be59a90-7d05-4f41-9075-000ad5bc9a10" value="ref_output" />
       <Data key="8d318d8b-cf7b-4b6b-b02c-ab1c5c49d0ba" value="button" />
       <Data key="8e6eb876-e71b-48d0-b35a-3a9d10d84a11" value="Tx_TFMINI" />
       <Data key="21d95943-6493-4c9b-8e7a-d8b42d454149" value="start_sampling" />
+      <Data key="162de74a-425a-4855-97c1-17889e541857" value="button_stop" />
       <Data key="261bcf4d-081d-48e7-bcee-2616add54d8a/16a808f6-2e13-45b9-bce0-b001c8655113" value="ADC_muestra_Bypass" />
       <Data key="287fe3dd-34f6-432f-bfab-702647e6ca36" value="Follower_out" />
       <Data key="554b74a4-cc54-4049-8cef-46e7eb3d6838" value="Tx_TFMINI" />
@@ -3453,6 +3455,11 @@
     </Group>
   </Group>
   <Group key="Pin2">
+    <Group key="0b32859a-5828-432c-a141-df5f52173a88">
+      <Group key="0">
+        <Data key="Port Format" value="2,0" />
+      </Group>
+    </Group>
     <Group key="1be59a90-7d05-4f41-9075-000ad5bc9a10">
       <Group key="0">
         <Data key="Port Format" value="2,2" />
@@ -3471,6 +3478,11 @@
     <Group key="21d95943-6493-4c9b-8e7a-d8b42d454149">
       <Group key="0">
         <Data key="Port Format" value="2,0" />
+      </Group>
+    </Group>
+    <Group key="162de74a-425a-4855-97c1-17889e541857">
+      <Group key="0">
+        <Data key="Port Format" value="2,2" />
       </Group>
     </Group>
     <Group key="261bcf4d-081d-48e7-bcee-2616add54d8a/16a808f6-2e13-45b9-bce0-b001c8655113">

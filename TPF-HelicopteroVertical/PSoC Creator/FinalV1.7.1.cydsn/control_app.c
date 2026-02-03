@@ -29,10 +29,12 @@ static control_write_u_fn_t    s_write_u_cb    = 0;
 static float g_ref = 0.0f;
 static float g_Ts  = 1.0f;
 
-static float g_u_cmd = 0.0f;  /* comando (antes de offset) */
+/* u_cmd: interno (antes de offset). En este proyecto es igual a PWM us. */
+static float g_u_cmd = 0.0f;
 static float g_u_out = 0.0f;  /* físico (post offset + sat) */
 
-static float g_vint  = 0.0f;  /* integrador */
+/* integrador */
+static float g_vint  = 0.0f;
 
 /* =======================
    TF (IIR orden 5, DF2T)
@@ -54,7 +56,6 @@ static float ss_Kx   = 0.0f;  /* Kr (NOI) o Ki (I) */
 
 static float xhat[2] = {0.0f, 0.0f};  /* posterior */
 static float zhat[2] = {0.0f, 0.0f};  /* prior (para ACT) */
-
 
 /* =======================
    Helpers
@@ -93,6 +94,25 @@ static inline float ucmd_from_uphy(float u_phy)
     return (u_phy - CONTROL_U_OFFSET);
 }
 
+/* --- clamp de referencia según modo (lo que querías) --- */
+static inline float clamp_ref(float r)
+{
+    if (UARTP_Impl == UARTP_IMPL_OPENLOOP)
+    {
+        /* Open-loop: ref = PWM directo (us) */
+        if (r < CONTROL_OL_REF_MIN) return CONTROL_OL_REF_MIN;
+        if (r > CONTROL_OL_REF_MAX) return CONTROL_OL_REF_MAX;
+        return r;
+    }
+    else
+    {
+        /* Closed-loop: ref = altura (cm) */
+        if (r < CONTROL_CL_REF_MIN) return CONTROL_CL_REF_MIN;
+        if (r > CONTROL_CL_REF_MAX) return CONTROL_CL_REF_MAX;
+        return r;
+    }
+}
+
 /* =======================
    write_u (único actuador)
    ======================= */
@@ -106,10 +126,12 @@ static inline void write_u(float u_cmd)
 
     if (s_write_u_cb) s_write_u_cb(u_phy);
 }
+
 void control_force_min(void)
 {
-    write_u( ucmd_from_uphy(CONTROL_SAT_MIN) );  /* o CONTROL_STOP_TARGET si ese es tu “mínimo” */
+    write_u( ucmd_from_uphy(CONTROL_SAT_MIN) );
 }
+
 /* =======================
    SS: yhat / predict
    ======================= */
@@ -120,24 +142,16 @@ static inline float ss_yhat_from_xu(const float x[2], float u)
 
 static inline void ss_predict_from_xu(const float x[2], float u, float z[2])
 {
-    /* z0 = [A11 A12]*x + B1*u */
     arm_dot_prod_f32((float32_t*)&ss_A[0], (float32_t*)x, 2u, (float32_t*)&z[0]);
     z[0] += ss_B[0] * u;
 
-    /* z1 = [A21 A22]*x + B2*u */
     arm_dot_prod_f32((float32_t*)&ss_A[2], (float32_t*)x, 2u, (float32_t*)&z[1]);
     z[1] += ss_B[1] * u;
 }
 
 /* =======================
-   Observadores (correctos)
+   Observadores
    ======================= */
-
-/* Predictor:
-   innov = y(k) - yhat(xhat(k), u_prev)
-   z = A*xhat(k) + B*u(k)
-   xhat(k+1) = z + L*innov
-*/
 static inline void ss_observer_pred_step(float y, float u_prev, float u_k)
 {
     const float innov = y - ss_yhat_from_xu(xhat, u_prev);
@@ -148,14 +162,9 @@ static inline void ss_observer_pred_step(float y, float u_prev, float u_k)
     float Linv[2];
     arm_scale_f32((float32_t*)ss_L, innov, (float32_t*)Linv, 2u);
 
-    /* xhat = z + Linv */
     arm_add_f32((float32_t*)z, (float32_t*)Linv, (float32_t*)xhat, 2u);
 }
 
-/* Actual/Current:
-   innov = y(k) - yhat(zhat(k), u_prev)
-   xhat(k) = zhat(k) + L*innov
-*/
 static inline void ss_observer_act_correct(float y, float u_prev)
 {
     const float innov = y - ss_yhat_from_xu(zhat, u_prev);
@@ -163,11 +172,9 @@ static inline void ss_observer_act_correct(float y, float u_prev)
     float Linv[2];
     arm_scale_f32((float32_t*)ss_L, innov, (float32_t*)Linv, 2u);
 
-    /* xhat = zhat + Linv */
     arm_add_f32((float32_t*)zhat, (float32_t*)Linv, (float32_t*)xhat, 2u);
 }
 
-/* zhat(k+1) = A*xhat(k) + B*u(k) */
 static inline void ss_observer_act_predict(float u_k)
 {
     ss_predict_from_xu(xhat, u_k, zhat);
@@ -202,7 +209,7 @@ void control_register_io(control_sample_isr_fn_t sample_isr,
 void control_on_sample_isr(void)
 {
     if (s_sample_isr_cb) {
-        s_sample_isr_cb(); /* debe llamar control_sample_isr_push(y) */
+        s_sample_isr_cb();
     } else {
         control_sample_pending = 1u;
     }
@@ -256,6 +263,8 @@ void control_start(float ref0)
     memset(tf_w, 0, sizeof(tf_w));
 
     g_vint = 0.0f;
+
+    /* Si estás en SS con integrador, inicializá vint para que u0 salga estable */
     if (UARTP_Impl != UARTP_IMPL_TF && UARTP_Impl != UARTP_IMPL_OPENLOOP) {
         float Ki = ss_Ki_eff();
         if (Ki != 0.0f) g_vint = u0_cmd / Ki;
@@ -263,36 +272,32 @@ void control_start(float ref0)
 
     write_u(u0_cmd);
 
-    /* clave para ACT: inicializar zhat consistente con u_prev */
     if (UARTP_Impl != UARTP_IMPL_TF && UARTP_Impl != UARTP_IMPL_OPENLOOP) {
-        ss_predict_from_xu(xhat, g_u_out, zhat); /* xhat=0 => zhat = B*u0 */
+        ss_predict_from_xu(xhat, g_u_out, zhat);
     }
 }
+
 bool control_stop_suave_step(void)
-/* Si querés, exponela en control_app.h como stop_step */
 {
     const float target = CONTROL_STOP_TARGET;
 
-    /* tolerancia: max(5% del target, abs mínimo) */
     float tol = CONTROL_STOP_TOL_ABS;
-    float rel = CONTROL_STOP_TOL_REL * ( (target >= 0.0f) ? target : -target );
+    float rel = CONTROL_STOP_TOL_REL * ((target >= 0.0f) ? target : -target);
     if (rel > tol) tol = rel;
 
     for (uint32_t i = 0; i < CONTROL_STOP_MAX_ITERS; i++)
     {
-        float u = g_u_cmd;  /* tu variable global/static actual */
+        float u = g_u_cmd;
 
         float err = target - u;
         if (err < 0.0f) err = -err;
 
         if (err <= tol)
         {
-            /* clavar exacto al target al final */
             write_u(target);
             return true;
         }
 
-        /* mover un paso hacia el target */
         if (u < target) {
             u += CONTROL_STOP_STEP;
             if (u > target) u = target;
@@ -302,12 +307,9 @@ bool control_stop_suave_step(void)
         }
 
         write_u(u);
-
-        /* delay fijo (no depende de timers) */
         CyDelayUs(CONTROL_STOP_DELAY_US);
     }
 
-    /* si no llegó: forzar a target igual */
     write_u(target);
     return true;
 }
@@ -362,28 +364,31 @@ void control_apply_ss(const float* c, uint16_t n)
    ======================= */
 void control_step(void)
 {
-    /* snapshot (y, r, u_prev) */
     uint8 intr = CyEnterCriticalSection();
     float y = control_last_y;
     control_sample_pending = 0u;
-    float r = g_ref;
-    float u_prev = g_u_out; /* u aplicado durante el último intervalo */
+
+    /* r se interpreta distinto según el modo */
+    float r = clamp_ref(g_ref);
+
+    float u_prev = g_u_out;
     CyExitCriticalSection(intr);
 
     switch (UARTP_Impl)
     {
-        /* ===== OPEN LOOP: u_phy = ref ===== */
+        /* ===== OPEN LOOP: u_phy = ref (PWM directo) ===== */
         case UARTP_IMPL_OPENLOOP:
         {
-            /* r está en volts físicos, queremos u_phy = r */
+            /* r ya está clamp a [1000..2000] */
             float u_cmd = ucmd_from_uphy(r);
             write_u(u_cmd);
         } break;
 
+        /* ===== TF: e = (cm) ===== */
         case UARTP_IMPL_TF:
         {
-            float e = r - y;
-            float u_cmd = tf_step(e);
+            float e = r - y;             /* cm */
+            float u_cmd = tf_step(e);    /* debe dar PWM(us) */
             write_u(u_cmd);
         } break;
 
@@ -394,16 +399,14 @@ void control_step(void)
             uint8 has_i = ss_mode_has_integrator(UARTP_Impl);
 
             if (has_i) {
-                float e = r - y;
-                g_vint += e;//g_vint += e * g_Ts;
+                float e = r - y;   /* cm */
+                g_vint += e;       /* como querés: sin Ts (Ts=1 “normalizado”) */
             }
 
-            /* u(k) con xhat(k) */
             float u_cmd = ss_Kr_eff()*r + ss_Ki_eff()*g_vint - dot2_cmsis(ss_K, xhat);
             write_u(u_cmd);
             float u_k = g_u_out;
 
-            /* xhat(k+1) */
             ss_observer_pred_step(y, u_prev, u_k);
         } break;
 
@@ -414,23 +417,20 @@ void control_step(void)
         {
             uint8 has_i = ss_mode_has_integrator(UARTP_Impl);
 
-            /* 1) corregir xhat(k) desde zhat(k) */
             ss_observer_act_correct(y, u_prev);
 
             if (has_i) {
-                float e = r - y;
-                g_vint += e;//g_vint += e * g_Ts;
+                float e = r - y;   /* cm */
+                g_vint += e;       /* sin Ts */
             }
 
-            /* 2) u(k) con xhat(k) corregido */
             float u_cmd = ss_Kr_eff()*r + ss_Ki_eff()*g_vint - dot2_cmsis(ss_K, xhat);
             write_u(u_cmd);
             float u_k = g_u_out;
 
-            /* 3) zhat(k+1) */
             ss_observer_act_predict(u_k);
         } break;
     }
-    UARTP_Telemetry_Push(g_u_out, y);
 
+    UARTP_Telemetry_Push(g_u_out, y);
 }
