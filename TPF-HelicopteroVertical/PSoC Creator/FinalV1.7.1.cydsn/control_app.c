@@ -276,43 +276,85 @@ void control_start(float ref0)
         ss_predict_from_xu(xhat, g_u_out, zhat);
     }
 }
-
+//
+//bool control_stop_suave_step(void)
+//{
+//    const float target = CONTROL_STOP_TARGET;
+//
+//    float tol = CONTROL_STOP_TOL_ABS;
+//    float rel = CONTROL_STOP_TOL_REL * ((target >= 0.0f) ? target : -target);
+//    if (rel > tol) tol = rel;
+//
+//    for (uint32_t i = 0; i < CONTROL_STOP_MAX_ITERS; i++)
+//    {
+//        float u = g_u_cmd;
+//
+//        float err = target - u;
+//        if (err < 0.0f) err = -err;
+//
+//        if (err <= tol)
+//        {
+//            write_u(target);
+//            return true;
+//        }
+//
+//        if (u < target) {
+//            u += CONTROL_STOP_STEP;
+//            if (u > target) u = target;
+//        } else {
+//            u -= CONTROL_STOP_STEP;
+//            if (u < target) u = target;
+//        }
+//
+//        write_u(u);
+//        CyDelayUs(CONTROL_STOP_DELAY_US);
+//    }
+//
+//    write_u(target);
+//    return true;
+//}
 bool control_stop_suave_step(void)
 {
-    const float target = CONTROL_STOP_TARGET;
+    const float u_target = CONTROL_DESC_TARGET_US;
 
-    float tol = CONTROL_STOP_TOL_ABS;
-    float rel = CONTROL_STOP_TOL_REL * ((target >= 0.0f) ? target : -target);
-    if (rel > tol) tol = rel;
-
-    for (uint32_t i = 0; i < CONTROL_STOP_MAX_ITERS; i++)
+    /* 1) Rampa hasta u_target */
+    for (uint32_t i = 0u; i < (uint32_t)CONTROL_DESC_MAX_ITERS; i++)
     {
-        float u = g_u_cmd;
+        float u = g_u_cmd; /* u_cmd interno */
 
-        float err = target - u;
-        if (err < 0.0f) err = -err;
-
-        if (err <= tol)
-        {
-            write_u(target);
-            return true;
-        }
-
-        if (u < target) {
-            u += CONTROL_STOP_STEP;
-            if (u > target) u = target;
+        if (u < u_target) {
+            u += CONTROL_DESC_STEP_US;
+            if (u > u_target) u = u_target;
+            write_u(u);
+        } else if (u > u_target) {
+            u -= CONTROL_DESC_STEP_US;
+            if (u < u_target) u = u_target;
+            write_u(u);
         } else {
-            u -= CONTROL_STOP_STEP;
-            if (u < target) u = target;
+            /* ya llegó */
+            break;
         }
 
-        write_u(u);
-        CyDelayUs(CONTROL_STOP_DELAY_US);
+        CyDelayUs(CONTROL_DESC_DELAY_US);
     }
 
-    write_u(target);
+    /* 2) Mantener u_target por 5s */
+    write_u(u_target);
+
+    uint32_t hold_loops = (CONTROL_DESC_HOLD_MS * 1000u) / CONTROL_DESC_HOLD_POLL_US;
+    if (hold_loops < 1u) hold_loops = 1u;
+
+    for (uint32_t k = 0u; k < hold_loops; k++) {
+        /* si querés, re-escribimos por seguridad (por si otro código lo pisa) */
+        write_u(u_target);
+        CyDelayUs(CONTROL_DESC_HOLD_POLL_US);
+    }
+
+    /* 3) Cortar motor y terminar */
+    write_u(ucmd_from_uphy((float)CONTROL_DESC_CUTOFF_US));
     return true;
 }
+
 
 /* =======================
    Carga coeficientes
