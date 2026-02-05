@@ -1,28 +1,28 @@
 #include "tfmini_psoc.h"
-#include "Control_Reg.h"
+#include "tfm_calib_simple.h"
 
 #include <string.h>
 
-
 volatile uint8_t tfmini_sample_pending = 0u;
 
-/* ===== Comandos TFMini Plus ===== */
+/* Parser state */
+static volatile uint8_t  s_frame[TFMINI_FRAME_SIZE];
+static volatile uint8_t  s_state = 0u; /* 0:wait H1, 1:wait H2, 2:collect */
+static volatile uint8_t  s_idx   = 0u;
+
+/* Última distancia calibrada */
+static volatile uint16_t s_last_cm = 0u;
+
+/* ===== TFMini Plus protocol ===== */
 #define TF_CMD_HDR   (0x5Au)
 #define TF_DATA_HDR  (0x59u)
 
 #define CMD_SET_RATE (0x03u) /* payload: rate (uint16 LE) */
 #define CMD_OUTPUT   (0x07u) /* payload: 0 disable, 1 enable */
-#define CMD_SAVE     (0x11u) /* no payload */
 
-static tfmini_data_t       s_last;
-static volatile uint8_t    s_frame[TFMINI_FRAME_SIZE];
-static volatile uint8_t    s_state = 0u; /* 0:wait H1, 1:wait H2, 2:collect */
-static volatile uint8_t    s_idx = 0u;
-
-static uint16_t s_min_cm = TFMINI_MIN_DIST_CM;
-static uint16_t s_max_cm = TFMINI_MAX_DIST_CM;
-static uint16_t s_fps_hz = 100u;
-
+/* =========================
+   Helpers
+   ========================= */
 static void parser_reset(void)
 {
     s_state = 0u;
@@ -41,14 +41,13 @@ static void rx_flush_nolock(void)
 {
     while (uart_TFminiPlus_GetRxBufferSize() > 0u) {
         (void)uart_TFminiPlus_ReadRxData();
-        s_last.bytes++;
     }
-    (void)uart_TFminiPlus_ReadRxStatus(); /* limpia flags sticky */
+    (void)uart_TFminiPlus_ReadRxStatus();
 }
 
 static void rx_flush_and_reset_locked(void)
 {
-    uint8 intr = CyEnterCriticalSection(); /* corta TODAS las IRQ -> ISR no corre */
+    uint8 intr = CyEnterCriticalSection();
     rx_flush_nolock();
     parser_reset();
     tfmini_sample_pending = 0u;
@@ -56,7 +55,6 @@ static void rx_flush_and_reset_locked(void)
     CyExitCriticalSection(intr);
 }
 
-/* 0x5A Len ID payload... checksum(sum low8) */
 static bool send_cmd(uint8_t id, const uint8_t* payload, uint8_t plen)
 {
     uint8_t  len;
@@ -77,61 +75,51 @@ static bool send_cmd(uint8_t id, const uint8_t* payload, uint8_t plen)
     for (i = 0u; i < (uint8_t)(len - 1u); i++) s += buf[i];
     buf[len - 1u] = (uint8_t)s;
 
-    /* flush + reset atómico (ISR no corre) */
     rx_flush_and_reset_locked();
-
     for (i = 0u; i < len; i++) uart_TFminiPlus_PutChar(buf[i]);
 
-    /* opcional: limpiar basura/respuestas */
     CyDelay(2u);
     rx_flush_and_reset_locked();
 
     return true;
 }
 
-static void on_frame(const uint8_t* f)
+/* =========================
+   Calibración: SOLO dist
+   ========================= */
+uint16_t tfmini_calibrate_cm(uint16_t dist_cm)
 {
-    Control_Reg_Write(~Control_Reg_Read());
-    uint16_t dist;
-    uint16_t str;
-    int16_t  temp_raw;
-    uint8_t  sum;
+    float y = tfmini_correct_distance_cm_simple((float)dist_cm);
 
-    sum = sum8_first8(f);
-    if (sum != f[8]) {
-        s_last.frames_bad++;
-        return;
-    }
+    /* guardas mínimas */
+    if (!(y == y)) y = 0.0f;          /* NaN */
+    if (y < 0.0f) y = 0.0f;
+    if (y > 65535.0f) y = 65535.0f;
 
-    dist = (uint16_t)f[2] | ((uint16_t)f[3] << 8);
-    str  = (uint16_t)f[4] | ((uint16_t)f[5] << 8);
-    
-    temp_raw = (uint16_t)f[6] | ((uint16_t)f[7] << 8);
-    
-    
-
-    /* calibración (editable por vos) */
-    dist = tfmini_calibrate_cm(dist, str, s_fps_hz,temp_raw);
-    /* clamp simple */
-    //if (dist < s_min_cm) dist = s_min_cm;
-    //if (dist > s_max_cm) dist = s_max_cm;
-    
-    
-    s_last.dist_cm = dist;
-    s_last.strength = str;
-    s_last.temp_raw = temp_raw;
-    s_last.frames_ok++;
-    s_last.valid = 1u;
-
-    tfmini_sample_pending = 1u;
-    Control_Reg_Write(~Control_Reg_Read());
-    
+    return (uint16_t)(y + 0.5f);
 }
 
+/* =========================
+   Frame handler
+   ========================= */
+static void on_frame(const uint8_t* f)
+{
+    if (sum8_first8(f) != f[8]) return;
+
+    /* dist = bytes[2..3] little-endian */
+    uint16_t dist = (uint16_t)f[2] | ((uint16_t)f[3] << 8);
+
+    dist = tfmini_calibrate_cm(dist);
+
+    s_last_cm = dist;
+    tfmini_sample_pending = 1u;
+}
+
+/* =========================
+   Byte parser
+   ========================= */
 static void parser_push(uint8_t b)
 {
-    s_last.bytes++;
-
     if (s_state == 0u) {
         if (b == TF_DATA_HDR) {
             s_frame[0] = b;
@@ -151,7 +139,7 @@ static void parser_push(uint8_t b)
         return;
     }
 
-    /* s_state == 2u: collect */
+    /* collect */
     s_frame[s_idx] = b;
     s_idx++;
 
@@ -164,18 +152,22 @@ static void parser_push(uint8_t b)
     }
 }
 
-/* ISR por RX On Byte Received */
+/* =========================
+   ISR RX
+   ========================= */
 CY_ISR(isr_rx_tfmini_handler)
 {
     isr_rx_TFminiPlus_ClearPending();
+
 #if defined(uart_TFminiPlus_RX_STS_FIFO_NOTEMPTY)
     for (;;) {
         uint8_t st = uart_TFminiPlus_ReadRxStatus();
 
     #if defined(uart_TFminiPlus_RX_STS_OVERRUN)
         if (st & uart_TFminiPlus_RX_STS_OVERRUN) {
-            s_last.frames_bad++;
-            rx_flush_and_reset_locked(); /* limpia y resync */
+            rx_flush_nolock();        /* ya estás en ISR */
+            parser_reset();
+            tfmini_sample_pending = 0u;
             break;
         }
     #endif
@@ -185,25 +177,25 @@ CY_ISR(isr_rx_tfmini_handler)
             parser_push(b);
             continue;
         }
-        break; /* FIFO vacío */
+        break;
     }
 #else
-    /* fallback: si tu componente no tiene FIFO_NOTEMPTY */
     while (uart_TFminiPlus_GetRxBufferSize() > 0u) {
         uint8_t b = (uint8_t)uart_TFminiPlus_ReadRxData();
         parser_push(b);
     }
     (void)uart_TFminiPlus_ReadRxStatus();
 #endif
-
-    
 }
 
+/* =========================
+   API pública
+   ========================= */
 void tfmini_init(void)
 {
-    memset(&s_last, 0, sizeof(s_last));
     parser_reset();
     tfmini_sample_pending = 0u;
+    s_last_cm = 0u;
 
     uart_TFminiPlus_Start();
     rx_flush_and_reset_locked();
@@ -238,64 +230,22 @@ bool tfmini_set_fps(uint16_t fps_hz)
     p[0] = (uint8_t)(fps_hz & 0xFFu);
     p[1] = (uint8_t)((fps_hz >> 8) & 0xFFu);
 
-    if (!send_cmd(CMD_SET_RATE, p, 2u)) return false;
-    s_fps_hz = fps_hz;
-    return true;
+    return send_cmd(CMD_SET_RATE, p, 2u);
 }
 
-void tfmini_set_range_cm(uint16_t min_cm, uint16_t max_cm)
+bool tfmini_pop_cm(uint16_t *y_cm)
 {
-    if (min_cm <= max_cm) {
-        s_min_cm = min_cm;
-        s_max_cm = max_cm;
-    } else {
-        s_min_cm = max_cm;
-        s_max_cm = min_cm;
+    if (!y_cm) return false;
+
+    uint8 intr = CyEnterCriticalSection();
+    if (tfmini_sample_pending == 0u) {
+        CyExitCriticalSection(intr);
+        return false;
     }
-}
 
-uint8_t tfmini_get(tfmini_data_t* out)
-{
-    uint8_t intr;
-
-    if (!out) return 0u;
-
-    intr = CyEnterCriticalSection();
-    *out = s_last;
+    *y_cm = (uint16_t)s_last_cm;
+    tfmini_sample_pending = 0u;
     CyExitCriticalSection(intr);
 
-    return out->valid;
-}
-
-
-
-#include "tfm_calib_simple.h"  // tu header
-
-uint16_t tfmini_calibrate_cm(uint16_t dist_cm,
-                             uint16_t strength,
-                             uint16_t fps_hz,
-                             uint16_t temp_raw)
-{
-    
-    /* temp_raw -> °C */
-    int16_t tc10 = tfmini_temp_c10_from_raw(temp_raw);
-    float32_t temp_C = ((float32_t)tc10) * 0.1f;
-
-    /* Mapeos (SOLO si entrenaste así) */
-    float32_t light_raw = (float32_t)strength;  // si “intensidaddeluz” == strength
-    float32_t freq_prom = (float32_t)fps_hz;    // si “freq_prom” == fps
-
-    float32_t y = tfmini_correct_distance_cm_simple(
-        (float32_t)dist_cm,  // dis_sensor_cm
-        light_raw,              // temp_c
-        temp_C,
-        freq_prom            // freq_prom
-    );
-
-    /* clamp numérico mínimo para convertir a uint16 sin romper si hay NaN */
-    if (!(y == y)) y = 0.0f;
-    if (y < 0.0f) y = 0.0f;
-    if (y > 65535.0f) y = 65535.0f;
-
-    return (uint16_t)(y + 0.5f);
+    return true;
 }

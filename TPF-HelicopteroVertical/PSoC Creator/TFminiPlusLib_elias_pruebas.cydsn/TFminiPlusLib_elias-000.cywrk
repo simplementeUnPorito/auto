@@ -3,7 +3,7 @@
 <!--This file is machine generated and read. It is not intended to be edited by hand.-->
 <!--Due to this, there is no schema for this file.-->
 <CyGuid_2867d519-54d2-4c01-9830-c51cb08bc3dd type_name="CyDesigner.Common.ProjMgmt.Model.CyPrjMgmtWorkspaceSerialize" version="5" xml_contents_version="3" name="TFminiPlusLib_elias-000" persistent="TFminiPlusLib_elias-000.cywrk" platform="NOT_USED">
-<current_project name="..\TFminiPlusLibPro.cydsn\TFminiPlusLibPro.cyprj" />
+<current_project name="..\FinalV1.8.cydsn\FinalV1.8.cyprj" />
 <wrkspc_folders />
 <files />
 <projects>
@@ -11,6 +11,8 @@
 <v>..\TFminiPlusLib.cydsn\TFminiPlusLib.cyprj</v>
 <v>..\FinalV1.6.cydsn\FinalV1.6.cyprj</v>
 <v>..\TFminiPlusLibPro.cydsn\TFminiPlusLibPro.cyprj</v>
+<v>..\FinalV1.7.1.cydsn\FinalV1.7.1.cyprj</v>
+<v>..\FinalV1.8.cydsn\FinalV1.8.cyprj</v>
 </projects>
 <workspace_id v="25f35006-bbf8-43ef-9213-ec622c8ff7f1" />
 <WriteAppVersionLastSavedWith v="4.4.0.80" />

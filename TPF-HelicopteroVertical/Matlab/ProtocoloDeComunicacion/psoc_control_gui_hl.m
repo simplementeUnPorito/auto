@@ -13,7 +13,6 @@ function psoc_control_gui_hl()
 %   El streaming reader es un timer que solo lee múltiplos de 8 bytes y,
 %   si encuentra basura, descarta hasta realinear (buffer simple).
 
-    timerClockHz = 1.491e6;  %#ok<NASGU>
 
     S = struct();
     S.sp = [];
@@ -44,7 +43,7 @@ function psoc_control_gui_hl()
     % UI
     % --------------------
     fig = uifigure( ...
-        'Name', sprintf('PSoC Control GUI (UARTP HL) | TimerClk=%.0f Hz', timerClockHz), ...
+        'Name', sprintf('PSoC Control GUI by Elías Álvarez'), ...
         'Position', [80 80 1280 720] ...
     );
     fig.CloseRequestFcn = @onClose;
@@ -100,6 +99,7 @@ function psoc_control_gui_hl()
 
     ddType = uidropdown( ...
         pMode, 'Items', {'TF','SS','Open-loop'}, ...
+        'Value', 'Open-loop', ...
         'Position', [10 120 120 24], ...
         'ValueChangedFcn', @(~,~) refreshVisibility() ...
     );
@@ -116,14 +116,14 @@ function psoc_control_gui_hl()
     uilabel(pMode, 'Text', 'N', 'Position', [10 85 20 24]);
     edtN = uieditfield( ...
         pMode, 'numeric', 'Limits', [0 100000], 'RoundFractionalValues', 'on', ...
-        'Value', 20, 'Position', [35 85 80 24] ...
+        'Value', 1, 'Position', [35 85 80 24] ...
     );
 
     % --- Fs (Hz) ---
     uilabel(pMode, 'Text', 'Fs (Hz)', 'Position', [130 85 50 24]);
     edtFs = uieditfield( ...
         pMode, 'numeric', 'Limits', [0.001 1e9], ...
-        'Value', double(timerClockHz)/1500.0, ...
+        'Value', 1000, ...
         'Position', [180 85 90 24], ...
         'ValueChangedFcn', @onFsChanged ...
     );
@@ -156,7 +156,7 @@ function psoc_control_gui_hl()
     pRef = uipanel(fig, 'Title', 'Control', 'Position', [860 320 400 100]);
 
     uilabel(pRef, 'Text', 'u0 / ref', 'Position', [10 45 60 22]);
-    edtU0 = uieditfield(pRef, 'numeric', 'Value', 0.25, 'Position', [80 40 100 26]);
+    edtU0 = uieditfield(pRef, 'numeric', 'Value', 1000, 'Position', [80 40 100 26]);
 
     btnStart = uibutton( ...
         pRef, 'Text', 'Start (i)', 'Position', [200 40 90 26], ...
@@ -209,8 +209,27 @@ function psoc_control_gui_hl()
 
     lblDataInfo = uilabel( ...
         pData, 'Text', 'n=0', ...
-        'Position', [270 10 120 28] ...
+        'Position', [270 45 120 22] ...
     );
+        % --- Plot scaling (solo visual) ---
+    uilabel(pData, 'Text', 'u x', 'Position', [270 12 30 18]);
+    edtScaleU = uieditfield( ...
+        pData, 'numeric', 'Value', 0.01, ...
+        'Limits', [-1e12 1e12], ...
+        'Position', [300 9 70 22], ...
+        'Tooltip', 'Escala visual para u (solo plot)', ...
+        'ValueChangedFcn', @onScaleChanged ...
+    );
+
+    uilabel(pData, 'Text', 'y x', 'Position', [375 12 30 18]);
+    edtScaleY = uieditfield( ...
+        pData, 'numeric', 'Value', 1, ...
+        'Limits', [-1e12 1e12], ...
+        'Position', [405 9 70 22], ...
+        'Tooltip', 'Escala visual para y (solo plot)', ...
+        'ValueChangedFcn', @onScaleChanged ...
+    );
+
 
     % --------------------
     % TF panel
@@ -301,7 +320,7 @@ function psoc_control_gui_hl()
             data.u = S.uVec;
             data.y = S.yVec;
             data.framesTotal = S.framesTotal;
-            data.timerClockHz = timerClockHz;
+            
             data.timestamp = datestr(now, 'yyyy-mm-dd HH:MM:SS.FFF');
 
             try
@@ -331,6 +350,11 @@ function psoc_control_gui_hl()
             S.yVec = zeros(0,1);
             S.streamRxBuf = uint8([]);
             S.framesTotal = 0;
+            S.scaleU = 0.01;
+            S.scaleY = 1.0;
+            try edtScaleU.Value = 1; edtScaleY.Value = 1; catch, end
+            applyPlotScaling();
+
 
             S.autoStopPending = false;
             S.autoStopReason  = "";
@@ -663,6 +687,39 @@ function psoc_control_gui_hl()
     % =====================================================================
     % Helpers
     % =====================================================================
+        function onScaleChanged(~,~)
+        % UI -> estado + redibujo
+        su = double(edtScaleU.Value);
+        sy = double(edtScaleY.Value);
+
+        if ~isfinite(su) || su == 0, su = 1; end
+        if ~isfinite(sy) || sy == 0, sy = 1; end
+
+        S.scaleU = su;
+        S.scaleY = sy;
+
+        applyPlotScaling();
+        drawnow limitrate;
+    end
+
+    function applyPlotScaling()
+        % Solo usa S.scaleU / S.scaleY
+        su = double(S.scaleU);
+        sy = double(S.scaleY);
+
+        if ~isfinite(su) || su == 0, su = 1; end
+        if ~isfinite(sy) || sy == 0, sy = 1; end
+
+        if isempty(S.nVec)
+            set(hU, 'XData', nan, 'YData', nan);
+            set(hY, 'XData', nan, 'YData', nan);
+        else
+            set(hU, 'XData', S.nVec, 'YData', S.uVec * su);
+            set(hY, 'XData', S.nVec, 'YData', S.yVec * sy);
+        end
+    end
+
+    
     function ok = requireConn()
         ok = S.isConnected && ~isempty(S.sp);
         if ~ok
@@ -847,8 +904,8 @@ function psoc_control_gui_hl()
                 S.yVec = S.yVec(k0:end);
             end
 
-            set(hU, 'XData', S.nVec, 'YData', S.uVec);
-            set(hY, 'XData', S.nVec, 'YData', S.yVec);
+            applyPlotScaling();
+
 
             S.framesTotal = S.framesTotal + numel(u);
             updateDataInfo();
@@ -916,5 +973,5 @@ function psoc_control_gui_hl()
         end
         delete(fig);
     end
-
 end
+

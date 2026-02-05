@@ -15,11 +15,11 @@
 
 /* Rango default (cm) */
 #ifndef TFMINI_MIN_DIST_CM
-#define TFMINI_MIN_DIST_CM (10u)
+#define TFMINI_MIN_DIST_CM (12u)
 #endif
 
 #ifndef TFMINI_MAX_DIST_CM
-#define TFMINI_MAX_DIST_CM (150u) /* 1.5 m */
+#define TFMINI_MAX_DIST_CM (1340u) /* 1.5 m */
 #endif
 
 typedef struct {
@@ -55,6 +55,6 @@ static inline int16_t tfmini_temp_c10_from_raw(uint16_t raw)
 }
 
 /* ÚNICA función que vos tocás para calibración */
-uint16_t tfmini_calibrate_cm(uint16_t dist_cm, uint16_t strength, uint16_t fps_hz,uint16_t temp_c);
+uint16_t tfmini_calibrate_cm(uint16_t dist_cm, uint16_t strength, uint16_t fps_hz, uint16_t temp_raw);
 
 #endif /* TFMINI_PSOC_H */

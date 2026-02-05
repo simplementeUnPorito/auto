@@ -33,7 +33,7 @@ int main(void)
     (void)tfmini_disable();
     CyDelay(20u);
     
-    (void)tfmini_set_fps(50u);
+    (void)tfmini_set_fps(1000u);
     CyDelay(20u);
 
    
@@ -49,12 +49,12 @@ int main(void)
             last_hb = t_ms;
 
             (void)tfmini_get(&d);
-            pc_printf("hb valid=%u ok=%lu bad=%lu bytes=%lu pend=%u\r\n",
-                      (unsigned)d.valid,
-                      (unsigned long)d.frames_ok,
-                      (unsigned long)d.frames_bad,
-                      (unsigned long)d.bytes,
-                      (unsigned)tfmini_sample_pending);
+//            pc_printf("hb valid=%u ok=%lu bad=%lu bytes=%lu pend=%u\r\n",
+//                      (unsigned)d.valid,
+//                      (unsigned long)d.frames_ok,
+//                      (unsigned long)d.frames_bad,
+//                      (unsigned long)d.bytes,
+//                      (unsigned)tfmini_sample_pending);
         }
 
         if ((t_ms - last_meas) >= 200u) {
@@ -64,12 +64,11 @@ int main(void)
 
 
             if (tfmini_get(&d)) {
-               pc_printf("dist=%u cm strength=%u temp=%d.%d C\r\n",
+               pc_printf("%u %u %d.%d\r\n",
                   (unsigned)d.dist_cm,
                   (unsigned)d.strength,
                   (int)(tc10 / 10),
-                  (int)((tc10 < 0) ? -(tc10 % 10) : (tc10 % 10)),
-                  (unsigned)d.temp_raw);
+                  (int)((tc10 < 0) ? -(tc10 % 10) : (tc10 % 10)));
             }
         }
 
