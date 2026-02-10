@@ -1,17 +1,16 @@
-\subsection{Diseño del controlador mediante respuesta en frecuencia}
 
 \insertarfigura{img/Bode/bodeMat.png}
 {Respuesta en frecuencia del lazo abierto del sistema identificado sin compensación.}
 {fig:bodeMat}{1}
 
 
-Para el diseño del controlador basado en el método de respuesta en frecuencia se utilizó directamente el modelo discreto de la planta obtenido mediante identificación experimental. En particular, se trabajó con la función de transferencia discreta \(G(z)\) identificada a partir de datos experimentales, la cual representa el comportamiento dinámico del sistema en el rango de operación considerado.
+Para el diseño del controlador basado en el método de respuesta en frecuencia se utilizó directamente el modelo discreto de la planta obtenido mediante identificación experimental, figura \ref{fig:bodeMat}. En particular, se trabajó con la función de transferencia discreta \(G(z)\) (\ref{eq:Gz_identificada}) identificada a partir de datos experimentales, la cual representa el comportamiento dinámico del sistema en el rango de operación considerado.
 
 El modelo identificado fue introducido en el entorno de diseño de MATLAB mediante la herramienta \texttt{controlSystemDesigner(planta)}, lo que permitió analizar la respuesta en frecuencia del sistema y realizar el diseño del controlador de forma interactiva. A partir de esta herramienta se obtuvieron los diagramas de Bode del sistema en lazo abierto, así como los márgenes de estabilidad asociados.
 
 \subsubsection{Análisis del sistema sin compensar}
 
-En la Figura correspondiente al sistema sin compensar se observa el diagrama de Bode del lazo abierto conformado únicamente por la planta identificada. A partir de dicho análisis se determinan los márgenes de ganancia y de fase iniciales del sistema, los cuales permiten evaluar la estabilidad relativa y el nivel de robustez frente a variaciones paramétricas.
+En la Figura \ref{fig:bodeMatSinC}, correspondiente al sistema sin compensar se observa el diagrama de Bode del lazo abierto conformado únicamente por la planta identificada. A partir de dicho análisis se determinan los márgenes de ganancia y de fase iniciales del sistema, los cuales permiten evaluar la estabilidad relativa y el nivel de robustez frente a variaciones paramétricas.
 
 El sistema presenta un margen de fase positivo, indicando estabilidad en lazo cerrado para ganancias reducidas, aunque con un compromiso limitado en términos de rapidez y amortiguamiento. Asimismo, la pendiente del módulo en la región de cruce de ganancia evidencia la presencia de múltiples polos dominantes, coherentes con la dinámica identificada de orden superior asociada al conjunto motor--ESC--hélice.
 
@@ -26,10 +25,37 @@ El criterio de diseño se centró en:
 	\item limitar la amplificación de ruido a altas frecuencias.
 \end{itemize}
 
+
 \subsubsection{Análisis del sistema compensado}
 
-La Figura correspondiente al sistema compensado muestra el diagrama de Bode del lazo abierto una vez incorporado el controlador diseñado. Se observa un aumento del margen de fase y un ajuste controlado del margen de ganancia, lo que indica una mejora en la estabilidad relativa del sistema.
+La Figura \ref{fig:bodeMatConC} correspondiente al sistema compensado muestra el diagrama de Bode del lazo abierto una vez incorporado el controlador diseñado. Se observa un aumento del margen de fase y un ajuste controlado del margen de ganancia, lo que indica una mejora en la estabilidad relativa del sistema.
 
 La validación del diseño se realizó mediante el análisis de la respuesta temporal en lazo cerrado. La respuesta al escalón del sistema compensado presenta un comportamiento estable, con un sobreimpulso moderado y un tiempo de establecimiento acorde a los objetivos del trabajo. Asimismo, la señal de control permanece dentro de valores aceptables, evitando saturaciones prolongadas del actuador.
 
 En conjunto, el controlador diseñado mediante el método de respuesta en frecuencia resulta adecuado para la planta identificada, proporcionando un desempeño dinámico satisfactorio y una base sólida para su implementación experimental en la plataforma real.
+
+\begin{itemize}
+	\item Margen de Ganancia inicial = 13dB
+	\item Margen de Fase inicial = \SI{61.7}{\degree}
+\end{itemize}
+
+\begin{itemize}
+	\item Margen de Ganancia Final = 10dB
+	\item Margen de Fase Final = \SI{52.9}{\degree}
+\end{itemize}
+
+\onecolumn
+\insertarfigura{img/Bode/bode_C.png}
+{Diagrama de Bode y respuestas temporales del lazo abierto sin compensación.}
+{fig:bodeMatSinC}{1}
+
+\insertarfigura{img/Bode/bode_compensado.png}
+{Diagrama de Bode y respuestas temporales del lazo abierto con compensación.}
+{fig:bodeMatConC}{1}
+
+
+\twocolumn
+
+\subsubsection{Análisis de la práctica experimental}
+
+Es observable un offset en la altura de aproximadamente 

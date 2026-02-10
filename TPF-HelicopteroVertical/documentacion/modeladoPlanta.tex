@@ -58,13 +58,18 @@ Durante el proceso de identificación se aplicaron escalones de amplitud suficie
 \subsubsection{Función de transferencia identificada}
 
 El modelo discreto resultante, que recuerda la relación entre la entrada \(u_1\) y la salida \(y_1\), queda expresado en términos de potencias de \(z^{-1}\) como:
-\[
-G(z) = \frac{Y_1(z)}{U_1(z)} =
-\frac{-1.205\times 10^{-4}\,z^{-1}
-	+ 2.415\times 10^{-4}\,z^{-2}
-	- 1.209\times 10^{-4}\,z^{-3}}
-{1 - 2.994\,z^{-1} + 2.989\,z^{-2} - 0.9944\,z^{-3}}
-\]
+
+\begin{equation}
+	\label{eq:Gz_identificada}
+	\scriptsize
+	\begin{aligned}
+		G(z) &= \frac{Y_1(z)}{U_1(z)} \\
+		&= \frac{-1.205\times 10^{-4}z^{-1}+2.415\times 10^{-4}z^{-2}-1.209\times 10^{-4}z^{-3}}
+		{1-2.994z^{-1}+2.989z^{-2}-0.9944z^{-3}}
+	\end{aligned}
+\end{equation}
+\normalsize
+
 
 Este modelo presenta un retardo de una muestra, evidenciado por el término dominante \(z^{-1}\) en el numerador, así como una dinámica de tercer orden en el denominador. La presencia de polos cercanos a \(z=1\) es consistente con el carácter integrador del sistema de altura, donde la posición resulta de la doble integración de la aceleración.
 
