@@ -1,0 +1,133 @@
+
+\subsection{Variables y convenciones}
+
+Se definen a continuación las variables y convenciones utilizadas para el modelado del sistema:
+
+\begin{itemize}
+	\item Eje vertical \(z\) [m], definido positivo hacia arriba.
+	\item Masa móvil:
+	\[
+	m = 0.360\ \text{kg}
+	\]
+	\item Aceleración de la gravedad:
+	\[
+	g = 9.81\ \text{m/s}^2
+	\]
+	\item Peso del cuerpo móvil:
+	\[
+	mg = 3.924\ \text{N}
+	\]
+	\item Entrada del sistema: señal PWM tipo servo a \(50\ \text{Hz}\),
+	\[
+	u \in [1000,2000]\ \mu s
+	\]
+	\item Normalización de la entrada:
+	\[
+	\hat u = \mathrm{sat}\!\left(\frac{u-1300}{1000},\,0,\,1\right)
+	\]
+	\item Salida medida:
+	\[
+	y = z
+	\]
+	correspondiente a la altura del cuerpo móvil medida mediante el sensor TFMini Plus.
+\end{itemize}
+
+\subsubsection{Estados del sistema}
+
+Se utilizan tres estados para representar la dinámica esencial del sistema:
+\[
+x_1 = z, \qquad
+x_2 = \dot z, \qquad
+x_3 = T
+\]
+donde $T$ representa el empuje efectivo generado por el conjunto ESC--motor--hélice, expresado en Newtons.
+
+\subsubsection{Dinámica mecánica vertical}
+
+La ecuación de movimiento del cuerpo móvil está dada por:
+\[
+\dot x_1 = x_2
+\]
+\[
+m\dot x_2 = T - mg
+\]
+
+
+Si bien este conjunto de variables permite describir el comportamiento básico del sistema, el modelo resultante constituye una simplificación que no logra representar completamente las dinámicas observadas durante las pruebas experimentales. Estas discrepancias pueden agruparse, principalmente, en los siguientes tres factores:
+
+\begin{itemize}
+	\item variaciones de masa efectiva y efectos de fricción mecánica,
+	\item fenómenos aerodinámicos asociados al empuje generado por la hélice,
+	\item dinámica propia del sistema de actuación, compuesta por el controlador ESC y el motor brushless.
+\end{itemize}
+
+\subsubsection{Dinámica del actuador}
+
+El empuje generado no sigue instantáneamente a la señal PWM. Se adopta un modelo dinámico de primer orden:
+\[
+\dot T = \frac{1}{\tau_T}\left(T_{\mathrm{ss}}(\hat u, V_b) - T\right)
+\]
+donde:
+\begin{itemize}
+	\item $\tau_T$ [s] es la constante de tiempo efectiva del actuador,
+	\item $V_b$ [V] es la tensión instantánea de la batería.
+\end{itemize}
+
+\paragraph{Empuje estacionario}
+
+Dado que no se dispone de un modelo aerodinámico preciso de la hélice, el empuje estacionario se modela mediante una ley estática identificable:
+\[
+T_{\mathrm{ss}}(\hat u, V_b) =
+\left(a_0 + a_1\hat u + a_2\hat u^2\right) G(V_b)
+\]
+
+Una expresión habitual para la dependencia con la batería es:
+\[
+G(V_b) = \left(\frac{V_b}{V_{\mathrm{ref}}}\right)^p
+\]
+
+donde $a_0$, $a_1$ y $a_2$ son parámetros a identificar, y $p$ es un exponente que captura la influencia del voltaje.
+
+\paragraph{Saturaciones físicas}
+
+El sistema presenta las siguientes limitaciones:
+\begin{itemize}
+	\item Saturación de la entrada: $\hat u \in [0,1]$,
+	\item Empuje máximo: $T \le T_{\max}(V_b)$.
+\end{itemize}
+
+El empuje estacionario se ve entonces limitado por:
+\[
+T_{\mathrm{ss}} \leftarrow
+\mathrm{sat}\!\left(T_{\mathrm{ss}},\,0,\,T_{\max}(V_b)\right)
+\]
+
+\subsection{Modelo del sensor}
+
+El sensor TFMini Plus no entrega una medición ideal de la posición. Se adopta el siguiente modelo:
+\[
+y(t) = z(t-\theta) + n(t)
+\]
+donde:
+\begin{itemize}
+	\item $\theta$ representa el retardo total del sistema de medición,
+	\item $n(t)$ representa el ruido de medición.
+\end{itemize}
+
+En el dominio digital, el sistema opera con un período de muestreo:
+\[
+T_s = \frac{1}{f_s}
+\]
+siendo $f_s$ la frecuencia de lectura del sensor.
+
+\subsection{Análisis del modelado}
+
+Durante las primeras etapas de identificación experimental se observó que, al aplicar variaciones de baja amplitud en la señal PWM, la respuesta del sistema resultaba poco representativa de su dinámica global. En particular, dichas excitaciones no permitían excitar de manera adecuada los distintos modos dinámicos del sistema, dificultando la obtención de un modelo fiable.
+
+Por recomendación del docente, se optó por aplicar escalones de mayor amplitud en la señal de entrada, con el objetivo de excitar un rango dinámico más amplio del sistema. Para el procesamiento de los datos obtenidos, se seleccionaron intervalos de operación en los cuales el sistema se comporta de manera aproximadamente lineal, evitando regiones dominadas por saturaciones, fricción estática u otros efectos fuertemente no lineales. Asimismo, se aplicaron técnicas de filtrado para reducir la influencia del ruido de medición, sin alterar la dinámica dominante del sistema.
+
+A partir de los datos experimentales procesados, se obtuvo un modelo dinámico que puede describirse, en primera aproximación, mediante una función de transferencia con dos ceros y tres polos. Adicionalmente, se observa un retardo en la respuesta ante cambios en la señal PWM, el cual se atribuye a la dinámica interna del sistema de actuación, principalmente asociada al controlador ESC.
+
+El polo adicional identificado en el modelo es compatible con la presencia de una dinámica electromecánica asociada al conjunto motor--ESC--hélice, la cual introduce una constante de tiempo adicional respecto de un modelo puramente mecánico. Por su parte, los ceros del sistema no pudieron ser asociados de manera concluyente a un único fenómeno físico, aunque su presencia es consistente con efectos aerodinámicos y con la dinámica interna del sistema de propulsión.
+
+Cabe destacar que el modelo obtenido representa una aproximación válida en el rango de operación considerado y resulta adecuado para el diseño y evaluación de las estrategias de control implementadas en este trabajo. No obstante, fuera de dicho rango, el sistema presenta comportamientos no lineales que no son capturados por el modelo lineal identificado.

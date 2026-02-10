@@ -1,0 +1,51 @@
+\section{Diagrama del Sistema}
+La \textbf{Figura~\ref{fig:DiagramaControl}} muestra el diagrama de bloques del sistema de control de altura en lazo cerrado. La referencia de altura \(z_{\text{ref}}\) es comparada con la señal de salida medida \(z(t)\), generando el error \(e(t)\), el cual es procesado por el controlador.
+
+El controlador representa el algoritmo de control implementado, pudiendo corresponder a un controlador estudiado en el semestre. A partir del error, el controlador genera la señal de control \(u(t)\), que constituye el esfuerzo aplicado al sistema.
+
+La señal \(u(t)\) actúa sobre el actuador, conformado por el motor brushless y la hélice, el cual convierte la señal de control en empuje mecánico. Dicho empuje excita la planta física, cuya dinámica vertical determina la altura real del sistema \(y(t)\).
+
+La altura es medida mediante un sensor TFMini Plus, que proporciona la señal \(z(t)\) utilizada para cerrar el lazo de control. En el diagrama se indican explícitamente las fuentes de ruido asociadas tanto al controlador como al sensor, reflejando las perturbaciones y no idealidades presentes en el sistema real.
+
+\insertarfigura{img/Planta/Diagrama.jpg}{Diagrama de bloques de Control.}{fig:DiagramaControl}{1}
+
+La \textbf{Figura~\ref{fig:Diagrama2}} muestra un diagrama de bloques que representa la implementación física y funcional completa del sistema de control de altura. En dicho diagrama se identifican claramente los siguientes subsistemas:
+\begin{itemize}
+	\item la cadena de energía (\texttt{batería} $\rightarrow$ \texttt{ESC} $\rightarrow$ \texttt{motor}),
+	\item la cadena de control (\texttt{MATLAB} $\rightarrow$ \texttt{PSoC} $\rightarrow$ \texttt{PWM}),
+	\item la planta física correspondiente al sistema bajo control,
+	\item y la cadena de medición y realimentación (\texttt{planta} $\rightarrow$ \texttt{sensor} $\rightarrow$ \texttt{PSoC} $\rightarrow$ \texttt{MATLAB}).
+\end{itemize}
+
+
+
+\insertarfigura{img/Planta/Diagrama-Page-2.jpg}{Diagrama de bloques, implementación física.}{fig:Diagrama2}{1}
+
+\subsection{Flujo de energía (parte electro--energética)}
+
+La batería LiPo de tres celdas (3S), con una tensión nominal de aproximadamente \(11{,}1\,\text{V}\), constituye la fuente principal de energía del sistema. Esta batería alimenta directamente al controlador electrónico de velocidad (ESC) de \(40\,\text{A}\), el cual se encarga de convertir la energía eléctrica continua proveniente de la batería en señales trifásicas adecuadas para el accionamiento del motor brushless.
+
+El ESC regula la velocidad del motor en función de la señal PWM recibida, lo que permite controlar el empuje generado por la hélice. Dicho empuje es el responsable del movimiento vertical de la planta, que constituye el sistema físico bajo control. En esta parte del sistema no se realiza ninguna acción de control, sino únicamente la conversión y entrega de potencia hacia el actuador.
+
+\subsection{Flujo de control (parte de mando)}
+
+El PSoC actúa como el controlador embebido del sistema. A partir de los algoritmos de control implementados (PID, control en espacio de estados, LQG, entre otros), el PSoC genera una señal PWM de tipo servo que es enviada al ESC.
+
+Esta señal PWM representa la variable de control \(u(t)\) del sistema y determina el nivel de empuje aplicado al motor. Para asegurar una correcta referencia eléctrica y el funcionamiento adecuado del sistema, el PSoC y el ESC comparten una conexión de tierra común (GND).
+
+El sistema MATLAB se comunica con el PSoC mediante una interfaz de datos seriales, lo que permite:
+\begin{itemize}
+	\item enviar referencias de altura,
+	\item modificar parámetros de control,
+	\item recibir y visualizar datos del sistema en tiempo real.
+\end{itemize}
+
+En este esquema, MATLAB cumple una función de supervisión, ajuste y análisis experimental, mientras que el PSoC ejecuta el control en tiempo real.
+
+\subsection{Medición y realimentación (cierre del lazo)}
+
+La planta física, al desplazarse verticalmente, genera una altura real que es medida mediante el sensor de distancia láser TFMini Plus. Este sensor entrega la medición de altura al PSoC a través de su interfaz de recepción (RX).
+
+La señal medida es utilizada por el PSoC para calcular el error entre la referencia y la salida real del sistema, cerrando de esta manera el lazo de control de altura. Adicionalmente, los datos medidos pueden ser enviados a MATLAB para su visualización, almacenamiento y análisis experimental.
+
+

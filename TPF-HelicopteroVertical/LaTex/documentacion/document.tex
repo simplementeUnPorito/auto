@@ -1,0 +1,99 @@
+\section{Caracterización física de la planta}
+\subsection{Helicóptero vertical de un solo eje (1-DOF)}
+
+\subsection{Descripción general de la planta}
+La planta desarrollada corresponde a un sistema mecatrónico de \textbf{un grado de libertad}, cuyo movimiento está restringido a la \textbf{dirección vertical}. El principio de funcionamiento se basa en la generación de empuje aerodinámico mediante un \textbf{motor brushless con hélice}, controlado electrónicamente, que permite regular la altura de un cuerpo móvil guiado mecánicamente.
+
+El sistema fue concebido como una planta experimental para el análisis y diseño de estrategias de control en altura, incorporando sensado directo de posición y actuadores eléctricos de rápida respuesta.
+
+\subsection{Estructura mecánica}
+La estructura está compuesta por:
+\begin{itemize}
+	\item \textbf{Tres rieles metálicos verticales}, que actúan como guías del movimiento del cuerpo móvil.
+	\item \textbf{Tres elementos estructurales de madera}, utilizados como refuerzo para evitar deformaciones de los rieles y asegurar la verticalidad del conjunto.
+\end{itemize}
+
+El cuerpo móvil se encuentra acoplado a los rieles mediante \textbf{abrazaderas articuladas tipo ``muñeca''}, diseñadas para tolerar pequeñas desalineaciones estructurales. Este tipo de guiado introduce \textbf{rozamiento mecánico}, el cual no es despreciable y se manifiesta tanto como rozamiento viscoso como rozamiento tipo Coulomb, además de un posible fenómeno de \textit{stiction} (umbral mínimo de fuerza para iniciar el movimiento).
+
+\subsection{Cuerpo móvil}
+\begin{itemize}
+	\item \textbf{Masa total móvil:}
+	\[
+	m = 0.400\ \text{kg}
+	\]
+	(incluye motor, hélice, soporte, cableado y elementos solidarios al movimiento).
+	\item \textbf{Tipo de movimiento:} traslación puramente vertical.
+	\item \textbf{Altura inicial típica:} aproximadamente $12.5\ \text{cm}$.
+	\item \textbf{Altura máxima disponible en la estructura:} aproximadamente $134\ \text{cm}$.
+\end{itemize}
+
+La ausencia de contrapesos implica que el sistema depende exclusivamente del empuje generado por la hélice para vencer la fuerza gravitatoria y los efectos de rozamiento.
+
+\subsection{Sistema de actuación (propulsión)}
+El sistema de actuación está compuesto por:
+\begin{itemize}
+	\item \textbf{Motor:} brushless A2212/5T, $2450\ \text{KV}$.
+	\item \textbf{Hélice:}
+	\begin{itemize}
+		\item Diámetro: $25\ \text{cm}$.
+		\item El \textit{pitch} no se encuentra especificado.
+	\end{itemize}
+	\item \textbf{Controlador electrónico (ESC):}
+	\begin{itemize}
+		\item Corriente continua: $40\ \text{A}$.
+		\item Corriente máxima de corta duración: $55\ \text{A}$.
+	\end{itemize}
+	\item \textbf{Batería:} LiPo 3S.
+	\begin{itemize}
+		\item Tensión inicial típica: $12.5\ \text{V}$.
+		\item La tensión disminuye de forma apreciable durante la operación, dependiendo del régimen de empuje y la duración de la práctica.
+	\end{itemize}
+\end{itemize}
+
+El empuje generado por el sistema depende fuertemente del comando aplicado, de la hélice y del voltaje instantáneo de la batería, lo que introduce una \textbf{no linealidad significativa} en la planta.
+
+\subsection{Señal de control}
+\begin{itemize}
+	\item \textbf{Tipo de señal:} PWM tipo servo.
+	\item \textbf{Frecuencia:} $50\ \text{Hz}$.
+	\item \textbf{Rango:} $1000\ \mu s$ -- $2000\ \mu s$.
+\end{itemize}
+
+Esta señal actúa como la \textbf{entrada manipulada} del sistema, regulando indirectamente el empuje generado por el motor y la hélice a través del ESC.
+
+\subsection{Sistema de sensado}
+\begin{itemize}
+	\item \textbf{Sensor de altura:} TFMini Plus.
+	\item \textbf{Variable medida:} posición vertical del cuerpo móvil $z(t)$.
+	\item \textbf{Frecuencia de lectura:} variable, típicamente en el rango de $50\ \text{Hz}$, $300\ \text{Hz}$ y hasta $1000\ \text{Hz}$, según la configuración utilizada.
+\end{itemize}
+
+El sensor introduce efectos de \textbf{ruido}, \textbf{cuantización} y \textbf{latencia}, los cuales deben ser considerados en el diseño del sistema de control y en el procesamiento de la señal medida.
+
+\subsection{Variables del sistema}
+\begin{itemize}
+	\item \textbf{Entrada del sistema:}
+	\[
+	u(t) = \text{PWM} \in [1000,2000]\ \mu s
+	\]
+	\item \textbf{Salida del sistema:}
+	\[
+	y(t) = z(t)
+	\]
+	\item \textbf{Disturbios principales:}
+	\begin{itemize}
+		\item Variaciones del voltaje de la batería durante la operación.
+		\item Rozamiento mecánico en las guías.
+		\item Perturbaciones aerodinámicas externas.
+		\item Vibraciones estructurales.
+	\end{itemize}
+\end{itemize}
+
+\subsection{Limitaciones físicas y no idealidades}
+La planta presenta las siguientes características no ideales:
+\begin{itemize}
+	\item \textbf{Rozamiento significativo} debido al sistema de guiado, que introduce zonas muertas alrededor del equilibrio.
+	\item \textbf{Saturación del actuador}, limitada por el rango de PWM y la corriente máxima del ESC.
+	\item \textbf{Dinámica no instantánea del empuje}, asociada a la respuesta del ESC, del motor y de la hélice.
+	\item \textbf{Variabilidad paramétrica}, principalmente debida a la caída de tensión de la batería bajo carga.
+\end{itemize}

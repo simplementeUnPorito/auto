@@ -1,0 +1,126 @@
+\subsection{Descripción general de la planta}
+La planta desarrollada corresponde a un sistema mecatrónico de \textbf{un grado de libertad}, cuyo movimiento está restringido a la \textbf{dirección vertical}. El principio de funcionamiento se basa en la generación de empuje aerodinámico mediante un \textbf{motor brushless con hélice}, controlado electrónicamente, que permite regular la altura de un cuerpo móvil guiado mecánicamente.
+
+El sistema fue concebido como una planta experimental para el análisis y diseño de estrategias de control en altura, incorporando sensado directo de posición y actuadores eléctricos de rápida respuesta.
+
+\subsection{Estructura física de la planta}
+
+\insertarfigura{img/Planta/planta.jpeg}{Vista general de la planta física.}{fig:plantaFisica}{0.5}
+
+La planta experimental fue diseñada y construida específicamente para el desarrollo de las prácticas de control de altura previstas en el presente trabajo. El diseño de la estructura respondió a la necesidad de disponer de una altura útil suficiente para la correcta evaluación de las distintas estrategias de control, manteniendo al mismo tiempo un esquema constructivo simple, robusto y de fácil implementación. Durante el desarrollo del proyecto se atravesaron distintas etapas de diseño, las cuales se describen con mayor detalle en el Apéndice~D.
+
+Inicialmente, la planta fue concebida con una altura total de aproximadamente \(80\,\text{cm}\). Sin embargo, dicha dimensión resultó insuficiente para la realización de todas las prácticas propuestas. En consecuencia, y por recomendación del profesor, se decidió extender la estructura hasta alcanzar una altura total de \(165\,\text{cm}\), permitiendo una altura útil de movimiento del cuerpo móvil de aproximadamente \(134\,\text{cm}\).
+
+La estructura se apoya sobre una base de madera de dimensiones \(50 \times 45\,\text{cm}\) y un espesor aproximado de \(2\,\text{cm}\), la cual proporciona estabilidad al conjunto. En la parte superior se dispone de un techo de madera de \(50 \times 50\,\text{cm}\) y un espesor de \(0{,}6\,\text{cm}\), que actúa como elemento de cierre y soporte estructural. La base y el techo se encuentran unidos mediante tres columnas verticales de madera, cuya función principal es aportar rigidez al conjunto y limitar las deformaciones de la estructura.
+
+El \textbf{movimiento vertical} del sistema se guía mediante tres rieles metálicos dispuestos en paralelo, construidos a partir de vigas de metal de aproximadamente \(0{,}6\,\text{cm}\) de diámetro. Estas vigas presentan deformaciones inherentes al material y a su longitud, por lo que las columnas de madera cumplen un rol fundamental en evitar que dichas deformaciones se acentúen durante el funcionamiento del sistema.
+
+El \textbf{cuerpo móvil} se desplaza a lo largo de los rieles mediante piezas impresas en 3D de tipo abrazadera. Estas abrazaderas poseen un diámetro aproximado de \(1{,}5\,\text{cm}\), superior al de las vigas, con el objetivo de permitir cierto grado de libertad angular y evitar perturbaciones en el movimiento vertical causadas por las deformaciones de los rieles. Las abrazaderas se unen al cuerpo móvil mediante un sistema de tornillos, arandelas y tuercas, funcionando como articulaciones tipo ``muñeca'', que facilitan el guiado sin generar atascamientos.
+
+\insertarfigura{img/Disenos/abrazadera.png}{Diseño 3D final de la abrazadera con agarre tipo ``muñeca''.}{fig:abrazadera}{0.5}
+
+\insertarfigura{img/Disenos/brazo.png}{Diseño 3D final del brazo de unión del cuerpo móvil.}{fig:brazo}{0.5}
+
+El cuerpo móvil está compuesto por dos \textbf{soportes principales}: un soporte superior que constituye la base de montaje del motor brushless y un soporte inferior que sostiene el conjunto estructural. Ambos soportes se encuentran unidos mediante tres brazos impresos en 3D, de aproximadamente \(1\,\text{cm}\) de altura, \(1{,}3\,\text{cm}\) de ancho y \(23\,\text{cm}\) de longitud. La unión de los distintos componentes del cuerpo móvil se realiza mediante roscas de aproximadamente \(3\,\text{cm}\) de diámetro y tuercas, evitando el uso de tornillería adicional. El conjunto incluye además un soporte para la batería, en cuya base se encuentra montado el ESC, equipado con dos disipadores térmicos laterales. La masa total del cuerpo móvil es de aproximadamente \(360\,\text{g}\).
+
+\insertarfigura{img/Disenos/soporte-cuerpo.png}{Diseño 3D final del soportes principales del cuerpo móvil (soporte superior e inferior).}{fig:soporte-cuerpo}{0.5}
+
+Con el fin de proteger el sistema ante caídas y movimientos bruscos, se incorporaron \textbf{elementos de seguridad adicionales}. En la parte inferior de la estructura se dispuso papel burbuja enrollado alrededor de los rieles, actuando como amortiguación ante impactos. Asimismo, se añadieron tubos de PVC tanto en la base como en la parte superior de la estructura, los cuales funcionan como topes mecánicos que limitan el recorrido del cuerpo móvil y evitan colisiones con la base o el techo. Adicionalmente, se incorporó una cuerda de seguridad destinada a restringir levantamientos excesivos durante las prácticas, reduciendo el riesgo de movimientos abruptos.
+
+Finalmente, se añadió una cinta métrica a lo largo de la estructura con el objetivo de \textbf{facilitar la visualización} del desplazamiento vertical y permitir una referencia directa de la altura durante el funcionamiento del sistema.
+
+El diseño de la estructura \textbf{priorizó} la rigidez del cuerpo móvil, de modo que pueda soportar tanto su propio peso como eventuales caídas desde alturas cercanas a un metro. Asimismo, se buscó una solución de fácil construcción, utilizando materiales de adquisición accesible en el contexto local y adaptándose a los recursos disponibles y al tiempo de desarrollo del trabajo. La visibilidad del movimiento y el correcto funcionamiento mecánico del sistema fueron considerados aspectos clave para su utilización como planta experimental en este trabajo práctico.
+
+
+
+\subsection{Cuerpo móvil}
+\begin{itemize}
+	\item \textbf{Masa total móvil:}
+	\[
+	m = 0.360\ \text{kg}
+	\]
+	(incluye motor, hélice, soporte, cableado y elementos solidarios al movimiento).
+	\item \textbf{Tipo de movimiento:} traslación puramente vertical.
+	\item \textbf{Altura inicial típica:} aproximadamente $12.5\ \text{cm}$.
+	\item \textbf{Altura máxima disponible en la estructura:} aproximadamente $134\ \text{cm}$.
+\end{itemize}
+
+La ausencia de contrapesos implica que el sistema depende exclusivamente del empuje generado por la hélice para vencer la fuerza gravitatoria y los efectos de rozamiento.
+
+\subsection{Sistema de actuación (propulsión)}
+El sistema de actuación está compuesto por:
+\begin{itemize}
+	\item \textbf{Motor:} brushless A2212/5T, $2450\ \text{KV}$ \cite{es_motor_a2212}.
+	\insertarfigura{img/Planta/motor-a2212-2450kv.jpg}{Motor}{fig:motor2212}{0.5}
+	\item \textbf{Hélice:}
+	\begin{itemize}
+		\item Diámetro: $25\ \text{cm}$.
+		%\item El \textit{pitch} no se encuentra especificado.
+	\end{itemize}
+	\insertarfigura{img/Planta/heliceMedida.jpeg}{Hélice}{fig:HeliceM}{1}
+	\item \textbf{Controlador electrónico (ESC) \cite{ESC_40A}.:}
+	\begin{itemize}
+		\item Corriente continua: $40\ \text{A}$.
+		\item Corriente máxima de corta duración: $55\ \text{A}$.
+	\end{itemize}
+	\insertarfigura{img/Planta/ESC-40A.jpg}{ESC 40A}{fig:ESC40A}{0.5}
+	\item \textbf{Batería:} LiPo 3S, \cite{LiPo3S}.
+	\begin{itemize}
+		\item Tensión inicial típica: $12.5\ \text{V}$.
+		\item La tensión disminuye de forma apreciable durante la operación, dependiendo del régimen de empuje y la duración de la práctica.
+	\end{itemize}
+	\insertarfigura{img/Planta/bateria2200.jpg}{Bateria LiPo 3S Ovonic}{fig:bateria3s}{0.5}
+\end{itemize}
+
+El empuje generado por el sistema depende fuertemente del comando aplicado, de la hélice y del voltaje instantáneo de la batería, lo que introduce una \textbf{no linealidad significativa} en la planta.
+
+\subsection{Señal de control}
+\begin{itemize}
+	\item \textbf{Tipo de señal:} PWM tipo servo.
+	\item \textbf{Frecuencia:} $50\ \text{Hz}$.
+	\item \textbf{Rango:} $1000\ \mu s$ -- $2000\ \mu s$.
+\end{itemize}
+
+Esta señal actúa como la \textbf{entrada manipulada} del sistema, regulando indirectamente el empuje generado por el motor y la hélice a través del ESC.
+
+\insertarfigura{img/Planta/motor2212.png}{Características del motor A2212/5T, 2450KV \cite{es_motor_a2212}}{fig:motor2212}{1}
+
+\subsection{Sistema de sensado}
+
+\begin{itemize}
+	\item \textbf{Sensor de altura:} TFMini Plus \cite{TFminiPlusDatasheet}.
+	\item \textbf{Variable medida:} posición vertical del cuerpo móvil \(z(t)\).
+	\item \textbf{Frecuencia de lectura:} configurable, típicamente en el rango de \(50\,\text{Hz}\), \(300\,\text{Hz}\) y hasta \(1000\,\text{Hz}\), según la configuración utilizada durante las distintas prácticas.
+\end{itemize}
+
+La señal de medición presenta efectos de \textbf{ruido}, \textbf{cuantización} y \textbf{latencia}, propios del sistema de sensado y del procesamiento digital, los cuales deben ser considerados tanto en el diseño del sistema de control como en el tratamiento de la señal medida.
+
+\insertarfigura{img/Planta/TFminiPlus.png}{Sensor óptico de distancia TFMini Plus.}{fig:sensor}{1}
+
+
+\subsection{Variables del sistema}
+\begin{itemize}
+	\item \textbf{Entrada del sistema:}
+	\[
+	u(t) = \text{PWM} \in [1000,2000]\ \mu s
+	\]
+	\item \textbf{Salida del sistema:}
+	\[
+	y(t) = z(t)
+	\]
+	\item \textbf{Disturbios principales:}
+	\begin{itemize}
+		\item Variaciones del voltaje de la batería durante la operación.
+		\item Rozamiento mecánico en las guías.
+		\item Perturbaciones aerodinámicas externas.
+		\item Vibraciones estructurales.
+	\end{itemize}
+\end{itemize}
+
+\subsection{Limitaciones físicas y no idealidades}
+La planta presenta las siguientes características no ideales:
+\begin{itemize}
+	\item \textbf{Saturación del actuador}, limitada por el rango de PWM y la corriente máxima del ESC.
+	\item \textbf{Dinámica no instantánea del empuje}, asociada a la respuesta del ESC, del motor y de la hélice.
+	\item \textbf{Variabilidad paramétrica}, principalmente debida a la caída de tensión de la batería bajo carga.
+\end{itemize}
