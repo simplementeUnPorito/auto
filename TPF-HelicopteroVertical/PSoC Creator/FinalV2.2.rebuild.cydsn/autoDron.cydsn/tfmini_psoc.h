@@ -10,6 +10,8 @@
 #include "isr_rx_TFminiPlus.h"
 
 #define TFMINI_FRAME_SIZE (9u)
+#define TFMINI_MIN_CM   (10u)
+#define TFMINI_MAX_CM   (130u)
 
 /* “hay muestra nueva lista” */
 extern volatile uint8_t tfmini_sample_pending;

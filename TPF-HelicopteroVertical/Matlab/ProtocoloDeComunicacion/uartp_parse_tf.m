@@ -1,12 +1,11 @@
-function [num6, den6, meta] = uartp_parse_tf(coeffs16)
-c = single(coeffs16(:));
-assert(numel(c)==16, "coeffs16 debe tener 16 floats");
+function [b,a,meta] = uartp_parse_tf(coeffs25)
+c = single(coeffs25(:));
+assert(numel(c)==25, "coeffs25 debe tener 25 floats");
 
-num6 = c(1:6).';
-den6 = c(7:12).';
+b = c(1:11).';
+a = c(12:22).';
 
-meta.res13  = c(13);
-meta.res14  = c(14);
-meta.N      = c(15);
-meta.Period = c(16);
+meta.order = c(23);
+meta.N     = c(24);
+meta.FsHz  = c(25);
 end
