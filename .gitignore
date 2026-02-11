@@ -1,25 +1,20 @@
-
-### PSoCCreator ###
-# Modified from https://www.gitignore.io/?templates=psoccreator
-# You may need to add additional directories, e.g. CortexM3/
-<<<<<<< Updated upstream
-=======
 # ========================
-# Third-party vendored
+# PSoC Creator
 # ========================
-third_party.zip
 
-# Project Settings
+# Workspace (usuario/PC)
 *.cywrk.*
-*.cyprj.*
 
-# Generated Assets and Resources
+# Builds / outputs
 Debug/
 Release/
 Export/
 CortexM0/
-codegentemp
-Generated_Source
+CortexM3/
+codegentemp/
+Generated_Source/
+
+# Generated reports / logs
 *_datasheet.pdf
 *_timing.html
 *.cycdx
@@ -28,9 +23,30 @@ Generated_Source
 *.svd
 *.log
 *.zip
-8.asv
 
-# Archivos auxiliares de LaTeX
+# Si realmente querés ignorar proyecto también (ojo, ver nota abajo)
+# *.cyprj.*
+
+# ========================
+# Third-party vendored
+# ========================
+third_party.zip
+
+# ========================
+# MATLAB
+# ========================
+*.asv
+*.m~
+*.autosave
+slprj/
+codegen/
+*.slxc
+*.mex*
+*.p
+
+# ========================
+# LaTeX
+# ========================
 *.aux
 *.log
 *.out
@@ -44,110 +60,27 @@ Generated_Source
 *.nav
 *.snm
 *.vrb
+*.bbl
 *.blg
-*.bbl
-
-# PDFs generados
-*.pdf
-# Archivos temporales de LaTeX
-*.aux
-*.log
-*.out
-*.toc
-*.lof
-*.lot
-*.gz
-*.fls
-*.fdb_latexmk
-*.synctex.gz
-*.nav
-*.snm
-*.vrb
-*.blg
-*.bbl
-*.pdf
-
-
-*.acn
-*.acr
-*.alg
-*.aux
-*.bak
-*.bbl
 *.bcf
-*.blg
-*.brf
-*.bst
+*.run.xml
+*blx.bib
+*.pyg
+*.xdv
 *.dvi
-*.fdb_latexmk
-*.fls
-*.glg
-*.glo
-*.gls
 *.idx
 *.ilg
 *.ind
 *.ist
-*.lof
-*.log
-*.lol
-*.lot
-*.maf
-*.mtc
-*.mtc1
-*.nav
-*.nlo
-*.nls
-*.out
-*.pdf
-*.pyg
-*.run.xml
-*.snm
-*.synctex.gz
-*.tex.backup
-*.tex~
-*.thm
-*.toc
-*.vrb
+*.glg
+*.glo
+*.gls
 *.xdy
 *.xml
-*blx.bib
-.bak 
-.mtc
-*.fdb_latexmk
-*.xml
-*.pdf
-*.fls
-*.bcf
-*.pyg
-build/
-*.aux
-*.log
-*.out
-*.toc
-*.lof
-*.lot
-*.gz
-*.fls
-*.fdb_latexmk
-*.synctex.gz
-*.nav
-*.snm
-*.vrb
-*.blg
-*.bbl
-*.pdf
 
-# LaTeX builds
-*.aux
-*.out
-*.log
-*.synctex.gz
-*.toc
-*.lof
-*.lot
-*.fls
-*.fdb_latexmk
-*.bbl
-*.blg
-*.pdf
+# Build dirs (si usás build/)
+build/
+
+# PDFs: recomendación → NO ignorarlos globalmente si versionás el informe final.
+# Si tu PDF final NO va al repo, descomentá:
+# *.pdf
