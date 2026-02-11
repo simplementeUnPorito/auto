@@ -4,6 +4,9 @@ Durante las etapas iniciales de diseño se intentó sintonizar un controlador PI
 
 Ante esta situación, se optó por utilizar una formulación de controlador PID basada en el método propuesto por Åström, el cual permite un mayor control sobre la estructura del controlador y sobre el compromiso entre rapidez, amortiguamiento y esfuerzo de control. Este enfoque resultó más adecuado para la planta identificada y permitió obtener respuestas dinámicas satisfactorias en simulación y en la práctica.
 
+\insertarfigura{img/PID/Astrom.png}{Diagrama de bloques, Astrom.}{fig:diaAstrom}{1}
+
+
 \subsubsection{Formulación del PID de Åström}
 
 La estructura del controlador PID de Åström se implementa en forma discreta y separa explícitamente las acciones proporcional, integral y derivativa. El término proporcional se define como:
@@ -11,8 +14,6 @@ La estructura del controlador PID de Åström se implementa en forma discreta y 
 P(t) = K\big(b\,u_c(t) - y(t)\big)
 \]
 donde \(K\) es la ganancia proporcional y \(b\) es un parámetro que determina qué fracción de la referencia se introduce en la acción proporcional, permitiendo reducir el sobreimpulso ante cambios bruscos de referencia.
-
-\insertarfigura{img/PID/Astrom.png}{Diagrama de bloques, Astrom.}{fig:diaAstrom}{1}
 
 La acción derivativa se implementa mediante un filtro de primer orden, cuya ecuación en tiempo discreto es:
 \[
@@ -33,6 +34,8 @@ La señal de control total se obtiene como la suma de los tres términos:
 \[
 u(kh) = P(kh) + I(kh) + D(kh)
 \]
+
+\insertarfigura{img/PID/astrom_diagrama.png}{Diagrama de bloques, Astrom - Antiwindup \cite{PID-TESIS}. Aplicada a la planta.}{fig:diaAstrom1}{1}
 
 \subsubsection{Criterios de sintonización}
 
