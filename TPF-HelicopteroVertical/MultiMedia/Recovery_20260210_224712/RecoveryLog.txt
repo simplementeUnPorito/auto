@@ -1,0 +1,22 @@
+Windows File Recovery
+Copyright (c) Microsoft Corporation. All rights reserved
+Version:            0.1.20151.0
+----------------------------------------------------------
+
+
+Recovered files
+
+C:\RECUPERADO\Recovery_20260210_224712\Media\mp4\2026-02-10 15-51-01.mp4
+C:\RECUPERADO\Recovery_20260210_224712\Media\mp4\2026-02-09 22-25-28.mp4
+C:\RECUPERADO\Recovery_20260210_224712\Media\mp4\2026-02-09 21-01-21.mp4
+C:\RECUPERADO\Recovery_20260210_224712\Media\mp4\2026-02-09 20-43-27.mp4
+C:\RECUPERADO\Recovery_20260210_224712\Media\mp4\2026-02-09 19-35-07.mp4
+C:\RECUPERADO\Recovery_20260210_224712\Media\mp4\2026-02-09 17-17-08.mp4
+C:\RECUPERADO\Recovery_20260210_224712\Media\mp4\2026-02-09 15-22-58.mp4
+
+Total damaged files:
+0
+Total recovered files:
+7
+Total irrecoverable files:
+0
