@@ -110,6 +110,9 @@ static void on_frame(const uint8_t* f)
     uint16_t dist = (uint16_t)f[2] | ((uint16_t)f[3] << 8);
 
     dist = tfmini_calibrate_cm(dist);
+     /* saturación a rango útil */
+    if (dist < TFMINI_MIN_CM) dist = TFMINI_MIN_CM;
+    else if (dist > TFMINI_MAX_CM) dist = TFMINI_MAX_CM;
 
     s_last_cm = dist;
     tfmini_sample_pending = 1u;
