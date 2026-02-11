@@ -7,14 +7,7 @@
 # ========================
 # Third-party vendored
 # ========================
-third_party/
 third_party.zip
-# Videos / multimedia pesados
-*.mp4
-*.avi
-*.mov
-*.mkv
->>>>>>> Stashed changes
 
 # Project Settings
 *.cywrk.*
