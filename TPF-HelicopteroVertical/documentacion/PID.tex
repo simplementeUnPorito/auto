@@ -1,0 +1,52 @@
+\subsection{Controlador PID basado en el método de Åström}
+
+Durante las etapas iniciales de diseño se intentó sintonizar un controlador PID utilizando la herramienta \texttt{PID Tuner} de MATLAB. Sin embargo, los resultados obtenidos no fueron satisfactorios para la planta bajo estudio, principalmente debido a la complejidad de la dinámica identificada, la presencia de retardos efectivos asociados al sistema de actuación (ESC--motor) y las limitaciones físicas del actuador. En particular, el desempeño obtenido presentaba respuestas lentas o esfuerzos de control excesivos, incompatibles con la implementación experimental.
+
+Ante esta situación, se optó por utilizar una formulación de controlador PID basada en el método propuesto por Åström, el cual permite un mayor control sobre la estructura del controlador y sobre el compromiso entre rapidez, amortiguamiento y esfuerzo de control. Este enfoque resultó más adecuado para la planta identificada y permitió obtener respuestas dinámicas satisfactorias en simulación y en la práctica.
+
+\subsubsection{Formulación del PID de Åström}
+
+La estructura del controlador PID de Åström se implementa en forma discreta y separa explícitamente las acciones proporcional, integral y derivativa. El término proporcional se define como:
+\[
+P(t) = K\big(b\,u_c(t) - y(t)\big)
+\]
+donde \(K\) es la ganancia proporcional y \(b\) es un parámetro que determina qué fracción de la referencia se introduce en la acción proporcional, permitiendo reducir el sobreimpulso ante cambios bruscos de referencia.
+
+\insertarfigura{img/PID/Astrom.png}{Diagrama de bloques, Astrom.}{fig:diaAstrom}{1}
+
+La acción derivativa se implementa mediante un filtro de primer orden, cuya ecuación en tiempo discreto es:
+\[
+D(kh) =
+\frac{T_d}{T_d + Nh}\,D(kh-h)
+-
+\frac{K T_d N}{T_d + Nh}\big(y(kh) - y(kh-h)\big)
+\]
+donde \(T_d\) es la constante de tiempo derivativa, \(N\) es el parámetro que limita el ancho de banda del término derivativo, y \(h\) es el período de muestreo.
+
+La acción integral se describe mediante:
+\[
+I(kh+h) = I(kh) + \frac{K h}{T_i}\,e(kh)
+\]
+donde \(T_i\) es la constante de tiempo integral y \(e(kh)=u_c(kh)-y(kh)\) es el error de control.
+
+La señal de control total se obtiene como la suma de los tres términos:
+\[
+u(kh) = P(kh) + I(kh) + D(kh)
+\]
+
+\subsubsection{Criterios de sintonización}
+
+La sintonización de los parámetros del controlador se realizó de forma iterativa, utilizando simulaciones y observando tanto la respuesta del sistema como el esfuerzo de control. Los criterios adoptados fueron los siguientes:
+
+\begin{itemize}
+	\item \textbf{Ganancia proporcional \(K\):} se incrementó progresivamente hasta aproximar el sistema al umbral de inestabilidad, con el objetivo de obtener un transitorio rápido y una respuesta ágil.
+	\item \textbf{Acción integral \(T_i\):} se incorporó posteriormente para eliminar el error en régimen permanente, ajustando su valor de manera que el tiempo de establecimiento resultara razonable sin introducir oscilaciones significativas.
+	\item \textbf{Acción derivativa \(T_d\):} se añadió con el fin de reducir el sobreimpulso y mejorar el amortiguamiento del sistema.
+	\item \textbf{Parámetro \(N\):} se ajustó para limitar la amplificación de ruido del término derivativo, probando distintos valores hasta observar una señal excesivamente sensible al ruido de medición.
+\end{itemize}
+
+Durante todo el proceso de sintonización se monitoreó cuidadosamente el esfuerzo de control. Como condición de diseño, se impuso que la variación de la señal PWM no superara aproximadamente \(10\,\mu s\) por centímetro de incremento en la altura, garantizando de esta manera que el actuador no entrara en saturación ni se expusiera la planta a condiciones potencialmente dañinas.
+
+\subsubsection{Resultados}
+
+El controlador PID basado en el método de Åström permitió obtener un comportamiento dinámico estable, con un compromiso adecuado entre rapidez de respuesta, amortiguamiento y esfuerzo de control. En comparación con los resultados obtenidos mediante el \texttt{PID Tuner}, esta metodología ofreció mayor flexibilidad y un mejor ajuste a las particularidades de la planta identificada, resultando adecuada para su implementación experimental.
