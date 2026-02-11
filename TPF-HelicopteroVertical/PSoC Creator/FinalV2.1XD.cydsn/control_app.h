@@ -34,7 +34,7 @@
     #define CONTROL_CALIB_MIN_HITS     (2u)    /* anti-ruido: hits consecutivos */
 #endif
 
-/* --- OPEN LOOP: por defecto ref = Δu (us) relativo a u0 --- */
+/* --- OPEN LOOP: ref = Δu (us) relativo a u0 --- */
 #ifndef CONTROL_OL_REF_IS_DELTA
     #define CONTROL_OL_REF_IS_DELTA (1u)
 #endif
@@ -56,14 +56,16 @@
 #endif
 
 /* =======================
-   Descenso / Stop suave (usa y = altura cm)
+   Descenso / Stop suave
    ======================= */
-#ifndef CONTROL_DESC_TARGET_US
-    #define CONTROL_DESC_TARGET_US   (20.0f)     /* PWM absoluto objetivo de descenso */
+/* OJO: TARGET es Δu relativo (cmd), NO PWM absoluto */
+#ifndef CONTROL_DESC_TARGET_CMD_US
+    #define CONTROL_DESC_TARGET_CMD_US   (20.0f)   /* Δu (us) relativo a u0 */
 #endif
 
+/* PWM absoluto para "cortar" al final */
 #ifndef CONTROL_DESC_CUTOFF_US
-    #define CONTROL_DESC_CUTOFF_US   (1000.0f)   /* cortar cuando llegó */
+    #define CONTROL_DESC_CUTOFF_US   (1000.0f)   /* PWM absoluto de corte */
 #endif
 
 #ifndef CONTROL_DESC_MIN_Y_CM
@@ -71,7 +73,7 @@
 #endif
 
 #ifndef CONTROL_DESC_STEP_US
-    #define CONTROL_DESC_STEP_US     (2.0f)      /* rampa en microsegundos */
+    #define CONTROL_DESC_STEP_US     (2.0f)      /* rampa en microsegundos (Δu) */
 #endif
 
 #ifndef CONTROL_DESC_DELAY_US

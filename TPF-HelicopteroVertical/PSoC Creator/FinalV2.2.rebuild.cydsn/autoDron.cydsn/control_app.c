@@ -170,11 +170,13 @@ static inline uint8 ss_mode_has_integrator(uint8 impl)
     return (impl == UARTP_IMPL_SS_PRED_I) || (impl == UARTP_IMPL_SS_ACT_I);
 }
 
+/* Ganancia efectiva de referencia (solo NOI) */
 static inline float ss_Kr_eff(void)
 {
     return ss_mode_has_integrator((uint8)UARTP_Impl) ? 0.0f : ss_Kx;
 }
 
+/* Ganancia efectiva del integrador (solo I) */
 static inline float ss_Ki_eff(void)
 {
     return ss_mode_has_integrator((uint8)UARTP_Impl) ? ss_Kx : 0.0f;
@@ -196,6 +198,7 @@ static inline float uphy_from_ucmd(float u_cmd)
 static inline float cmd_min_dyn(void) { return (CONTROL_SAT_MIN - g_u0_offset_us); }
 static inline float cmd_max_dyn(void) { return (CONTROL_SAT_MAX - g_u0_offset_us); }
 
+/* y_rel y r_rel para cálculos en closed-loop */
 static inline float y_rel_from_y(float y_phys) { return (y_phys - (float)CONTROL_DESC_MIN_Y_CM); }
 static inline float r_rel_from_r(float r_phys) { return (r_phys - (float)CONTROL_DESC_MIN_Y_CM); }
 
@@ -280,15 +283,19 @@ static inline float tf_step(float x)
     const uint8 ord = tf_order;
 
     if (ord == 0u) {
+        /* y = b0/a0 * x (a0 ya normalizado a 1) */
         return tf_b[0] * x;
     }
 
+    /* y = b0*x + w0 */
     float y = tf_b[0] * x + tf_w[0];
 
+    /* w[i] = w[i+1] + b[i+1]*x - a[i+1]*y  (i=0..ord-2) */
     for (uint8 i = 0u; i < (uint8)(ord - 1u); i++) {
         tf_w[i] = tf_w[i + 1u] + tf_b[i + 1u] * x - tf_a[i + 1u] * y;
     }
 
+    /* último */
     tf_w[ord - 1u] = tf_b[ord] * x - tf_a[ord] * y;
 
     return y;
@@ -398,12 +405,10 @@ void control_start(float ref0)
 
 /* =======================
    STOP suave: termina sesión
-   (FIX: target es Δu directo, no PWM absoluto)
    ======================= */
 bool control_stop_suave_step(void)
 {
-    /* TARGET es Δu relativo (cmd) */
-    float u_target_cmd = (float)CONTROL_DESC_TARGET_CMD_US;
+    float u_target_cmd = ucmd_from_uphy((float)CONTROL_DESC_TARGET_US);
     u_target_cmd = satf(u_target_cmd, cmd_min_dyn(), cmd_max_dyn());
 
     for (uint32_t i = 0u; i < (uint32_t)CONTROL_DESC_MAX_ITERS; i++)
@@ -433,7 +438,6 @@ bool control_stop_suave_step(void)
         CyDelayUs(CONTROL_DESC_HOLD_POLL_US);
     }
 
-    /* CUTOFF es PWM absoluto (us) -> convertir a Δu */
     write_u(ucmd_from_uphy((float)CONTROL_DESC_CUTOFF_US));
 
     g_session_active = 0u;
@@ -453,6 +457,13 @@ void control_apply_tf(const float* c, uint16_t n)
 {
     if (!c || n < 25u) return;
 
+    /* Layout TF:
+       c[0..10]  b0..b10
+       c[11..21] a0..a10
+       c[22]     order
+       c[23]     N
+       c[24]     FsHz
+    */
     for (uint8 i = 0u; i < (uint8)(CONTROL_TF_MAX_ORDER + 1u); i++) {
         tf_b[i] = c[i];
         tf_a[i] = c[i + 11u];
@@ -460,11 +471,13 @@ void control_apply_tf(const float* c, uint16_t n)
 
     tf_order = tf_order_from_float(c[22]);
 
+    /* Forzar a 0 lo que no se usa (por higiene y por si luego cambias el order) */
     for (uint8 i = (uint8)(tf_order + 1u); i < (uint8)(CONTROL_TF_MAX_ORDER + 1u); i++) {
         tf_b[i] = 0.0f;
         tf_a[i] = 0.0f;
     }
 
+    /* Normalizar a0 (solo hasta el orden efectivo) */
     if (tf_a[0] == 0.0f) {
         tf_a[0] = 1.0f;
     }
@@ -479,9 +492,11 @@ void control_apply_tf(const float* c, uint16_t n)
         tf_a[0] = 1.0f;
     }
 
+    /* Meta SIEMPRE al final */
     UARTP_StreamN    = u16_from_float(c[23]);
     UARTP_StreamFsHz = c[24];
 
+    /* Reset estados */
     memset(tf_w, 0, sizeof(tf_w));
 }
 
@@ -505,6 +520,7 @@ void control_apply_ss(const float* c, uint16_t n)
 
     ss_Kx   = c[22];
 
+    /* Meta SIEMPRE al final */
     UARTP_StreamN    = u16_from_float(c[23]);
     UARTP_StreamFsHz = c[24];
 
@@ -526,6 +542,7 @@ void control_step(void)
 
     float r_phys = g_ref;
 
+    /* u_prev_cmd (Δu) coherente con la salida post-sat */
     float u_prev_cmd = ucmd_from_uphy(g_u_out);
 
     CyExitCriticalSection(intr);
@@ -533,7 +550,6 @@ void control_step(void)
     r_phys = clamp_ref(r_phys);
 
 #if CONTROL_ENABLE_AUTOCAL
-    /* ... TODO lo tuyo de autocal igual (sin cambios) ... */
     if (g_calib_state == CALIB_RAMP)
     {
         g_calib_total_samples++;
@@ -643,6 +659,7 @@ void control_step(void)
     }
 #endif
 
+    /* Normal */
     float y_rel = y_rel_from_y(y_phys);
     float r_rel = r_rel_from_r(r_phys);
 
@@ -673,7 +690,7 @@ void control_step(void)
 
             if (has_i) {
                 float e = r_rel - y_rel;
-                g_vint += e;
+                g_vint += e; /* opcional: *g_Ts */
             }
 
             float u_cmd = ss_Kr_eff()*r_rel + ss_Ki_eff()*g_vint - dot3_cmsis(ss_K, xhat);
@@ -693,7 +710,7 @@ void control_step(void)
 
             if (has_i) {
                 float e = r_rel - y_rel;
-                g_vint += e;
+                g_vint += e; /* opcional: *g_Ts */
             }
 
             float u_cmd = ss_Kr_eff()*r_rel + ss_Ki_eff()*g_vint - dot3_cmsis(ss_K, xhat);
