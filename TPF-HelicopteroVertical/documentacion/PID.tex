@@ -1,4 +1,3 @@
-\subsection{Controlador PID basado en el método de Åström}
 
 Durante las etapas iniciales de diseño se intentó sintonizar un controlador PID utilizando la herramienta \texttt{PID Tuner} de MATLAB. Sin embargo, los resultados obtenidos no fueron satisfactorios para la planta bajo estudio, principalmente debido a la complejidad de la dinámica identificada, la presencia de retardos efectivos asociados al sistema de actuación (ESC--motor) y las limitaciones físicas del actuador. En particular, el desempeño obtenido presentaba respuestas lentas o esfuerzos de control excesivos, incompatibles con la implementación experimental.
 
@@ -52,4 +51,15 @@ Durante todo el proceso de sintonización se monitoreó cuidadosamente el esfuer
 
 \subsubsection{Resultados}
 
-El controlador PID basado en el método de Åström permitió obtener un comportamiento dinámico estable, con un compromiso adecuado entre rapidez de respuesta, amortiguamiento y esfuerzo de control. En comparación con los resultados obtenidos mediante el \texttt{PID Tuner}, esta metodología ofreció mayor flexibilidad y un mejor ajuste a las particularidades de la planta identificada, resultando adecuada para su implementación experimental.
+El controlador PID basado en el método de Åström permitió obtener un comportamiento dinámico estable, con un compromiso adecuado entre rapidez de respuesta, amortiguamiento y esfuerzo de control. En comparación con los resultados obtenidos mediante el \texttt{PID Tuner}, esta metodología ofreció mayor flexibilidad y un mejor ajuste a las particularidades de la planta identificada, resultando adecuada para su implementación experimental (Figuras \ref{fig:rstaPID} y \ref{fig:EsfPID}).
+
+\insertarfigura{img/PID/BodePID.png}{Diagrama de Bode con el controlador PID.}{fig:BodePID}{1}
+
+\insertarfigura{img/PID/UnitarioPID.png}{Ubicación de los polos del sistema compensado en el plano $z$ respecto al círculo unitario.}{fig:UnitarioPID}{1}
+
+
+\onecolumn
+\insertarfigura{img/PID/RstaPID.png}{La respuesta al escalón del PID.}{fig:rstaPID}{0.7}
+
+\insertarfigura{img/PID/EsfuerzoPID.png}{El esfuerzo del PID.}{fig:EsfPID}{0.7}
+\twocolumn
