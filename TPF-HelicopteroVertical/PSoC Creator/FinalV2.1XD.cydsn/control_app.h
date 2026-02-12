@@ -1,5 +1,5 @@
 /* =========================
-   control_app.h
+   control_app.h  (UNIDADES EN METROS PARA y/r)
    ========================= */
 #ifndef CONTROL_APP_H
 #define CONTROL_APP_H
@@ -7,39 +7,54 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+/* =========================================================
+   UNIDADES (Closed-loop)
+   - y_phys: metros [m]
+   - r_phys: metros [m]
+   - y_rel, r_rel: metros [m]
+   Open-loop:
+   - referencia puede ser PWM absoluto [us] o Δu [us] según flags
+   ========================================================= */
+
 /* =======================
    RANGO DEL ACTUADOR (PWM)
    ======================= */
-/* u_phy final que sale a tu callback write_u(). En tu caso: PWM en microsegundos */
-#ifndef CONTROL_SAT_MIN
-    #define CONTROL_SAT_MIN (1000.0f)
-#endif
+
+/* Máximo PWM SIEMPRE */
 #ifndef CONTROL_SAT_MAX
-    #define CONTROL_SAT_MAX (1600.0f)
+    #define CONTROL_SAT_MAX (1700.0f)
 #endif
 
-/* Offset default (fallback). El real se auto-calibra en runtime (g_u0_offset_us) */
+/* Mínimo PWM cuando HAY control (sesión activa) */
+#ifndef CONTROL_SAT_MIN
+    #define CONTROL_SAT_MIN (1150.0f)
+#endif
+
+/* Mínimo PWM cuando NO hay control (idle) */
+#ifndef CONTROL_SAT_MIN_IDLE
+    #define CONTROL_SAT_MIN_IDLE (1000.0f)
+#endif
+
 #ifndef CONTROL_U_OFFSET
-    #define CONTROL_U_OFFSET (1350.0f)
+    #define CONTROL_U_OFFSET (1300.0f)
 #endif
 
 /* =======================
    RANGOS DE REFERENCIA
    ======================= */
 #ifndef CONTROL_CALIB_HOLD_SAMPLES
-    #define CONTROL_CALIB_HOLD_SAMPLES (30u)   /* N muestras por nivel */
+    #define CONTROL_CALIB_HOLD_SAMPLES (30u)
 #endif
 
 #ifndef CONTROL_CALIB_MIN_HITS
-    #define CONTROL_CALIB_MIN_HITS     (2u)    /* anti-ruido: hits consecutivos */
+    #define CONTROL_CALIB_MIN_HITS     (2u)
 #endif
 
-/* --- OPEN LOOP: ref = Δu (us) relativo a u0 --- */
 #ifndef CONTROL_OL_REF_IS_DELTA
     #define CONTROL_OL_REF_IS_DELTA (1u)
 #endif
 
-/* Si OL_REF_IS_DELTA=0, entonces ref sería PWM absoluto y se usa esto: */
+/* Open-loop (PWM absoluto) si CONTROL_OL_REF_IS_DELTA = 0 */
 #ifndef CONTROL_OL_REF_MIN
     #define CONTROL_OL_REF_MIN (1000.0f)
 #endif
@@ -47,64 +62,63 @@
     #define CONTROL_OL_REF_MAX (1700.0f)
 #endif
 
-/* --- CLOSED LOOP: ref = altura (cm) --- */
+/* Closed-loop (referencia en METROS) */
 #ifndef CONTROL_CL_REF_MIN
-    #define CONTROL_CL_REF_MIN (12.0f)    /* cm */
+    #define CONTROL_CL_REF_MIN (0.12f)   /* antes 12 cm */
 #endif
 #ifndef CONTROL_CL_REF_MAX
-    #define CONTROL_CL_REF_MAX (120.0f)   /* cm */
+    #define CONTROL_CL_REF_MAX (1.20f)   /* antes 120 cm */
 #endif
 
 /* =======================
    Descenso / Stop suave
    ======================= */
-/* OJO: TARGET es Δu relativo (cmd), NO PWM absoluto */
 #ifndef CONTROL_DESC_TARGET_CMD_US
-    #define CONTROL_DESC_TARGET_CMD_US   (20.0f)   /* Δu (us) relativo a u0 */
+    #define CONTROL_DESC_TARGET_CMD_US   (20.0f)
 #endif
 
-/* PWM absoluto para "cortar" al final */
 #ifndef CONTROL_DESC_CUTOFF_US
-    #define CONTROL_DESC_CUTOFF_US   (1000.0f)   /* PWM absoluto de corte */
+    #define CONTROL_DESC_CUTOFF_US   (1000.0f)
 #endif
 
-#ifndef CONTROL_DESC_MIN_Y_CM
-    #define CONTROL_DESC_MIN_Y_CM    (12.0f)     /* altura mínima (cm) */
+/* Altura mínima de referencia/offset en METROS */
+#ifndef CONTROL_DESC_MIN_Y_M
+    #define CONTROL_DESC_MIN_Y_M    (0.12f)  /* antes 12 cm */
 #endif
 
 #ifndef CONTROL_DESC_STEP_US
-    #define CONTROL_DESC_STEP_US     (2.0f)      /* rampa en microsegundos (Δu) */
+    #define CONTROL_DESC_STEP_US     (2.0f)
 #endif
 
 #ifndef CONTROL_DESC_DELAY_US
-    #define CONTROL_DESC_DELAY_US    (20000u)    /* 20ms -> 50Hz */
+    #define CONTROL_DESC_DELAY_US    (20000u)
 #endif
 
 #ifndef CONTROL_DESC_MAX_ITERS
-    #define CONTROL_DESC_MAX_ITERS   (600u)      /* 600*20ms = 12s */
+    #define CONTROL_DESC_MAX_ITERS   (600u)
 #endif
 
 #ifndef CONTROL_DESC_MIN_HITS
-    #define CONTROL_DESC_MIN_HITS    (2u)        /* N lecturas seguidas <= min */
+    #define CONTROL_DESC_MIN_HITS    (2u)
 #endif
 
 #ifndef CONTROL_DESC_HOLD_MS
-    #define CONTROL_DESC_HOLD_MS     (500u)      /* esperar 0.5 segundos */
+    #define CONTROL_DESC_HOLD_MS     (500u)
 #endif
 
 #ifndef CONTROL_DESC_HOLD_POLL_US
-    #define CONTROL_DESC_HOLD_POLL_US (20000u)   /* chequeo cada 20ms */
+    #define CONTROL_DESC_HOLD_POLL_US (20000u)
 #endif
 
 /* =======================
-   Auto-calibración u0 (runtime)
+   Auto-calibración u0
    ======================= */
 #ifndef CONTROL_ENABLE_AUTOCAL
     #define CONTROL_ENABLE_AUTOCAL (1u)
 #endif
 
 #ifndef CONTROL_CALIB_START_US
-    #define CONTROL_CALIB_START_US (1250.0f)
+    #define CONTROL_CALIB_START_US (1350.0f)
 #endif
 
 #ifndef CONTROL_CALIB_STEP_US
@@ -112,11 +126,12 @@
 #endif
 
 #ifndef CONTROL_CALIB_MAX_US
-    #define CONTROL_CALIB_MAX_US   (1500.0f)
+    #define CONTROL_CALIB_MAX_US   (1600.0f)
 #endif
 
-#ifndef CONTROL_CALIB_DY_CM
-    #define CONTROL_CALIB_DY_CM    (0.30f)   /* cm: umbral de movimiento real */
+/* Umbral de movimiento en METROS (antes 0.30 cm -> 0.0030 m) */
+#ifndef CONTROL_CALIB_DY_M
+    #define CONTROL_CALIB_DY_M    (0.0030f)
 #endif
 
 #ifndef CONTROL_CALIB_N_HITS
@@ -128,29 +143,24 @@
 #endif
 
 /* =======================
-   TF (IIR) - orden máximo soportado por el paquete TF
+   TF (IIR) - orden máximo
    ======================= */
 #ifndef CONTROL_TF_MAX_ORDER
-    #define CONTROL_TF_MAX_ORDER (10u) /* b0..b10 / a0..a10 */
+    #define CONTROL_TF_MAX_ORDER (10u)
 #endif
 
 /* =======================
    Callbacks IO
    ======================= */
 typedef void (*control_write_u_fn_t)(float u_phy);
-
-/* Corre DENTRO del ISR de muestreo.
-   Debe ser ultraliviano y terminar llamando:
-     control_sample_isr_push(y);
-*/
 typedef void (*control_sample_isr_fn_t)(void);
 
 /* =======================
    Variables ISR -> main
    ======================= */
-extern volatile float   control_last_y;
+extern volatile float   control_last_y;        /* y en METROS */
 extern volatile uint8_t control_sample_pending;
-extern volatile float   control_ref_v;
+extern volatile float   control_ref_v;         /* r en METROS */
 
 /* =======================
    API
@@ -159,39 +169,25 @@ void control_register_io(control_sample_isr_fn_t sample_isr,
                          control_write_u_fn_t    write_u);
 
 void control_on_sample_isr(void);
-void control_sample_isr_push(float y);
 
-void  control_set_reference(float r);
+/* y debe venir en METROS */
+void control_sample_isr_push(float y_m);
+
+void  control_set_reference(float r_m);
 float control_get_reference(void);
 
 void  control_set_sample_time(float Ts);
 float control_get_sample_time(void);
 
-/* START: inicia control + dispara autocalibración (si enabled) */
-void  control_start(float ref0);
-
-/* Stop suave: rampa hacia target y corta */
+void  control_start(float ref0_m);
 bool  control_stop_suave_step(void);
 
-/* PAQUETE FIJO 25 floats:
-   TF:
-     c[0..10]  = b0..b10
-     c[11..21] = a0..a10
-     c[22]     = order (0..10)
-     c[23]     = N
-     c[24]     = FsHz
-   SS:
-     c[0..22]  = matrices/ganancias
-     c[23]     = N
-     c[24]     = FsHz
-*/
 void  control_apply_tf(const float* c, uint16_t n);
 void  control_apply_ss(const float* c, uint16_t n);
 
 void  control_step(void);
 void  control_force_min(void);
 
-/* Debug: leer u0 runtime */
 float control_get_u0_offset_us(void);
 
 #endif /* CONTROL_APP_H */
