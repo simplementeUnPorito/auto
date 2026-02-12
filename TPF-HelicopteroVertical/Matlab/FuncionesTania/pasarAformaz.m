@@ -1,4 +1,19 @@
-close all;
+close all; clear; clc;
+
+S = load("D:\auto\TPF-HelicopteroVertical\Matlab\modeloSimplificado.mat");
+whos('-file',"D:\auto\TPF-HelicopteroVertical\Matlab\modeloSimplificado.mat")
+
+% Elegí la planta correcta según lo que exista
+if isfield(S,'plantaC')
+    plantaC = S.plantaC;
+elseif isfield(S,'sysC')
+    plantaC = S.sysC;   % si tu planta se llama sysC
+elseif isfield(S,'G')
+    plantaC = S.G;
+else
+    error("No encontré plantaC/sysC/G dentro del .mat. Mirá la salida de whos -file.");
+end
+
 
 Ts = 1/4;
 [num, den] = tfdata(c2d(plantaC,Ts,'zoh'),'v');
