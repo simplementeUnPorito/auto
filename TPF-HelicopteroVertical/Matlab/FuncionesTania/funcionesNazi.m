@@ -12,8 +12,7 @@ elseif isfield(S,'sysC')
 else
     error('No encuentro "plantaC" ni "sysC" dentro de planta (1).mat');
 end
-plantaC = plantaC/100;
-Ts   = 1/100;                 % <-- ajustá si querés
+Ts   = 1/50;                 % <-- ajustá si querés
 sysD = c2d(plantaC, Ts, 'zoh');
 [A,B,C,D] = ssdata(ss(sysD));
 n = size(A,1);
@@ -23,7 +22,7 @@ fprintf('Ts=%.9f | n=%d\n', Ts, n);
 %% =========================
 % 2) POLOS DESEADOS (AJUSTE AUTOMÁTICO A n)
 %% =========================
-p_ctrl = [0.85 + 0.15i, 0.85 - 0.15i,0.9];
+p_ctrl = [0.9 + 0.15i, 0.9 - 0.15i,0.9];
 p_obs  = [0.4  + 0.25i,  0.4  - 0.25i,0.6];
 
 %% =========================
@@ -52,7 +51,7 @@ ulim_inf = Inf;     % ideal (sin sat)
 
 % step 0 -> 25
 r = zeros(1,N);
-r(2:end) = 0.10;
+r(2:end) = 20;
 
 % ----- DOUBLE ideal (sin saturación) -----
 out_noobs_d_ideal = sim_noobs_loop(A,B,C,D,K,Nbar,r,Ts,ulim_inf,false);
