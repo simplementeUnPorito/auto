@@ -26,9 +26,10 @@ p_obs  = [0.4  + 0.25i,  0.4  - 0.25i,0.6];
 % Ajustables:
 wy = 20;          % peso salida
 wu = 500;          % peso control (subí esto => menos u)
+u_max  = 300;
 
 Q = wy*(C'*C) + 1e-8*eye(n);
-R = wu;
+R = wu/u_max;
                         
 
 %% =========================
