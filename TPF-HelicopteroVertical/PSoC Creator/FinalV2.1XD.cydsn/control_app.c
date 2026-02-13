@@ -65,6 +65,7 @@ float control_get_u0_offset_us(void)
    ======================= */
 static uint8_t g_session_active = 0u; /* 0=parado, 1=en sesión */
 static uint8_t g_u0_valid       = 0u; /* 0=pendiente calibrar, 1=u0 fijo en esta sesión */
+static uint8_t g_first_start = 1u;
 
 /* =======================
    TF (IIR DF2T) hasta orden 10
@@ -119,6 +120,11 @@ static float    g_settle_y_prev       = 0.0f;
 static uint16_t g_settle_stable_cnt   = 0u;
 static uint8_t  g_settle_first        = 1u;
 #endif
+
+
+static volatile uint8_t g_stop_busy      = 0u;
+static volatile uint8_t g_start_queued   = 0u;
+static volatile float   g_start_ref_q    = 0.0f;
 
 /* =======================
    Helpers
@@ -371,10 +377,47 @@ float control_get_sample_time(void)
    ======================= */
 void control_start(float ref0)
 {
-    control_set_reference(ref0);
+    
+     control_set_reference(ref0);
+
+    /* ===== FIX RÁPIDO: limpiar estado en el primer START ===== */
+    if (g_first_start)
+    {
+        g_first_start   = 0u;
+
+        /* reset duro de estados que pueden quedar "a medio camino" */
+        g_session_active = 0u;
+        g_stop_busy      = 0u;
+        g_start_queued   = 0u;
+
+#if CONTROL_ENABLE_AUTOCAL
+        g_calib_state = CALIB_IDLE;
+#endif
+        g_u0_valid = 0u;                 /* fuerza calibración */
+        g_u0_offset_us = CONTROL_U_OFFSET;
+
+        g_u_cmd = 0.0f;
+        g_u_out = CONTROL_SAT_MIN;       /* o CONTROL_U_OFFSET si preferís */
+        g_vint  = 0.0f;
+
+        xhat[0]=0; xhat[1]=0; xhat[2]=0;
+        zhat[0]=0; zhat[1]=0; zhat[2]=0;
+        memset(tf_w, 0, sizeof(tf_w));
+    }
+    /* ======================================================== */
+
+#if CONTROL_ENABLE_AUTOCAL
+    if (g_stop_busy)
+    {
+        g_start_queued = 1u;
+        g_start_ref_q  = ref0;
+        return;
+    }
+#endif
 
     if (g_session_active) return;
     g_session_active = 1u;
+   
 
     xhat[0] = 0.0f; xhat[1] = 0.0f; xhat[2] = 0.0f;
     zhat[0] = 0.0f; zhat[1] = 0.0f; zhat[2] = 0.0f;
@@ -422,6 +465,8 @@ void control_start(float ref0)
    ======================= */
 bool control_stop_suave_step(void)
 {
+   g_stop_busy = 1u;
+
     /* TARGET es Δu relativo (cmd) */
     float u_target_cmd = (float)CONTROL_DESC_TARGET_CMD_US;
     u_target_cmd = satf(u_target_cmd, cmd_min_dyn(), cmd_max_dyn());
@@ -458,11 +503,24 @@ bool control_stop_suave_step(void)
 
     g_session_active = 0u;
     g_u0_valid       = 0u;
-#if CONTROL_ENABLE_AUTOCAL
-    g_calib_state    = CALIB_IDLE;
-#endif
+    #if CONTROL_ENABLE_AUTOCAL
+        g_calib_state    = CALIB_IDLE;
+    #endif
+        
+    g_stop_busy = 0u;
+
+    #if CONTROL_ENABLE_AUTOCAL
+        /* Si llegó un START durante el STOP, ejecutalo ahora */
+        if (g_start_queued)
+        {
+            float r0 = g_start_ref_q;
+            g_start_queued = 0u;
+            control_start(r0);
+        }
+    #endif
 
     return true;
+
 }
 
 /* =======================
@@ -730,150 +788,154 @@ void control_step(void)
     const float umin_cmd = cmd_min_dyn();
     const float umax_cmd = cmd_max_dyn();
 
-    switch (UARTP_Impl)
+switch (UARTP_Impl)
+{
+    case UARTP_IMPL_OPENLOOP:
     {
-        case UARTP_IMPL_OPENLOOP:
-        {
 #if CONTROL_OL_REF_IS_DELTA
-            float u_cmd = satf(r_phys, umin_cmd, umax_cmd);
-            write_u(u_cmd);
+        float u_cmd = satf(r_phys, umin_cmd, umax_cmd);
+        write_u(u_cmd);
 #else
-            float u_cmd = ucmd_from_uphy(r_phys);
-            write_u(u_cmd);
+        float u_cmd = ucmd_from_uphy(r_phys);
+        write_u(u_cmd);
 #endif
-        } break;
+    } break;
 
-        case UARTP_IMPL_TF:
+    case UARTP_IMPL_TF:
+    {
+        /* Anti-windup “freeze” para TF:
+           si el controlador (DF2T) satura y el error empuja hacia afuera,
+           revertimos el estado interno (tf_w) de este step. */
+        float e = r_rel - y_rel;
+
+        float tf_w_bak[CONTROL_TF_MAX_ORDER];
+        memcpy(tf_w_bak, tf_w, sizeof(tf_w));
+
+        float u_unsat = tf_step(e);
+        uint8 sat_hi  = (u_unsat > umax_cmd);
+        uint8 sat_lo  = (u_unsat < umin_cmd);
+        float u_cmd   = satf(u_unsat, umin_cmd, umax_cmd);
+
+        /* freeze si satura y e empuja hacia la misma saturación */
+        if ( (sat_hi && (e > 0.0f)) || (sat_lo && (e < 0.0f)) )
         {
-            /* Anti-windup “freeze” para TF:
-               si el controlador (DF2T) satura y el error empuja hacia afuera,
-               revertimos el estado interno (tf_w) de este step. */
-            float e = r_rel - y_rel;
+            memcpy(tf_w, tf_w_bak, sizeof(tf_w));
+        }
 
-            float tf_w_bak[CONTROL_TF_MAX_ORDER];
-            memcpy(tf_w_bak, tf_w, sizeof(tf_w));
+        write_u(u_cmd);
+    } break;
 
-            float u_unsat = tf_step(e);
-            uint8 sat_hi  = (u_unsat > umax_cmd);
-            uint8 sat_lo  = (u_unsat < umin_cmd);
-            float u_cmd   = satf(u_unsat, umin_cmd, umax_cmd);
+case UARTP_IMPL_SS_PRED_NOI:
+case UARTP_IMPL_SS_PRED_I:
+{
+    uint8 has_i = ss_mode_has_integrator((uint8)UARTP_Impl);
 
-            /* freeze si satura y e empuja hacia la misma saturación */
-            if ( (sat_hi && (e > 0.0f)) || (sat_lo && (e < 0.0f)) )
-            {
-                memcpy(tf_w, tf_w_bak, sizeof(tf_w));
-            }
+    if (has_i)
+    {
+        /* Ogata: v(k+1)=v(k)+e ; u = K1*v(k+1) - K2*xhat */
+        const float K1 = ss_Kx;                 /* K1 (integrador) */
+        const float e  = (r_rel - y_rel);
 
-            write_u(u_cmd);
-        } break;
+        const float v0 = g_vint;
+        const float v1 = v0 + e;                /* si querés Ts: v0 + g_Ts*e */
 
-        case UARTP_IMPL_SS_PRED_NOI:
-        case UARTP_IMPL_SS_PRED_I:
+        const float u_unsat = (K1 * v1) - dot3_cmsis(ss_K, xhat);  /* ss_K = K2 */
+        const float u_cmd   = satf(u_unsat, umin_cmd, umax_cmd);
+
+        /* Anti-windup: CONDITIONAL INTEGRATION
+           - Integro si NO satura
+           - Si satura: integro solo si el error empuja hacia adentro
+             (saturado arriba => e<0 baja u; saturado abajo => e>0 sube u) */
+        if (u_unsat == u_cmd)
         {
-            uint8 has_i = ss_mode_has_integrator((uint8)UARTP_Impl);
-
-            float u_cmd;
-
-            if (has_i)
+            g_vint = v1;
+        }
+        else
+        {
+            if ( (u_unsat > umax_cmd && e < 0.0f) ||
+                 (u_unsat < umin_cmd && e > 0.0f) )
             {
-                const float Ki = ss_Ki_eff();
-                const float e  = (r_rel - y_rel);
-
-                const float vint0 = g_vint;
-                const float vint1 = vint0 + e;     /* si querés Ts: vint0 + g_Ts*e */
-
-                /* CAMBIO DE SIGNO: -Ki*vint */
-                const float u0 = ss_Kr_eff()*r_rel - Ki*vint0 - dot3_cmsis(ss_K, xhat);
-                const float u1 = ss_Kr_eff()*r_rel - Ki*vint1 - dot3_cmsis(ss_K, xhat);
-
-                const float u1_sat = satf(u1, umin_cmd, umax_cmd);
-
-                if (u1 != u1_sat)
-                {
-                    /* freeze robusto: si integrar empeora la saturación, no integro */
-                    if ( (u1 > umax_cmd && u1 > u0) || (u1 < umin_cmd && u1 < u0) )
-                    {
-                        g_vint = vint0;
-                        u_cmd  = satf(u0, umin_cmd, umax_cmd);
-                    }
-                    else
-                    {
-                        g_vint = vint1;
-                        u_cmd  = u1_sat;
-                    }
-                }
-                else
-                {
-                    g_vint = vint1;
-                    u_cmd  = u1;
-                }
+                g_vint = v1;   /* deja integrar: desatura */
             }
             else
             {
-                u_cmd = ss_Kr_eff()*r_rel - dot3_cmsis(ss_K, xhat);
+                g_vint = v0;   /* freeze */
             }
+        }
 
-            write_u(u_cmd);
-
-            float u_k_cmd = ucmd_from_uphy(g_u_out);
-            ss_observer_pred_step(y_rel, u_prev_cmd, u_k_cmd);
-        } break;
-
-        case UARTP_IMPL_SS_ACT_NOI:
-        case UARTP_IMPL_SS_ACT_I:
-        default:
-        {
-            uint8 has_i = ss_mode_has_integrator((uint8)UARTP_Impl);
-
-            ss_observer_act_correct(y_rel, u_prev_cmd);
-
-            float u_cmd;
-
-            if (has_i)
-            {
-                const float Ki = ss_Ki_eff();
-                const float e  = (r_rel - y_rel);
-
-                const float vint0 = g_vint;
-                const float vint1 = vint0 + e;     /* si querés Ts: vint0 + g_Ts*e */
-
-                /* CAMBIO DE SIGNO: -Ki*vint */
-                const float u0 = ss_Kr_eff()*r_rel - Ki*vint0 - dot3_cmsis(ss_K, xhat);
-                const float u1 = ss_Kr_eff()*r_rel - Ki*vint1 - dot3_cmsis(ss_K, xhat);
-
-                const float u1_sat = satf(u1, umin_cmd, umax_cmd);
-
-                if (u1 != u1_sat)
-                {
-                    if ( (u1 > umax_cmd && u1 > u0) || (u1 < umin_cmd && u1 < u0) )
-                    {
-                        g_vint = vint0;
-                        u_cmd  = satf(u0, umin_cmd, umax_cmd);
-                    }
-                    else
-                    {
-                        g_vint = vint1;
-                        u_cmd  = u1_sat;
-                    }
-                }
-                else
-                {
-                    g_vint = vint1;
-                    u_cmd  = u1;
-                }
-            }
-            else
-            {
-                u_cmd = ss_Kr_eff()*r_rel - dot3_cmsis(ss_K, xhat);
-            }
-
-            write_u(u_cmd);
-
-            float u_k_cmd = ucmd_from_uphy(g_u_out);
-            ss_observer_act_predict(u_k_cmd);
-        } break;
-
+        write_u(u_cmd);
     }
+    else
+    {
+        /* NOI: NO TOCAR */
+        float u_cmd = ss_Kr_eff()*r_rel - dot3_cmsis(ss_K, xhat);
+        write_u(u_cmd);
+    }
+
+    /* predictor step (NO TOCAR) */
+    {
+        float u_k_cmd = ucmd_from_uphy(g_u_out);
+        ss_observer_pred_step(y_rel, u_prev_cmd, u_k_cmd);
+    }
+} break;
+
+case UARTP_IMPL_SS_ACT_NOI:
+case UARTP_IMPL_SS_ACT_I:
+default:
+{
+    uint8 has_i = ss_mode_has_integrator((uint8)UARTP_Impl);
+
+    /* corrección ACT (NO TOCAR) */
+    ss_observer_act_correct(y_rel, u_prev_cmd);
+
+    if (has_i)
+    {
+        /* Ogata: v(k+1)=v(k)+e ; u = K1*v(k+1) - K2*xhat */
+        const float K1 = ss_Kx;
+        const float e  = (r_rel - y_rel);
+
+        const float v0 = g_vint;
+        const float v1 = v0 + e;
+
+        const float u_unsat = (K1 * v1) - dot3_cmsis(ss_K, xhat);
+        const float u_cmd   = satf(u_unsat, umin_cmd, umax_cmd);
+
+        /* Anti-windup: CONDITIONAL INTEGRATION (igual que arriba) */
+        if (u_unsat == u_cmd)
+        {
+            g_vint = v1;
+        }
+        else
+        {
+            if ( (u_unsat > umax_cmd && e < 0.0f) ||
+                 (u_unsat < umin_cmd && e > 0.0f) )
+            {
+                g_vint = v1;
+            }
+            else
+            {
+                g_vint = v0;
+            }
+        }
+
+        write_u(u_cmd);
+    }
+    else
+    {
+        /* NOI: NO TOCAR */
+        float u_cmd = ss_Kr_eff()*r_rel - dot3_cmsis(ss_K, xhat);
+        write_u(u_cmd);
+    }
+
+    /* predicción ACT (NO TOCAR) */
+    {
+        float u_k_cmd = ucmd_from_uphy(g_u_out);
+        ss_observer_act_predict(u_k_cmd);
+    }
+} break;
+
+
+}
 
     UARTP_Telemetry_Push(g_u_cmd, y_phys);
     controlPin_Write(0);

@@ -145,6 +145,58 @@
 <file name="..\..\FinalV2.1XD.cydsn\control_app.c" />
 <file name="..\..\FinalV2.1XD.cydsn\control_app.h" />
 <file name="..\..\FinalV2.1XD.cydsn\uartp_sw.h" />
+<file name=".\CortexM3\ARM_GCC_541\Debug\main.o">
+<dep name=".\Generated_Source\PSoC5\Clock_2.h" />
+<dep name=".\Generated_Source\PSoC5\Clock_3.h" />
+<dep name=".\Generated_Source\PSoC5\CyDmac.h" />
+<dep name=".\Generated_Source\PSoC5\CyFlash.h" />
+<dep name=".\Generated_Source\PSoC5\CyLib.h" />
+<dep name=".\Generated_Source\PSoC5\CySpc.h" />
+<dep name=".\Generated_Source\PSoC5\PWM_ESC.h" />
+<dep name=".\Generated_Source\PSoC5\UART.h" />
+<dep name=".\Generated_Source\PSoC5\UART_IntClock.h" />
+<dep name=".\Generated_Source\PSoC5\button_stop.h" />
+<dep name=".\Generated_Source\PSoC5\button_stop_aliases.h" />
+<dep name=".\Generated_Source\PSoC5\clock_led.h" />
+<dep name=".\Generated_Source\PSoC5\controlPin.h" />
+<dep name=".\Generated_Source\PSoC5\controlPin_aliases.h" />
+<dep name=".\Generated_Source\PSoC5\core_cm3_psoc5.h" />
+<dep name=".\Generated_Source\PSoC5\cyPm.h" />
+<dep name=".\Generated_Source\PSoC5\cy_em_eeprom.h" />
+<dep name=".\Generated_Source\PSoC5\cydevice.h" />
+<dep name=".\Generated_Source\PSoC5\cydevice_trm.h" />
+<dep name=".\Generated_Source\PSoC5\cydisabledsheets.h" />
+<dep name=".\Generated_Source\PSoC5\cyfitter.h" />
+<dep name=".\Generated_Source\PSoC5\cyfitter_cfg.h" />
+<dep name=".\Generated_Source\PSoC5\cypins.h" />
+<dep name=".\Generated_Source\PSoC5\cytypes.h" />
+<dep name=".\Generated_Source\PSoC5\isr_rx.h" />
+<dep name=".\Generated_Source\PSoC5\isr_rx_TFminiPlus.h" />
+<dep name=".\Generated_Source\PSoC5\project.h" />
+<dep name=".\Generated_Source\PSoC5\pwm_out.h" />
+<dep name=".\Generated_Source\PSoC5\pwm_out_aliases.h" />
+<dep name=".\Generated_Source\PSoC5\timer_uart.h" />
+<dep name=".\Generated_Source\PSoC5\uart_TFminiPlus.h" />
+<dep name=".\Generated_Source\PSoC5\uart_TFminiPlus_IntClock.h" />
+<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_armcc.h" />
+<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_armclang.h" />
+<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_armclang_ltm.h" />
+<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_compiler.h" />
+<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_gcc.h" />
+<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_iccarm.h" />
+<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_tiarmclang.h" />
+<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_version.h" />
+<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\core_cm3.h" />
+<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\mpu_armv7.h" />
+<dep name="..\..\FinalV2.1XD.cydsn\control_app.h" />
+<dep name="..\..\FinalV2.1XD.cydsn\uartp_sw.h" />
+<dep name=".\esc_pwm.h" />
+<dep name=".\main.c" />
+<dep name=".\tfmini_psoc.h" />
+</file>
+<file name=".\esc_pwm.h" />
+<file name=".\main.c" />
+<file name=".\tfmini_psoc.h" />
 <file name=".\CortexM3\ARM_GCC_541\Debug\uartp_sw.o">
 <dep name=".\Generated_Source\PSoC5\Clock_2.h" />
 <dep name=".\Generated_Source\PSoC5\Clock_3.h" />
@@ -622,58 +674,6 @@
 <dep name=".\esc_pwm.h" />
 </file>
 <file name=".\esc_pwm.c" />
-<file name=".\esc_pwm.h" />
-<file name=".\CortexM3\ARM_GCC_541\Debug\main.o">
-<dep name=".\Generated_Source\PSoC5\Clock_2.h" />
-<dep name=".\Generated_Source\PSoC5\Clock_3.h" />
-<dep name=".\Generated_Source\PSoC5\CyDmac.h" />
-<dep name=".\Generated_Source\PSoC5\CyFlash.h" />
-<dep name=".\Generated_Source\PSoC5\CyLib.h" />
-<dep name=".\Generated_Source\PSoC5\CySpc.h" />
-<dep name=".\Generated_Source\PSoC5\PWM_ESC.h" />
-<dep name=".\Generated_Source\PSoC5\UART.h" />
-<dep name=".\Generated_Source\PSoC5\UART_IntClock.h" />
-<dep name=".\Generated_Source\PSoC5\button_stop.h" />
-<dep name=".\Generated_Source\PSoC5\button_stop_aliases.h" />
-<dep name=".\Generated_Source\PSoC5\clock_led.h" />
-<dep name=".\Generated_Source\PSoC5\controlPin.h" />
-<dep name=".\Generated_Source\PSoC5\controlPin_aliases.h" />
-<dep name=".\Generated_Source\PSoC5\core_cm3_psoc5.h" />
-<dep name=".\Generated_Source\PSoC5\cyPm.h" />
-<dep name=".\Generated_Source\PSoC5\cy_em_eeprom.h" />
-<dep name=".\Generated_Source\PSoC5\cydevice.h" />
-<dep name=".\Generated_Source\PSoC5\cydevice_trm.h" />
-<dep name=".\Generated_Source\PSoC5\cydisabledsheets.h" />
-<dep name=".\Generated_Source\PSoC5\cyfitter.h" />
-<dep name=".\Generated_Source\PSoC5\cyfitter_cfg.h" />
-<dep name=".\Generated_Source\PSoC5\cypins.h" />
-<dep name=".\Generated_Source\PSoC5\cytypes.h" />
-<dep name=".\Generated_Source\PSoC5\isr_rx.h" />
-<dep name=".\Generated_Source\PSoC5\isr_rx_TFminiPlus.h" />
-<dep name=".\Generated_Source\PSoC5\project.h" />
-<dep name=".\Generated_Source\PSoC5\pwm_out.h" />
-<dep name=".\Generated_Source\PSoC5\pwm_out_aliases.h" />
-<dep name=".\Generated_Source\PSoC5\timer_uart.h" />
-<dep name=".\Generated_Source\PSoC5\uart_TFminiPlus.h" />
-<dep name=".\Generated_Source\PSoC5\uart_TFminiPlus_IntClock.h" />
-<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_armcc.h" />
-<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_armclang.h" />
-<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_armclang_ltm.h" />
-<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_compiler.h" />
-<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_gcc.h" />
-<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_iccarm.h" />
-<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_tiarmclang.h" />
-<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\cmsis_version.h" />
-<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\core_cm3.h" />
-<dep name="..\..\..\..\third_party\CMSIS_5\CMSIS\Core\Include\mpu_armv7.h" />
-<dep name="..\..\FinalV2.1XD.cydsn\control_app.h" />
-<dep name="..\..\FinalV2.1XD.cydsn\uartp_sw.h" />
-<dep name=".\esc_pwm.h" />
-<dep name=".\main.c" />
-<dep name=".\tfmini_psoc.h" />
-</file>
-<file name=".\main.c" />
-<file name=".\tfmini_psoc.h" />
 <file name=".\CortexM3\ARM_GCC_541\Debug\tfmini_psoc.o">
 <dep name=".\Generated_Source\PSoC5\CyFlash.h" />
 <dep name=".\Generated_Source\PSoC5\CyLib.h" />
@@ -1183,7 +1183,7 @@
 <dataGuid v="769d31ea-68b1-4f0c-b90a-7c10a43ee563">
 <CyGuid_769d31ea-68b1-4f0c-b90a-7c10a43ee563 type_name="CyDesigner.Common.ProjMgmt.Model.CyLinkCustomData" version="1">
 <link_deps_times>
-<name_val_pair name="c9323d49-d323-40b8-9b59-cc008d68a989@Debug@CortexM3" v="134154230375629009" />
+<name_val_pair name="c9323d49-d323-40b8-9b59-cc008d68a989@Debug@CortexM3" v="134154805126537522" />
 </link_deps_times>
 </CyGuid_769d31ea-68b1-4f0c-b90a-7c10a43ee563>
 </dataGuid>
