@@ -20,7 +20,7 @@
 
 /* Offset default (fallback). El real se auto-calibra en runtime (g_u0_offset_us) */
 #ifndef CONTROL_U_OFFSET
-    #define CONTROL_U_OFFSET (1400.0f)
+    #define CONTROL_U_OFFSET (1350.0f)
 #endif
 
 /* =======================
@@ -31,7 +31,7 @@
 #endif
 
 #ifndef CONTROL_CALIB_MIN_HITS
-    #define CONTROL_CALIB_MIN_HITS     (2u)    /* anti-ruido: hits consecutivos */
+    #define CONTROL_CALIB_MIN_HITS     (5u)    /* anti-ruido: hits consecutivos */
 #endif
 
 /* --- OPEN LOOP: ref = Δu (us) relativo a u0 --- */
@@ -126,6 +126,9 @@
 #ifndef CONTROL_CALIB_MAX_SAMPLES
     #define CONTROL_CALIB_MAX_SAMPLES (800u)
 #endif
+#ifndef CONTROL_CALIB_POSTMOVE_MS
+    #define CONTROL_CALIB_POSTMOVE_MS (200u)   /* 200ms típico para spool/estabilizar */
+#endif
 
 /* =======================
    TF (IIR) - orden máximo soportado por el paquete TF
@@ -193,5 +196,10 @@ void  control_force_min(void);
 
 /* Debug: leer u0 runtime */
 float control_get_u0_offset_us(void);
+
+
+/* ===== estado de autocal u0 ===== */
+bool control_is_calibrating(void);
+bool control_u0_is_valid(void);
 
 #endif /* CONTROL_APP_H */

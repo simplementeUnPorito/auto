@@ -5,7 +5,8 @@
 #include "esc_pwm.h"
 #include <stdint.h>
 
-#define TFMINI_FPS_DEFAULT   (100u)
+#define TFMINI_FPS_DEFAULT   (1000u)
+#define CALIB_FORCE_FS_HZ    (1000.0f)
 
 /* =========================================================
    Actuador: u_phy = microsegundos (1000..2000)
@@ -20,13 +21,14 @@ static void my_write_u(float u_us)
 }
 
 /* =========================================================
-   Callbacks para UARTP -> TFMini
+   Helpers Fs
    ========================================================= */
-static void my_sampling_enable(void)      { (void)tfmini_enable(); }
-static void my_sampling_disable(void)     { (void)tfmini_disable(); }
-static void my_sampling_clear_flags(void) { tfmini_clear_flags(); }
+static float   g_fs_requested_hz      = (float)TFMINI_FPS_DEFAULT;
+static uint8_t g_fs_apply_after_calib = 0u;
+static uint8_t g_fs_forcing_calib     = 0u;
 
-static void my_sampling_change_fs(float fs_hz)
+/* Aplica Fs al sensor y mantiene Ts coherente */
+static void apply_fs_now(float fs_hz)
 {
     if (!(fs_hz > 0.0f)) return;
 
@@ -35,9 +37,36 @@ static void my_sampling_change_fs(float fs_hz)
     if (fps > 1000u) fps = 1000u;
 
     if (tfmini_set_fps(fps)) {
-        /* Ts lo mantenemos coherente con el FPS del sensor */
         control_set_sample_time(1.0f / (float)fps);
     }
+}
+
+/* =========================================================
+   Callbacks para UARTP -> TFMini
+   ========================================================= */
+static void my_sampling_enable(void)      { (void)tfmini_enable(); }
+static void my_sampling_disable(void)     { (void)tfmini_disable(); }
+static void my_sampling_clear_flags(void) { tfmini_clear_flags(); }
+
+/* Clave: durante autocal u0, forzamos 1000 Hz y pateamos el Fs real */
+static void my_sampling_change_fs(float fs_hz)
+{
+    if (!(fs_hz > 0.0f)) return;
+
+    /* Guardar siempre el Fs pedido por el host */
+    g_fs_requested_hz = fs_hz;
+
+    /* Si estamos calibrando u0 -> FORZAR 1000 Hz y aplicar después */
+    if (control_is_calibrating())
+    {
+        g_fs_apply_after_calib = 1u;
+        g_fs_forcing_calib     = 1u;
+        apply_fs_now(CALIB_FORCE_FS_HZ);
+        return;
+    }
+
+    /* Si no estamos calibrando -> aplicar Fs real */
+    apply_fs_now(fs_hz);
 }
 
 /* =========================================================
@@ -102,6 +131,18 @@ int main(void)
                 if (control_sample_pending) {
                     control_sample_pending = 0u;
                     control_step();
+                }
+
+                /* Si veníamos forzando 1000 Hz por calibración y ya terminó -> aplicar Fs real */
+                if (g_fs_forcing_calib && !control_is_calibrating())
+                {
+                    g_fs_forcing_calib = 0u;
+
+                    if (g_fs_apply_after_calib)
+                    {
+                        g_fs_apply_after_calib = 0u;
+                        apply_fs_now(g_fs_requested_hz);
+                    }
                 }
 
                 UARTP_ControlTick();

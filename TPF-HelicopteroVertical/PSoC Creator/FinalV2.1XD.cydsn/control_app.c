@@ -95,6 +95,7 @@ static float zhat[3] = {0.0f, 0.0f, 0.0f};  /* prior (para ACT) */
 typedef enum {
     CALIB_IDLE = 0,
     CALIB_RAMP,
+    CALIB_POSTMOVE,
     CALIB_SETTLE,
     CALIB_DONE,
     CALIB_FAIL
@@ -108,6 +109,10 @@ static float    g_calib_y_level0      = 0.0f;
 static uint16_t g_calib_hits          = 0u;
 static uint16_t g_calib_level_samples = 0u;
 static uint32_t g_calib_total_samples = 0u;
+static uint16_t g_postmove_cnt   = 0u;
+static uint16_t g_postmove_need  = 0u;
+static float    g_postmove_u_phy = 0.0f;
+
 
 /* Estabilización post-calib */
 static float    g_settle_y_prev       = 0.0f;
@@ -118,6 +123,21 @@ static uint8_t  g_settle_first        = 1u;
 /* =======================
    Helpers
    ======================= */
+
+static inline uint16_t samples_from_ms(uint16_t ms)
+{
+    float Ts = g_Ts;
+    if (!(Ts > 0.0f)) Ts = 1.0f;
+
+    float fs = 1.0f / Ts;
+    float n  = fs * ((float)ms / 1000.0f);
+
+    if (n < 1.0f) n = 1.0f;
+    if (n > 65535.0f) n = 65535.0f;
+
+    return (uint16_t)(n + 0.5f);
+}
+
 
 static inline uint16_t u16_from_float(float x)
 {
@@ -559,15 +579,19 @@ void control_step(void)
             g_u0_offset_us = g_calib_u_phy;
             g_u0_valid     = 1u;
 
-            write_u(0.0f);
+            /* NUEVO: hold por X ms manteniendo el u donde detectamos movimiento */
+            g_postmove_u_phy = g_calib_u_phy;
+            g_postmove_cnt   = 0u;
+            g_postmove_need  = samples_from_ms((uint16_t)CONTROL_CALIB_POSTMOVE_MS);
+            g_calib_state    = CALIB_POSTMOVE;
 
-            g_calib_state       = CALIB_SETTLE;
-            g_settle_first      = 1u;
-            g_settle_stable_cnt = 0u;
+            /* mantener u constante (NO seguir rampando) */
+            write_u(ucmd_from_uphy(g_postmove_u_phy));
 
             UARTP_Telemetry_Push(g_u_cmd, y_phys);
             controlPin_Write(0);
             return;
+
         }
 
         if (g_calib_total_samples >= CONTROL_CALIB_MAX_SAMPLES || g_calib_u_phy >= CONTROL_CALIB_MAX_US)
@@ -596,6 +620,32 @@ void control_step(void)
         g_calib_level_samples = 0u;
 
         write_u(ucmd_from_uphy(g_calib_u_phy));
+        UARTP_Telemetry_Push(g_u_cmd, y_phys);
+        controlPin_Write(0);
+        return;
+    }
+    
+    
+    if (g_calib_state == CALIB_POSTMOVE)
+    {
+        /* mantener u fijo */
+        write_u(ucmd_from_uphy(g_postmove_u_phy));
+
+        if (g_postmove_cnt < 65535u) g_postmove_cnt++;
+
+        if (g_postmove_cnt >= g_postmove_need)
+        {
+            /* luego de esperar, pasamos a tu settle existente (u=0 y estabilizar) */
+            write_u(0.0f);
+            g_calib_state       = CALIB_SETTLE;
+            g_settle_first      = 1u;
+            g_settle_stable_cnt = 0u;
+
+            UARTP_Telemetry_Push(g_u_cmd, y_phys);
+            controlPin_Write(0);
+            return;
+        }
+
         UARTP_Telemetry_Push(g_u_cmd, y_phys);
         controlPin_Write(0);
         return;
@@ -706,4 +756,22 @@ void control_step(void)
 
     UARTP_Telemetry_Push(g_u_cmd, y_phys);
     controlPin_Write(0);
+}
+
+
+bool control_is_calibrating(void)
+{
+#if CONTROL_ENABLE_AUTOCAL
+    return (g_calib_state == CALIB_RAMP) ||
+       (g_calib_state == CALIB_POSTMOVE) ||
+       (g_calib_state == CALIB_SETTLE);
+
+#else
+    return false;
+#endif
+}
+
+bool control_u0_is_valid(void)
+{
+    return (g_u0_valid != 0u);
 }
