@@ -12,7 +12,7 @@ elseif isfield(S,'sysC')
 else
     error('No encuentro "plantaC" ni "sysC" dentro de planta (1).mat');
 end
-Ts   = 1/100;                 % <-- ajustá si querés
+Ts   = 1/200;                 % <-- ajustá si querés
 sysD = c2d(plantaC, Ts, 'zoh');
 [A,B,C,D] = ssdata(ss(sysD));
 n = size(A,1);
@@ -26,8 +26,12 @@ p_obs  = [0.4  + 0.25i,  0.4  - 0.25i,0.6];
 % Ajustables:
 wy = 20;          % peso salida
 wu = 500;          % peso control (subí esto => menos u)
+<<<<<<< Updated upstream
 u_max  = 300;
 
+=======
+u_max = 300;
+>>>>>>> Stashed changes
 Q = wy*(C'*C) + 1e-8*eye(n);
 R = wu/u_max;
                         
