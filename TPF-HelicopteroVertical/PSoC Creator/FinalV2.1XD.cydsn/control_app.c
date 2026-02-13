@@ -405,7 +405,7 @@ void control_start(float ref0)
 
         if (UARTP_Impl != UARTP_IMPL_TF && UARTP_Impl != UARTP_IMPL_OPENLOOP) {
             float Ki = ss_Ki_eff();
-            if (Ki != 0.0f) g_vint = u0_cmd / Ki;
+            if (Ki != 0.0f) g_vint = -u0_cmd / Ki;
         }
 
         write_u(u0_cmd);
@@ -533,8 +533,42 @@ void control_apply_ss(const float* c, uint16_t n)
     g_vint  = 0.0f;
 }
 
+
+
+bool control_is_calibrating(void)
+{
+#if CONTROL_ENABLE_AUTOCAL
+    return (g_calib_state == CALIB_RAMP) ||
+       (g_calib_state == CALIB_POSTMOVE) ||
+       (g_calib_state == CALIB_SETTLE);
+
+#else
+    return false;
+#endif
+}
+
+bool control_u0_is_valid(void)
+{
+    return (g_u0_valid != 0u);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* =======================
    CONTROL STEP (main)
+   + Anti-windup (freeze) en:
+     - TF (congelando estados DF2T si satura y el error empuja hacia afuera)
+     - SS_PRED_I / SS_ACT_I (congelando g_vint si satura y el error empuja hacia afuera)
    ======================= */
 void control_step(void)
 {
@@ -546,6 +580,7 @@ void control_step(void)
 
     float r_phys = g_ref;
 
+    /* u_prev_cmd: Δu usado para yhat/innov (consistente con tu obs) */
     float u_prev_cmd = ucmd_from_uphy(g_u_out);
 
     CyExitCriticalSection(intr);
@@ -579,19 +614,16 @@ void control_step(void)
             g_u0_offset_us = g_calib_u_phy;
             g_u0_valid     = 1u;
 
-            /* NUEVO: hold por X ms manteniendo el u donde detectamos movimiento */
             g_postmove_u_phy = g_calib_u_phy;
             g_postmove_cnt   = 0u;
             g_postmove_need  = samples_from_ms((uint16_t)CONTROL_CALIB_POSTMOVE_MS);
             g_calib_state    = CALIB_POSTMOVE;
 
-            /* mantener u constante (NO seguir rampando) */
             write_u(ucmd_from_uphy(g_postmove_u_phy));
 
             UARTP_Telemetry_Push(g_u_cmd, y_phys);
             controlPin_Write(0);
             return;
-
         }
 
         if (g_calib_total_samples >= CONTROL_CALIB_MAX_SAMPLES || g_calib_u_phy >= CONTROL_CALIB_MAX_US)
@@ -624,18 +656,15 @@ void control_step(void)
         controlPin_Write(0);
         return;
     }
-    
-    
+
     if (g_calib_state == CALIB_POSTMOVE)
     {
-        /* mantener u fijo */
         write_u(ucmd_from_uphy(g_postmove_u_phy));
 
         if (g_postmove_cnt < 65535u) g_postmove_cnt++;
 
         if (g_postmove_cnt >= g_postmove_need)
         {
-            /* luego de esperar, pasamos a tu settle existente (u=0 y estabilizar) */
             write_u(0.0f);
             g_calib_state       = CALIB_SETTLE;
             g_settle_first      = 1u;
@@ -693,15 +722,20 @@ void control_step(void)
     }
 #endif
 
+    /* referencias en modo closed-loop: en cm (físico) -> relativo */
     float y_rel = y_rel_from_y(y_phys);
     float r_rel = r_rel_from_r(r_phys);
+
+    /* límites de Δu (cmd) (dinámicos por u0) */
+    const float umin_cmd = cmd_min_dyn();
+    const float umax_cmd = cmd_max_dyn();
 
     switch (UARTP_Impl)
     {
         case UARTP_IMPL_OPENLOOP:
         {
 #if CONTROL_OL_REF_IS_DELTA
-            float u_cmd = satf(r_phys, cmd_min_dyn(), cmd_max_dyn());
+            float u_cmd = satf(r_phys, umin_cmd, umax_cmd);
             write_u(u_cmd);
 #else
             float u_cmd = ucmd_from_uphy(r_phys);
@@ -711,8 +745,25 @@ void control_step(void)
 
         case UARTP_IMPL_TF:
         {
+            /* Anti-windup “freeze” para TF:
+               si el controlador (DF2T) satura y el error empuja hacia afuera,
+               revertimos el estado interno (tf_w) de este step. */
             float e = r_rel - y_rel;
-            float u_cmd = tf_step(e);
+
+            float tf_w_bak[CONTROL_TF_MAX_ORDER];
+            memcpy(tf_w_bak, tf_w, sizeof(tf_w));
+
+            float u_unsat = tf_step(e);
+            uint8 sat_hi  = (u_unsat > umax_cmd);
+            uint8 sat_lo  = (u_unsat < umin_cmd);
+            float u_cmd   = satf(u_unsat, umin_cmd, umax_cmd);
+
+            /* freeze si satura y e empuja hacia la misma saturación */
+            if ( (sat_hi && (e > 0.0f)) || (sat_lo && (e < 0.0f)) )
+            {
+                memcpy(tf_w, tf_w_bak, sizeof(tf_w));
+            }
+
             write_u(u_cmd);
         } break;
 
@@ -721,12 +772,47 @@ void control_step(void)
         {
             uint8 has_i = ss_mode_has_integrator((uint8)UARTP_Impl);
 
-            if (has_i) {
-                float e = r_rel - y_rel;
-                g_vint += e;
+            float u_cmd;
+
+            if (has_i)
+            {
+                const float Ki = ss_Ki_eff();
+                const float e  = (r_rel - y_rel);
+
+                const float vint0 = g_vint;
+                const float vint1 = vint0 + e;     /* si querés Ts: vint0 + g_Ts*e */
+
+                /* CAMBIO DE SIGNO: -Ki*vint */
+                const float u0 = ss_Kr_eff()*r_rel - Ki*vint0 - dot3_cmsis(ss_K, xhat);
+                const float u1 = ss_Kr_eff()*r_rel - Ki*vint1 - dot3_cmsis(ss_K, xhat);
+
+                const float u1_sat = satf(u1, umin_cmd, umax_cmd);
+
+                if (u1 != u1_sat)
+                {
+                    /* freeze robusto: si integrar empeora la saturación, no integro */
+                    if ( (u1 > umax_cmd && u1 > u0) || (u1 < umin_cmd && u1 < u0) )
+                    {
+                        g_vint = vint0;
+                        u_cmd  = satf(u0, umin_cmd, umax_cmd);
+                    }
+                    else
+                    {
+                        g_vint = vint1;
+                        u_cmd  = u1_sat;
+                    }
+                }
+                else
+                {
+                    g_vint = vint1;
+                    u_cmd  = u1;
+                }
+            }
+            else
+            {
+                u_cmd = ss_Kr_eff()*r_rel - dot3_cmsis(ss_K, xhat);
             }
 
-            float u_cmd = ss_Kr_eff()*r_rel + ss_Ki_eff()*g_vint - dot3_cmsis(ss_K, xhat);
             write_u(u_cmd);
 
             float u_k_cmd = ucmd_from_uphy(g_u_out);
@@ -741,37 +827,54 @@ void control_step(void)
 
             ss_observer_act_correct(y_rel, u_prev_cmd);
 
-            if (has_i) {
-                float e = r_rel - y_rel;
-                g_vint += e;
+            float u_cmd;
+
+            if (has_i)
+            {
+                const float Ki = ss_Ki_eff();
+                const float e  = (r_rel - y_rel);
+
+                const float vint0 = g_vint;
+                const float vint1 = vint0 + e;     /* si querés Ts: vint0 + g_Ts*e */
+
+                /* CAMBIO DE SIGNO: -Ki*vint */
+                const float u0 = ss_Kr_eff()*r_rel - Ki*vint0 - dot3_cmsis(ss_K, xhat);
+                const float u1 = ss_Kr_eff()*r_rel - Ki*vint1 - dot3_cmsis(ss_K, xhat);
+
+                const float u1_sat = satf(u1, umin_cmd, umax_cmd);
+
+                if (u1 != u1_sat)
+                {
+                    if ( (u1 > umax_cmd && u1 > u0) || (u1 < umin_cmd && u1 < u0) )
+                    {
+                        g_vint = vint0;
+                        u_cmd  = satf(u0, umin_cmd, umax_cmd);
+                    }
+                    else
+                    {
+                        g_vint = vint1;
+                        u_cmd  = u1_sat;
+                    }
+                }
+                else
+                {
+                    g_vint = vint1;
+                    u_cmd  = u1;
+                }
+            }
+            else
+            {
+                u_cmd = ss_Kr_eff()*r_rel - dot3_cmsis(ss_K, xhat);
             }
 
-            float u_cmd = ss_Kr_eff()*r_rel + ss_Ki_eff()*g_vint - dot3_cmsis(ss_K, xhat);
             write_u(u_cmd);
 
             float u_k_cmd = ucmd_from_uphy(g_u_out);
             ss_observer_act_predict(u_k_cmd);
         } break;
+
     }
 
     UARTP_Telemetry_Push(g_u_cmd, y_phys);
     controlPin_Write(0);
-}
-
-
-bool control_is_calibrating(void)
-{
-#if CONTROL_ENABLE_AUTOCAL
-    return (g_calib_state == CALIB_RAMP) ||
-       (g_calib_state == CALIB_POSTMOVE) ||
-       (g_calib_state == CALIB_SETTLE);
-
-#else
-    return false;
-#endif
-}
-
-bool control_u0_is_valid(void)
-{
-    return (g_u0_valid != 0u);
 }

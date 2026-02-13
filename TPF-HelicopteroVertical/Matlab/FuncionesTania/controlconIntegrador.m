@@ -39,7 +39,7 @@ p_ctrl = [0.9 + 0.15i, 0.9 - 0.15i, 0.90];   % n polos
 p_obs  = [0.4 + 0.25i, 0.4 - 0.25i, 0.60];   % n polos
 
 % Polo extra para el integrador (n+1 polos total)
-p_int  = 0.80;
+p_int  = 0.95;
 
 p_ctrl = fit_poles_to_n(p_ctrl, n, 'p_ctrl');
 p_obs  = fit_poles_to_n(p_obs,  n, 'p_obs');
