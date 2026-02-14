@@ -1,4 +1,4 @@
-Dado que la planta identificada presenta polos ubicados fuera del círculo unitario, el sistema en lazo abierto resulta inestable en el dominio discreto. En consecuencia, cualquier diseño de control debe garantizar que los polos del lazo cerrado queden estrictamente dentro del círculo unitario para asegurar estabilidad interna.
+Dado que la planta identificada (ecuación \ref{eq:Gz_identificada}) presenta polos ubicados fuera del círculo unitario, el sistema en lazo abierto resulta inestable en el dominio discreto. En consecuencia, cualquier diseño de control debe garantizar que los polos del lazo cerrado queden estrictamente dentro del círculo unitario para asegurar estabilidad interna.
 
 \insertarfigura{img/CircUnitarioPlanta.png}
 {Ubicación de los polos de la planta sin compensar en el plano $z$. Se observa que al menos uno de ellos se encuentra fuera del círculo unitario, lo que implica inestabilidad discreta.}
@@ -61,8 +61,10 @@ El resultado fue un compensador lag--lead cuyos parámetros fueron obtenidos med
 {Respuesta temporal del sistema en lazo cerrado con el compensador diseñado.}
 {fig:RespuestaTemporalCompensada}{1}
 
-\subsection{Práctica}
+\subsubsection{Práctica}
 a completar lo que sale en la práctica
 \insertarfigura{img/PID/RstaPIDPractica.png}{La respuesta con el controlador PID.}{fig:RstaPID_practica}{1}
 
 \insertarfigura{img/PID/EsfuerzoPIDPractica.png}{El esfuerzo del con el controlador PID.}{fig:EsfPID_practica}{1}
+
+

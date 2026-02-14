@@ -62,16 +62,56 @@ Si bien la síntesis directa es útil para comprender la relación entre la resp
 La magnitud extrema del esfuerzo se atribuye a la inversión explícita de \(G_{ZAS}(z)\) y a la presencia de dinámica cercana a \(z=1\), lo que vuelve al diseño altamente sensible a cancelaciones y a incertidumbres del modelo (tensión de batería, fricción, aerodinámica y dinámica no modelada del conjunto ESC--motor--hélice). En consecuencia, para implementación experimental se priorizan controladores de menor orden y mayor robustez, considerando explícitamente saturación y limitaciones del esfuerzo.
 
 
-	
-\onecolumn
 \subsection{Simulaciones}
 
 \insertarfigura{img/Sintesis/Step_esfuerzoL.png}
 {Respuesta temporal del esfuerzo de control para ambos métodos de síntesis.}
-{fig:resp_esfuerzo_sintesis}{0.5}
+{fig:resp_esfuerzo_sintesis}{1}
 
 \insertarfigura{img/Sintesis/Step_salidaL.png}
 {Respuesta temporal de la salida en lazo cerrado para ambos métodos de síntesis.}
-{fig:resp_salida_sintesis}{0.5}
+{fig:resp_salida_sintesis}{1}
 
-\twocolumn
+
+\subsubsection{Modelo de la Planta}
+
+Se parte del modelo discreto identificado:
+
+\begin{equation}
+	G(z)=\textbf{[Completar]}
+\end{equation}
+
+Tiempo de muestreo:
+
+\[
+T_s = \textbf{[Completar]}
+\]
+
+Polos de la planta:
+
+\[
+\{z_i\} = \textbf{[Completar]}
+\]
+
+Observaciones relevantes:
+
+\begin{itemize}
+	\item Presencia de polos cercanos a $z=1$: \textbf{[Completar]}
+	\item Naturaleza inestable / marginalmente estable: \textbf{[Completar]}
+\end{itemize}
+
+
+% ============================================================
+\subsubsection{Formulación General}
+% ============================================================
+
+La síntesis directa propone especificar una dinámica deseada en lazo cerrado:
+
+\begin{equation}
+	G_{cl}(z)=\frac{C(z)G(z)}{1+C(z)G(z)}
+\end{equation}
+
+Despejando el controlador:
+
+\begin{equation}
+	C(z)=

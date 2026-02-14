@@ -1,0 +1,204 @@
+
+\subsection{Introducción}
+
+A diferencia de los métodos clásicos basados en funciones de transferencia
+y análisis en frecuencia, los métodos modernos de control se fundamentan
+en la representación en espacio de estados del sistema dinámico.
+
+En este enfoque, la dinámica se describe mediante:
+
+\[
+x_{k+1}=Ax_k+Bu_k
+\]
+\[
+y_k=Cx_k+Du_k
+\]
+
+donde $x_k \in \mathbb{R}^n$ es el vector de estados,
+$u_k$ la entrada de control y $y_k$ la salida medida.
+
+Este formalismo permite:
+
+\begin{itemize}
+	\item Diseñar realimentación directa de estados.
+	\item Ubicar polos del sistema de manera sistemática.
+	\item Formular problemas de control óptimo.
+	\item Incorporar estimadores de estado.
+\end{itemize}
+
+
+% ============================================================
+\subsection{Modelo en Espacio de Estados}
+% ============================================================
+
+El modelo discreto obtenido a partir de la identificación es:
+
+\[
+A = \textbf{[Completar]}
+\]
+
+\[
+B = \textbf{[Completar]}
+\]
+
+\[
+C = \textbf{[Completar]}
+\]
+
+\[
+D = \textbf{[Completar]}
+\]
+
+Tiempo de muestreo:
+
+\[
+T_s = \textbf{[Completar]}
+\]
+
+
+% ============================================================
+\subsection{Análisis de Controlabilidad y Observabilidad}
+% ============================================================
+
+Matriz de controlabilidad:
+
+\[
+\mathcal{C}=[B\ AB\ A^2B\ \dots A^{n-1}B]
+\]
+
+\[
+\text{rank}(\mathcal{C}) = \textbf{[Completar]}
+\]
+
+Matriz de observabilidad:
+
+\[
+\mathcal{O}=\begin{bmatrix}
+	C \\ CA \\ CA^2 \\ \vdots \\ CA^{n-1}
+\end{bmatrix}
+\]
+
+\[
+\text{rank}(\mathcal{O}) = \textbf{[Completar]}
+\]
+
+Conclusión estructural:
+
+\textbf{[Completar: sistema controlable/observable]}
+
+
+% ============================================================
+\subsection{Realimentación de Estados}
+% ============================================================
+
+Se plantea la ley de control:
+
+\[
+u_k = -Kx_k
+\]
+
+Los polos del sistema en lazo cerrado quedan dados por:
+
+\[
+\lambda(A-BK)
+\]
+
+Objetivo:
+
+\begin{itemize}
+	\item Ubicación deseada de polos: \textbf{[Completar]}
+\end{itemize}
+
+Ganancia obtenida:
+
+\[
+K = \textbf{[Completar]}
+\]
+
+
+% ============================================================
+\subsection{Control Óptimo (LQR)}
+% ============================================================
+
+Se define el funcional de costo:
+
+\[
+J=\sum_{k=0}^{\infty}(x_k^TQx_k+u_k^TRu_k)
+\]
+
+Matrices de ponderación:
+
+\[
+Q=\textbf{[Completar]}
+\]
+
+\[
+R=\textbf{[Completar]}
+\]
+
+La solución se obtiene resolviendo la ecuación de Riccati discreta:
+
+\[
+P=A^TPA - A^TPB(R+B^TPB)^{-1}B^TPA + Q
+\]
+
+Ganancia óptima:
+
+\[
+K=(R+B^TPB)^{-1}B^TPA
+\]
+
+Polos obtenidos:
+
+\[
+\lambda(A-BK)=\textbf{[Completar]}
+\]
+
+
+% ============================================================
+\subsection{Estimación de Estados}
+% ============================================================
+
+Dado que no todos los estados son medibles, se implementa un observador:
+
+\[
+\hat{x}_{k+1}=A\hat{x}_k+Bu_k+L(y_k-C\hat{x}_k)
+\]
+
+Ganancia del observador:
+
+\[
+L = \textbf{[Completar]}
+\]
+
+Polos del observador:
+
+\[
+\lambda(A-LC)=\textbf{[Completar]}
+\]
+
+
+% ============================================================
+\subsection{Control Óptimo con Estimación (LQG)}
+% ============================================================
+
+Combinando LQR y estimador de estados se obtiene:
+
+\[
+u_k = -K\hat{x}_k
+\]
+
+Ventajas:
+
+\begin{itemize}
+	\item Diseño sistemático.
+	\item Consideración explícita de estados internos.
+	\item Optimización del esfuerzo de control.
+\end{itemize}
+
+Limitaciones:
+
+\begin{itemize}
+	\item Dependencia del modelo.
+	\item Sensibilidad a incertidumbres no modeladas.
+\end{itemize}
