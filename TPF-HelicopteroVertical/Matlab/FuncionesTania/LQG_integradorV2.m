@@ -174,3 +174,13 @@ figure('Name','xi(t) — integrador');
 plot(t, V, 'LineWidth',1.4);
 grid on; grid minor;
 xlabel('t [s]'); ylabel('\xi');
+
+
+Aaug = [A,B;...
+        Kx-Kx*A-Ki*C*A,1-Kx*B-Ki*C*B];
+Baug = [0;0;0;Ki];
+Caug    = [C,0];
+D = 0;
+sysDaug = ss(Aaug,Baug,Caug,D,Ts);
+
+figure;pzmap(sysDaug);grid on;zgrid;hold on;pzmap()
