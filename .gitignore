@@ -84,3 +84,4 @@ build/
 # PDFs: recomendación → NO ignorarlos globalmente si versionás el informe final.
 # Si tu PDF final NO va al repo, descomentá:
 # *.pdf
+TPF-HelicopteroVertical/documentacion/document.pdf
