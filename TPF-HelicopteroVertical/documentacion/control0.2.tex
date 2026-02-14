@@ -1,0 +1,151 @@
+
+\subsection{Introducción}
+
+A diferencia de los métodos clásicos basados en funciones de transferencia
+y análisis en frecuencia, los métodos modernos de control se fundamentan
+en la representación en espacio de estados del sistema dinámico.
+
+En este enfoque, la dinámica se describe mediante:
+
+\[
+x_{k+1}=Ax_k+Bu_k
+\]
+\[
+y_k=Cx_k+Du_k
+\]
+
+donde $x_k \in \mathbb{R}^n$ es el vector de estados,
+$u_k$ la entrada de control y $y_k$ la salida medida.
+
+Este formalismo permite:
+
+\begin{itemize}
+	\item Diseñar realimentación directa de estados.
+	\item Ubicar polos del sistema de manera sistemática.
+	\item Formular problemas de control óptimo.
+	\item Incorporar estimadores de estado.
+\end{itemize}
+
+
+% ============================================================
+\subsection{Modelo en Espacio de Estados}
+% ============================================================
+
+El modelo discreto obtenido a partir de la identificación es:
+
+\[
+A = \textbf{[Completar]}
+\]
+
+\[
+B = \textbf{[Completar]}
+\]
+
+\[
+C = \textbf{[Completar]}
+\]
+
+\[
+D = \textbf{[Completar]}
+\]
+
+Tiempo de muestreo:
+
+\[
+T_s = \textbf{[Completar]}
+\]
+
+
+% ============================================================
+\subsection{Análisis de Controlabilidad y Observabilidad}
+% ============================================================
+
+Matriz de controlabilidad:
+
+\[
+\mathcal{C}=[B\ AB\ A^2B\ \dots A^{n-1}B]
+\]
+
+\[
+\text{rank}(\mathcal{C}) = \textbf{[Completar]}
+\]
+
+Matriz de observabilidad:
+
+\[
+\mathcal{O}=\begin{bmatrix}
+	C \\ CA \\ CA^2 \\ \vdots \\ CA^{n-1}
+\end{bmatrix}
+\]
+
+\[
+\text{rank}(\mathcal{O}) = \textbf{[Completar]}
+\]
+
+Conclusión estructural:
+
+\textbf{[Completar: sistema controlable/observable]}
+
+
+% ============================================================
+\subsection{Realimentación de Estados}
+% ============================================================
+
+Se plantea la ley de control:
+
+\[
+u_k = -Kx_k
+\]
+
+Los polos del sistema en lazo cerrado quedan dados por:
+
+\[
+\lambda(A-BK)
+\]
+
+Objetivo:
+
+\begin{itemize}
+	\item Ubicación deseada de polos: \textbf{[Completar]}
+\end{itemize}
+
+Ganancia obtenida:
+
+\[
+K = \textbf{[Completar]}
+\]
+
+
+\subsection{Ubicación Arbitraria de Polos}
+% ============================================================
+\input{ubiArbPolos.tex}
+
+\clearpage
+
+\subsection{Estimación de Estados}
+% ============================================================
+
+\input{Estimadores.tex}
+
+\clearpage
+
+% ============================================================
+\subsection{Control Óptimo (LQR)}
+% ============================================================
+
+\input{ControlOptimo.tex}
+
+\clearpage
+% ============================================================
+
+% ============================================================
+\subsection{Control Óptimo con Integrador}
+% ============================================================
+
+\input{ControlOptimoIntegrador.tex}
+\clearpage
+
+% ============================================================
+\subsection{Filtro de Kalman}
+% ============================================================
+\input{Kalman.tex}

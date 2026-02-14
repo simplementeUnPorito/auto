@@ -1,0 +1,70 @@
+
+\subsubsection{Fundamento}
+
+Se propone la ley de control:
+
+\[
+u_k = -Kx_k
+\]
+
+lo que conduce a:
+
+\[
+x_{k+1} = (A - BK)x_k
+\]
+
+El objetivo es imponer:
+
+\[
+\lambda(A - BK)=\{p_1,p_2,\dots,p_n\}
+\]
+
+
+\subsubsection{Selección de Polos Deseados}
+
+Polos seleccionados:
+
+\[
+\{p_i\} = \textbf{[Completar]}
+\]
+
+Criterios:
+
+\begin{itemize}
+	\item Rapidez deseada.
+	\item Amortiguamiento.
+	\item Estabilidad discreta ($|p_i|<1$).
+\end{itemize}
+
+
+\subsubsection{Cálculo de la Ganancia}
+
+La ganancia se obtuvo mediante:
+
+\begin{itemize}
+	\item Método de Ackermann.
+	\item Función \texttt{place()}.
+\end{itemize}
+
+\[
+K = \textbf{[Completar]}
+\]
+
+Polos resultantes:
+
+\[
+\lambda(A-BK)=\textbf{[Completar]}
+\]
+
+
+\subsubsection{Resultados}
+
+\begin{itemize}
+	\item Sobreimpulso: \textbf{[Completar]}
+	\item Tiempo de establecimiento: \textbf{[Completar]}
+	\item Pico de esfuerzo: \textbf{[Completar]}
+\end{itemize}
+
+\insertarfigura{img/Estados/respuesta_poleplacement.png}
+{Respuesta temporal con ubicación arbitraria de polos.}
+{fig:resp_poleplacement}{1}

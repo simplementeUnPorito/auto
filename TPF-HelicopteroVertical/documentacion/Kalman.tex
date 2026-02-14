@@ -1,0 +1,120 @@
+
+\subsubsection{Modelo con Ruido}
+
+Para incorporar incertidumbre en el modelo,
+se considera la siguiente representación estocástica:
+
+\[
+x_{k+1} = Ax_k + Bu_k + w_k
+\]
+
+\[
+y_k = Cx_k + v_k
+\]
+
+donde:
+
+\begin{itemize}
+	\item $w_k \sim \mathcal{N}(0,Q)$ es el ruido de proceso.
+	\item $v_k \sim \mathcal{N}(0,R)$ es el ruido de medición.
+\end{itemize}
+
+Las matrices de covarianza utilizadas fueron:
+
+\[
+Q = \textbf{[Completar]}
+\]
+
+\[
+R = \textbf{[Completar]}
+\]
+
+
+% ============================================================
+\subsubsection{Ecuaciones del Filtro de Kalman}
+% ============================================================
+
+El filtro consta de dos etapas:
+
+\paragraph{Predicción}
+
+\[
+\hat{x}_{k|k-1} = A\hat{x}_{k-1} + Bu_{k-1}
+\]
+
+\[
+P_{k|k-1} = A P_{k-1} A^T + Q
+\]
+
+\paragraph{Actualización}
+
+\[
+L_k = P_{k|k-1} C^T (C P_{k|k-1} C^T + R)^{-1}
+\]
+
+\[
+\hat{x}_k = \hat{x}_{k|k-1} + L_k (y_k - C\hat{x}_{k|k-1})
+\]
+
+\[
+P_k = (I - L_k C) P_{k|k-1}
+\]
+
+
+% ============================================================
+\subsubsection{Ganancia en Régimen Permanente}
+% ============================================================
+
+En régimen estacionario, la ganancia converge a:
+
+\[
+L = A P C^T (C P C^T + R)^{-1}
+\]
+
+donde $P$ satisface la ecuación de Riccati discreta:
+
+\[
+P = A P A^T - A P C^T (C P C^T + R)^{-1} C P A^T + Q
+\]
+
+Ganancia obtenida:
+
+\[
+L = \textbf{[Completar]}
+\]
+
+
+% ============================================================
+\subsubsection{Resultados de Estimación}
+% ============================================================
+
+Se evaluó la calidad de estimación comparando:
+
+\begin{itemize}
+	\item Estados reales vs estados estimados.
+	\item Error cuadrático medio.
+	\item Respuesta frente a ruido.
+\end{itemize}
+
+%\insertarfigura{img/Estados/estimacion_kalman.png}{Comparación entre estados reales y estimados mediante Filtro de Kalman.}{fig:kalman_estimacion}{1}
+
+
+% ============================================================
+\subsubsection{Discusión}
+% ============================================================
+
+El filtro de Kalman presenta las siguientes ventajas:
+
+\begin{itemize}
+	\item Minimiza la varianza del error de estimación.
+	\item Permite modelar explícitamente ruido de proceso y medición.
+	\item Se integra naturalmente con LQR formando el esquema LQG.
+\end{itemize}
+
+Limitaciones:
+
+\begin{itemize}
+	\item Dependencia de una correcta elección de $Q$ y $R$.
+	\item Sensibilidad a errores estructurales del modelo.
+	\item Supone ruido blanco gaussiano.
+\end{itemize}

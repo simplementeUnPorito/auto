@@ -1,0 +1,240 @@
+
+\subsection{Introducción}
+
+Los métodos clásicos de control se fundamentan en el análisis de sistemas
+lineales mediante funciones de transferencia y herramientas del dominio
+de la frecuencia y del plano complejo.
+
+En este enfoque, la dinámica del sistema se describe como:
+
+\[
+G(s)=\frac{Y(s)}{U(s)}
+\quad \text{o en tiempo discreto} \quad
+G(z)=\frac{Y(z)}{U(z)}
+\]
+
+El diseño del controlador se realiza modificando la función de transferencia
+del lazo abierto:
+
+\[
+L(s)=C(s)G(s)
+\quad \text{o} \quad
+L(z)=C(z)G(z)
+\]
+
+con el objetivo de garantizar:
+
+\begin{itemize}
+	\item Estabilidad en lazo cerrado.
+	\item Desempeño transitorio adecuado.
+	\item Error estacionario reducido.
+	\item Robustez frente a incertidumbre.
+\end{itemize}
+
+Los métodos clásicos utilizados en este trabajo incluyen:
+
+\begin{itemize}
+	\item Controlador PID.
+	\item Diseño por Lugar de Raíces.
+	\item Diseño mediante Respuesta en Frecuencia (Bode).
+	\item Síntesis Directa (Truxal--Ragazzini).
+\end{itemize}
+
+
+% ============================================================
+\subsection{Modelo de la Planta}
+% ============================================================
+
+El diseño clásico parte de la función de transferencia identificada:
+
+\[
+G(z) = \textbf{[Completar]}
+\]
+
+Tiempo de muestreo:
+
+\[
+T_s = \textbf{[Completar]}
+\]
+
+Polos de la planta:
+
+\[
+\{z_i\} = \textbf{[Completar]}
+\]
+
+Ceros de la planta:
+
+\[
+\{z_j\} = \textbf{[Completar]}
+\]
+
+Observaciones:
+
+\begin{itemize}
+	\item Estabilidad en lazo abierto: \textbf{[Completar]}
+	\item Orden del sistema: \textbf{[Completar]}
+	\item Presencia de retardo efectivo: \textbf{[Completar]}
+\end{itemize}
+
+
+% ============================================================
+\subsection{Fundamentos Matemáticos del Control Clásico}
+% ============================================================
+
+\subsubsection{Estabilidad en Lazo Cerrado}
+
+El sistema en lazo cerrado se expresa como:
+
+\[
+G_{cl}(z)=\frac{C(z)G(z)}{1+C(z)G(z)}
+\]
+
+La estabilidad discreta requiere que:
+
+\[
+|z_i| < 1 \quad \forall i
+\]
+
+donde $z_i$ son los polos de $G_{cl}(z)$.
+
+\subsubsection{Lugar de Raíces}
+
+Los polos del lazo cerrado satisfacen:
+
+\[
+1 + C(z)G(z) = 0
+\]
+
+El Lugar de Raíces describe la trayectoria de estos polos al variar
+la ganancia del controlador.
+
+\subsubsection{Márgenes de Estabilidad}
+
+A partir del diagrama de Bode del lazo abierto $L(z)$ se definen:
+
+\begin{itemize}
+	\item Margen de ganancia.
+	\item Margen de fase.
+	\item Frecuencia de cruce de ganancia.
+\end{itemize}
+
+Estos parámetros cuantifican la estabilidad relativa y robustez del sistema.
+
+
+% ============================================================
+\subsection{Controlador PID}
+% ============================================================
+
+%Forma general del PID:
+
+%\[
+%C(s)=K_p\left(1+\frac{1}{T_is}+\frac{T_ds}{1+\frac{T_d}{N}s}\right)
+%\]
+
+%Parámetros utilizados:
+
+
+%Objetivo del PID:
+
+%\begin{itemize}
+%	\item Reducir error estacionario.
+%	\item Mejorar rapidez.
+%	\item Ajustar amortiguamiento.
+%\end{itemize}
+\input{PID.tex}
+
+\clearpage
+% ============================================================
+\subsection{Diseño por Lugar de Raíces}
+% ============================================================
+
+Se analiza la ecuación característica:
+
+\[
+1 + C(z)G(z) = 0
+\]
+
+\input{RLOCUS.tex}
+Objetivos:
+
+\begin{itemize}
+	\item Ubicar polos dentro del círculo unitario.
+	\item Controlar amortiguamiento.
+	\item Ajustar velocidad de respuesta.
+\end{itemize}
+
+Compensador adoptado:
+
+\[
+C(z)=\textbf{[Completar]}
+\]
+
+\clearpage
+% ============================================================
+\subsection{Diseño por Respuesta en Frecuencia}
+% ============================================================
+
+Se analiza el lazo abierto:
+
+\[
+L(z)=C(z)G(z)
+\]
+\input{BODE.tex}
+Parámetros clave:
+
+\begin{itemize}
+	\item Margen de fase: \textbf{[Completar]}
+	\item Margen de ganancia: \textbf{[Completar]}
+	\item Frecuencia de cruce: \textbf{[Completar]}
+\end{itemize}
+
+Controlador adoptado:
+
+\[
+C(z)=\textbf{[Completar]}
+\]
+
+\clearpage
+
+% ============================================================
+\subsection{Síntesis Directa}
+% ============================================================
+\input{SinDirec.tex}
+Ecuación general:
+
+\[
+C(z)=\frac{1}{G(z)}\frac{G_{cl}(z)}{1-G_{cl}(z)}
+\]
+
+Dinámica deseada:
+
+\[
+G_{cl}(z)=\textbf{[Completar]}
+\]
+
+Observaciones:
+
+\begin{itemize}
+	\item Sensibilidad al modelo.
+	\item Elevado esfuerzo de control.
+	\item Limitaciones prácticas.
+\end{itemize}
+
+
+% ============================================================
+\subsection{Comparación entre Métodos Clásicos}
+% ============================================================
+
+\begin{itemize}
+	\item PID: \textbf{[Completar fortalezas y debilidades]}
+	\item Lugar de Raíces: \textbf{[Completar]}
+	\item Bode: \textbf{[Completar]}
+	\item Síntesis Directa: \textbf{[Completar]}
+\end{itemize}
+
+Observación general:
+
+\textbf{[Completar: limitaciones estructurales del enfoque clásico]}
+
+\clearpage
