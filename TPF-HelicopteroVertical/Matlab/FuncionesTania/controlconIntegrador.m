@@ -18,7 +18,7 @@ else
     error('No encuentro "plantaC" ni "sysC" dentro de planta (1).mat');
 end
 
-Ts   = 1/100;                 % <-- ajustá si querés
+Ts   = 1/50;                 % <-- ajustá si querés
 sysD = c2d(plantaC, Ts, 'zoh');
 [A,B,C,D] = ssdata(ss(sysD));
 

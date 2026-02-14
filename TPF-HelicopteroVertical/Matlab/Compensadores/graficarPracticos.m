@@ -3,8 +3,8 @@ clc; close all; clear;
 %% =========================
 % Parámetros
 %% =========================
-titulo = 'LQR\_pred (u e y vs n)';
-DATA_MAT_PATH = 'D:\GitHub\auto\TPF-HelicopteroVertical\Matlab\Compensadores\LQR_act_practico.mat';
+titulo = 'SSi (u e y vs n)';
+DATA_MAT_PATH = 'D:\GitHub\auto\TPF-HelicopteroVertical\Matlab\Compensadores\SSi_practico.mat';
 
 %% =========================
 % Carga

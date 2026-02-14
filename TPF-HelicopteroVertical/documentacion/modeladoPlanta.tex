@@ -4,77 +4,190 @@ Se definen a continuación las variables y convenciones utilizadas para el model
 
 \begin{itemize}
 	\item Eje vertical \(z\) [m], definido positivo hacia arriba.
+	
 	\item Masa móvil:
 	\[
 	m = 0.360\ \text{kg}
 	\]
+	
 	\item Aceleración de la gravedad:
 	\[
 	g = 9.81\ \text{m/s}^2
 	\]
+	
 	\item Peso del cuerpo móvil:
 	\[
 	mg = 3.924\ \text{N}
 	\]
+	
 	\item Entrada del sistema: señal PWM tipo servo a \(50\ \text{Hz}\),
 	\[
 	u \in [1000,2000]\ \mu s
 	\]
+	
+	Si bien el rango eléctrico nominal del protocolo PWM se encuentra entre
+	$1000$ y $2000\ \mu s$, durante la operación en vuelo la señal se restringe
+	intencionalmente al intervalo
+	
+	\[
+	u \in [1100,1700]\ \mu s
+	\]
+	
+	Esta limitación surge de criterios de confiabilidad experimental.
+	En ensayos previos realizados con ESCs de menor capacidad nominal
+	($30\ \text{A}$), se observaron fallas térmicas al operar en valores
+	superiores a aproximadamente $1600\ \mu s$ bajo carga sostenida.
+	
+	Dado que no se realizaron mediciones directas de corriente ni
+	caracterizaciones térmicas detalladas del conjunto motor--ESC--hélice,
+	se adoptó un margen de seguridad conservador que evita la operación
+	prolongada en regímenes de alta demanda energética.
+	
+	Asimismo, el límite inferior de $1100\ \mu s$ se fija con el objetivo
+	de evitar regiones cercanas a la detención del motor, donde pueden
+	presentarse comportamientos fuertemente no lineales y pérdida abrupta
+	de sustentación.
+	
+	En consecuencia, el modelo identificado y las estrategias de control
+	desarrolladas se consideran válidos únicamente dentro de este rango
+	operativo seguro.
+	
 	\item Normalización de la entrada:
 	\[
-	\hat u = \mathrm{sat}\!\left(\frac{u-1300}{1000},\,0,\,1\right)
+	\hat u = \mathrm{sat}\!\left(u-u_0,\,1100-u_0,\,1700-u_0\right)
 	\]
+	
+	Siendo $u_0$ el valor de PWM necesario para generar un empuje
+	equivalente al peso del sistema, es decir, la condición de equilibrio
+	vertical estacionario.
+	
 	\item Salida medida:
 	\[
 	y = z
 	\]
-	correspondiente a la altura del cuerpo móvil medida mediante el sensor TFMini Plus.
+	
+	correspondiente a la altura del cuerpo móvil medida mediante el sensor
+	TFMini Plus, cuya resolución efectiva se encuentra en el orden de
+	centímetros.
 \end{itemize}
 
 \subsubsection{Modelo físico simplificado}
 
-Desde un punto de vista físico, el movimiento vertical del cuerpo móvil puede describirse, en primera aproximación, mediante las siguientes ecuaciones:
+Desde un punto de vista físico, el movimiento vertical del cuerpo móvil puede describirse, en primera aproximación, mediante:
+
 \[
 \dot z = v
 \]
+
 \[
 m\dot v = T - mg
 \]
-donde \(T\) representa el empuje efectivo generado por el conjunto ESC--motor--hélice. Este modelo corresponde a una descripción idealizada del sistema y no contempla efectos tales como fricción, aerodinámica ni la dinámica interna del actuador.
 
-Si bien este modelo permite capturar la estructura básica del sistema, resulta insuficiente para reproducir con precisión las dinámicas observadas durante las pruebas experimentales. Las principales fuentes de discrepancia se asocian a:
+Este modelo corresponde al caso ideal sin disipación, en el cual la
+dinámica posición--empuje presenta una estructura de doble integración.
+
+En una aproximación más realista, puede incorporarse el efecto de
+rozamiento de las guías mediante un término viscoso proporcional a la
+velocidad:
+
+\[
+m\dot v = T - mg - b\,v
+\]
+
+donde \(b\) [N\,s/m] representa un coeficiente equivalente de fricción
+viscosa.
+
+La inclusión de este término modifica la estructura ideal de doble
+integrador, convirtiéndola en un sistema con integración amortiguada.
+Desde el punto de vista de función de transferencia continua, el
+doble polo en el origen deja de ser estrictamente doble, introduciéndose
+un amortiguamiento mecánico que desplaza uno de los polos hacia el
+semiplano izquierdo.
+
+Por lo tanto, la presencia de un único integrador dominante en el modelo
+simplificado resulta coherente con la física del sistema cuando se
+consideran pérdidas mecánicas.
+
+\subsubsection{Modelo dinámico equivalente del actuador (BLDC)}
+
+A efectos de análisis lineal, el conjunto ESC--motor BLDC puede
+aproximarse mediante un modelo promedio equivalente al de un motor DC
+de imanes permanentes:
+
+\[
+v(t)=R\,i(t) + L\,\dot i(t) + K_e\,\omega(t)
+\]
+
+\[
+J\,\dot \omega(t)=K_t\,i(t) - B\,\omega(t) - \tau_L(t)
+\]
+
+Este modelo introduce una dinámica electromecánica adicional respecto
+del modelo puramente mecánico de la masa móvil, justificando la
+aparición de un polo adicional en la relación entrada--salida.
+
+En muchos casos, la constante de tiempo eléctrica
+\(\tau_e=L/R\) es considerablemente menor que la mecánica,
+permitiendo despreciar \(L\) y obtener una dinámica dominante de
+segundo orden asociada al actuador.
+
+\subsubsection{Función de transferencia continua equivalente}
+
+La representación continua obtenida a partir del modelo identificado
+puede expresarse inicialmente como:
+
+\[
+G(s)=
+\frac{-0.12107\,(s-14)(s+10.62)}
+{(s+0.0002797)\,(s^2+5.61s+14.02)}
+\]
+
+El polo ubicado en \(s=-0.0002797\) corresponde a una dinámica
+extremadamente lenta respecto de las restantes constantes de tiempo
+del sistema.
+
+Considerando que:
+
 \begin{itemize}
-	\item variaciones de masa efectiva y efectos de fricción mecánica,
-	\item fenómenos aerodinámicos no lineales asociados al empuje generado por la hélice,
-	\item dinámica propia del sistema de actuación, compuesta por el controlador ESC y el motor brushless.
+	\item la resolución del sensor de altura se encuentra en el orden
+	de centímetros,
+	\item no se dispone de mediciones de alta precisión submilimétrica,
+	\item el identificador polinomial puede ajustar polos muy cercanos
+	al origen para capturar pequeñas tendencias de deriva,
 \end{itemize}
 
-\subsubsection{Identificación experimental del sistema}
+se interpreta que dicho polo próximo a cero no representa una dinámica
+física real dominante, sino un posible efecto de sobreajuste
+(\textit{overfitting}) del procedimiento de identificación.
 
-Con el objetivo de obtener un modelo más representativo del comportamiento real de la planta, se recurrió a técnicas de identificación de sistemas utilizando la \textit{System Identification Toolbox} de MATLAB. A partir de datos experimentales de entrada--salida, se identificó un modelo discreto basado en estructuras polinomiales del tipo \textit{Box--Jenkins} / \textit{Polynomial Function}, seleccionadas por su capacidad para capturar dinámicas de mayor orden y retardos efectivos.
+En consecuencia, y en coherencia con el modelo físico que contempla
+amortiguamiento mecánico, se adopta la siguiente simplificación:
 
-Durante el proceso de identificación se aplicaron escalones de amplitud suficiente en la señal PWM, con el fin de excitar los modos dominantes del sistema. Para el procesamiento de los datos se seleccionaron intervalos de operación aproximadamente lineales, evitando regiones dominadas por saturaciones, fricción estática u otros efectos fuertemente no lineales. Asimismo, se aplicaron técnicas de filtrado para reducir la influencia del ruido de medición, sin alterar la dinámica dominante.
+\[
+G(s)=
+\frac{-0.12107\,(s-14)(s+10.62)}
+{s\,(s^2+5.61s+14.02)}
+\]
 
-\subsubsection{Función de transferencia identificada}
+En esta forma:
 
-El modelo discreto resultante, que recuerda la relación entre la entrada \(u_1\) y la salida \(y_1\), queda expresado en términos de potencias de \(z^{-1}\) como:
-
-\begin{equation}
-	\label{eq:Gz_identificada}
-	\scriptsize
-	\begin{aligned}
-		G(z) &= \frac{Y_1(z)}{U_1(z)} \\
-		&= \frac{-1.205\times 10^{-4}z^{-1}+2.415\times 10^{-4}z^{-2}-1.209\times 10^{-4}z^{-3}}
-		{1-2.994z^{-1}+2.989z^{-2}-0.9944z^{-3}}
-	\end{aligned}
-\end{equation}
-\normalsize
-
-
-Este modelo presenta un retardo de una muestra, evidenciado por el término dominante \(z^{-1}\) en el numerador, así como una dinámica de tercer orden en el denominador. La presencia de polos cercanos a \(z=1\) es consistente con el carácter integrador del sistema de altura, donde la posición resulta de la doble integración de la aceleración.
-
-El polo adicional identificado respecto del modelo físico ideal puede asociarse a la dinámica electromecánica del conjunto motor--ESC--hélice, mientras que los ceros del sistema no pudieron ser vinculados de manera concluyente a un único fenómeno físico. No obstante, su presencia resulta compatible con efectos aerodinámicos y con la dinámica interna del sistema de actuación.
+\begin{itemize}
+	\item El polo en el origen representa el carácter integrador dominante
+	de la posición vertical.
+	\item El segundo orden \(s^2+5.61s+14.02\) modela la dinámica
+	electromecánica del actuador.
+	\item Los ceros se interpretan como parámetros de ajuste que capturan
+	efectos agregados del actuador, discretización y linealización
+	alrededor del punto de operación.
+\end{itemize}
 
 \subsubsection{Validez del modelo}
 
-El modelo identificado constituye una aproximación válida del comportamiento del sistema en el rango de operación considerado y resulta adecuado para el diseño y la evaluación de las estrategias de control implementadas en este trabajo. Sin embargo, fuera de dicho rango, el sistema presenta comportamientos no lineales y efectos dependientes del punto de operación que no son capturados por el modelo lineal identificado.
+El modelo adoptado constituye una aproximación coherente con la física
+del sistema y adecuada para el diseño de control dentro del rango
+operativo \([1100,1700]\ \mu s\).
+
+Fuera de dicho intervalo, el sistema presenta comportamientos no lineales
+significativos (aerodinámica, fricción no lineal, saturaciones y posibles
+limitaciones térmicas del actuador) que no son capturados por el modelo
+lineal simplificado.
