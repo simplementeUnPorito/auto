@@ -169,3 +169,13 @@ title('Obs error'); xlabel('Re\{z\}'); ylabel('Im\{z\}');
 legend('A-LC (pred)','A-LCA (act)','Location','best');
 
 sgtitle('Ogata 6.19 — Solo integrador + predictor/actual');
+
+
+Aaug = [A,B;...
+        K2-K2*A-K1*C*A,1-K2*B-K1*C*B];
+Baug = [0;0;0;K1];
+Caug    = [C,0];
+D = 0;
+sysDaug = ss(Aaug,Baug,Caug,D,Ts);
+sysObs = ss((A-L_actual*C*A),B,C,D,Ts);
+figure;pzmap(sysDaug);grid on;zgrid;hold on;pzmap(sysObs);

@@ -4,7 +4,7 @@ clc; close all; clear;
 % Parámetros
 %% =========================
 titulo = 'LQR\_pred (u e y vs n)';
-DATA_MAT_PATH = 'D:\GitHub\auto\TPF-HelicopteroVertical\Matlab\Compensadores\LQR_pred_practico.mat';
+DATA_MAT_PATH = 'D:\GitHub\auto\TPF-HelicopteroVertical\Matlab\Compensadores\LQR_act_practico.mat';
 
 %% =========================
 % Carga
