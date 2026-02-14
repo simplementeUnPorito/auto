@@ -116,89 +116,36 @@ K = \textbf{[Completar]}
 \]
 
 
+\subsection{Ubicación Arbitraria de Polos}
+% ============================================================
+\input{ubiArbPolos.tex}
+
+\clearpage
+
+\subsection{Estimación de Estados}
+% ============================================================
+
+\input{Estimadores.tex}
+
+\clearpage
+
 % ============================================================
 \subsection{Control Óptimo (LQR)}
 % ============================================================
 
-Se define el funcional de costo:
+\input{ControlOptimo.tex}
 
-\[
-J=\sum_{k=0}^{\infty}(x_k^TQx_k+u_k^TRu_k)
-\]
-
-Matrices de ponderación:
-
-\[
-Q=\textbf{[Completar]}
-\]
-
-\[
-R=\textbf{[Completar]}
-\]
-
-La solución se obtiene resolviendo la ecuación de Riccati discreta:
-
-\[
-P=A^TPA - A^TPB(R+B^TPB)^{-1}B^TPA + Q
-\]
-
-Ganancia óptima:
-
-\[
-K=(R+B^TPB)^{-1}B^TPA
-\]
-
-Polos obtenidos:
-
-\[
-\lambda(A-BK)=\textbf{[Completar]}
-\]
-
-
-% ============================================================
-\subsection{Estimación de Estados}
+\clearpage
 % ============================================================
 
-Dado que no todos los estados son medibles, se implementa un observador:
-
-\[
-\hat{x}_{k+1}=A\hat{x}_k+Bu_k+L(y_k-C\hat{x}_k)
-\]
-
-Ganancia del observador:
-
-\[
-L = \textbf{[Completar]}
-\]
-
-Polos del observador:
-
-\[
-\lambda(A-LC)=\textbf{[Completar]}
-\]
-
-
 % ============================================================
-\subsection{Control Óptimo con Estimación (LQG)}
+\subsection{Control Óptimo con Integrador}
 % ============================================================
 
-Combinando LQR y estimador de estados se obtiene:
 
-\[
-u_k = -K\hat{x}_k
-\]
+\clearpage
 
-Ventajas:
-
-\begin{itemize}
-	\item Diseño sistemático.
-	\item Consideración explícita de estados internos.
-	\item Optimización del esfuerzo de control.
-\end{itemize}
-
-Limitaciones:
-
-\begin{itemize}
-	\item Dependencia del modelo.
-	\item Sensibilidad a incertidumbres no modeladas.
-\end{itemize}
+% ============================================================
+\subsection{Filtro de Kalman}
+% ============================================================
+\input{Kalman.tex}
