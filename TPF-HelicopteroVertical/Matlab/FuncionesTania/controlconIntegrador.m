@@ -18,7 +18,7 @@ else
     error('No encuentro "plantaC" ni "sysC" dentro de planta (1).mat');
 end
 
-Ts   = 1/50;                 % <-- ajustá si querés
+Ts   = 1/100;                 % <-- ajustá si querés
 sysD = c2d(plantaC, Ts, 'zoh');
 [A,B,C,D] = ssdata(ss(sysD));
 
@@ -38,7 +38,8 @@ fprintf('Ts=%.9f | n=%d\n', Ts, n);
 % 2) POLOS DESEADOS (FIJOS)
 %% =========================
 p_ctrl = [0.95 + 0.15i, 0.95 - 0.15i, 0.98];   % control
-p_obs  = [0.4  + 0.25i, 0.4  - 0.25i, 0.6 ];   % observador
+p_obs  = [0.8 + 0.25i, 0.8 - 0.25i, 0.9];
+%p_obs  = [0.4  + 0.25i, 0.4  - 0.25i, 0.6 ];   % observador
 p_i    = 0.96;                                 % polo integrador
 
 %% =========================
@@ -82,7 +83,7 @@ t  = 0:Ts:(N-1)*Ts;
 r = ones(1,N)*25;
 r(1:30) = 0;
 
-% ruido en medición (igual que tu estilo)
+% ruido en medicsión (igual que tu estilo)
 w = [zeros(1,75), 0.01*ones(1,N-75)];
 
 % ----- PREDICTIVO CON integrador -----

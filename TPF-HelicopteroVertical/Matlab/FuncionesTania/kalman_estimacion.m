@@ -1,79 +1,24 @@
+%% ============================================================
+% Tuning de Q = q*I para Kalman (dlqe) con R FIJO (sigma_v ~ 2..3 cm)
+% usando datos reales (dato1,dato2) desde iddata.
+%
+% - Planta: BJ continuo en planta (1).mat  -> G = B/F
+% - Datos : datos.mat con dato1,dato2 (iddata) con y en cm, u en du_us
+% - Ts_target: 0.01 s (decimación exacta si Ts original es divisor)
+%
+% Objetivo: var(eta) ~ 1 donde eta = nu / sqrt(S), S = C P C' + R
+% (criterio consistente para elegir q cuando el modelo no es perfecto)
+%% ============================================================
 close all; clear; clc
-
-%% ============================================================
-% Estimar R desde Excel (sensor vs real) y estimar Q (qI) usando iddata
-% SIN resample() (decimación exacta cuando Ts_target/Ts es entero)
-%
-% Archivos:
-%  - planta (1).mat  -> plantaC o sysC (BJ continuo)
-%  - Excel:
-%      D:\GitHub\auto\TPF-HelicopteroVertical\sensorMedicionesPostCalibracion.xlsx
-%      col1 = Medida Sensor (cm)
-%      col2 = Medida Real (cm)
-%  - datos.mat:
-%      D:\GitHub\auto\TPF-HelicopteroVertical\Matlab\PruebasEmpiricas\datos.mat
-%      contiene dato1,dato2,dato3 (iddata)
-%
-% Salidas:
-%  - R (cm^2) desde error sensor-real (sin sesgo)
-%  - q_best por dataset y q_global (mediana)
-%  - L_kalman final con Q=q_global*I
-%% ============================================================
 
 %% ===== rutas =====
 mat_planta = 'planta (1).mat';
-xlsx_path  = 'D:\GitHub\auto\TPF-HelicopteroVertical\sensorMedicionesPostCalibracion.xlsx';
 mat_datos  = 'D:\GitHub\auto\TPF-HelicopteroVertical\Matlab\PruebasEmpiricas\datos.mat';
 
-%% ===== Ts objetivo =====
-Ts_target = 1/200;  % 0.005 s
-Fs_target = 1/Ts_target;
-
-fprintf('Ts_target = %.9f s\n', Ts_target);
-fprintf('Excel     = %s\n', xlsx_path);
-fprintf('Datos     = %s\n', mat_datos);
-fprintf('Planta    = %s\n\n', mat_planta);
+Ts_target = 0.01;                 % 100 Hz
 
 %% ============================================================
-% 1) Estimar R desde Excel (sensor vs real)
-%% ============================================================
-T = readtable(xlsx_path);
-
-if width(T) < 2
-    error('El Excel debe tener al menos 2 columnas (Sensor, Real).');
-end
-
-y_sensor = T{:,1};
-y_real   = T{:,2};
-
-mask = isfinite(y_sensor) & isfinite(y_real);
-y_sensor = y_sensor(mask);
-y_real   = y_real(mask);
-
-if numel(y_sensor) < 20
-    error('Muy pocos datos válidos en el Excel luego de filtrar NaNs.');
-end
-
-e    = y_sensor - y_real;     % error total
-bias = mean(e);
-e0   = e - bias;              % error sin sesgo
-R    = var(e0, 1);            % var poblacional (1/N)
-sigmaR = sqrt(R);
-
-fprintf('==== R desde Excel ====\n');
-fprintf('N_excel = %d\n', numel(e0));
-fprintf('bias = mean(sensor-real) = %.6g cm\n', bias);
-fprintf('R = var(e-bias) = %.6g cm^2\n', R);
-fprintf('sigma_R = %.6g cm\n\n', sigmaR);
-
-figure('Name','Excel: error sensor-real','NumberTitle','off');
-subplot(2,1,1); plot(e,'LineWidth',1.0); grid on; grid minor;
-ylabel('e (cm)'); title('Error crudo: sensor - real');
-subplot(2,1,2); histogram(e0,40); grid on; grid minor;
-xlabel('e0 (cm)'); title('Error sin sesgo (para R)');
-
-%% ============================================================
-% 2) Cargar BJ y construir planta determinista G=B/F discretizada
+% 1) CARGAR PLANTA Y DISCRETIZAR
 %% ============================================================
 S = load(mat_planta);
 
@@ -82,214 +27,168 @@ if isfield(S,'plantaC')
 elseif isfield(S,'sysC')
     plantaC = S.sysC;
 else
-    error('No encuentro "plantaC" ni "sysC" dentro de planta (1).mat');
+    error('No encuentro "plantaC" ni "sysC" dentro de %s', mat_planta);
 end
 
-G  = tf(plantaC.B, plantaC.F);              % planta determinista
-Gd = c2d(ss(G), Ts_target, 'zoh');          % a Ts_target
+% Planta determinista desde BJ: G = B/F
+G  = tf(plantaC.B, plantaC.F);
+Gd = c2d(ss(G), Ts_target, 'zoh');
 [A,B,C,D] = ssdata(Gd);
-n = size(A,1);
 
-fprintf('==== Planta determinista G=B/F discretizada ====\n');
-fprintf('orden n = %d\n\n', n);
+n = size(A,1);
+if size(B,2) ~= 1
+    error('SISO requerido. size(B,2)=%d', size(B,2));
+end
+if size(C,1) ~= 1
+    C = C(1,:);
+    D = D(1,:);
+end
+if isempty(D), D = 0; end
+D = double(D);
+
+fprintf('Planta discretizada: n=%d, Ts_target=%.6g\n', n, Ts_target);
 
 %% ============================================================
-% 3) Cargar iddata dato1,dato2,dato3 y llevar a Ts_target SIN resample()
+% 2) CARGAR DATOS (iddata) Y ARMAR u,y (concatenados)
 %% ============================================================
 DD = load(mat_datos);
-names = {'dato1','dato2','dato3'};
-datos = cell(1,3);
+use_names = {'dato1','dato2'};
 
-for i=1:3
-    if ~isfield(DD, names{i})
-        error('No encuentro %s en %s', names{i}, mat_datos);
+u_all = [];
+y_all = [];
+
+for i=1:numel(use_names)
+    nm = use_names{i};
+    if ~isfield(DD,nm)
+        error('No existe %s en %s', nm, mat_datos);
     end
-    datos{i} = DD.(names{i});
-    if ~isa(datos{i}, 'iddata')
-        error('%s no es iddata.', names{i});
+
+    zi = DD.(nm);
+    if ~isa(zi,'iddata')
+        error('%s no es iddata.', nm);
     end
-end
 
-U = cell(1,3);
-Y = cell(1,3);
-
-for i=1:3
-    di = datos{i};
-
-    Ts_i = di.Ts;
+    Ts_i = zi.Ts;
     if isempty(Ts_i) || Ts_i <= 0
-        error('%s: iddata no tiene Ts válido.', names{i});
+        error('%s: iddata sin Ts válido.', nm);
     end
 
-    % Extraer señales crudas (double columnas)
-    yraw = di.OutputData(:);
-    uraw = di.InputData(:);
+    % señales crudas
+    yraw = zi.OutputData(:);
+    uraw = zi.InputData(:);
 
-    % limpiar NaNs/infs
-    m = isfinite(yraw) & isfinite(uraw);
+    % limpiar NaN/Inf (sin isfinite por compat)
+    m = ~isnan(yraw) & ~isinf(yraw) & ~isnan(uraw) & ~isinf(uraw);
     yraw = yraw(m);
     uraw = uraw(m);
 
-    if abs(Ts_i - Ts_target) < 1e-12
-        % ya está
-        yds = yraw;
-        uds = uraw;
-        fprintf('%s: Ts ya es Ts_target (%.9g)\n', names{i}, Ts_i);
-
-    else
-        ratio = Ts_target / Ts_i;  % ej: 0.005 / 0.001 = 5
+    % decimación exacta a Ts_target
+    if abs(Ts_i - Ts_target) > 1e-12
+        ratio = Ts_target / Ts_i;
         if abs(ratio - round(ratio)) > 1e-12
-            error('%s: Ts_target/Ts_i no es entero. Ts_i=%.9g Ts_target=%.9g', names{i}, Ts_i, Ts_target);
+            error('%s: Ts_target/Ts_i no entero. Ts_i=%.17g Ts_target=%.17g', nm, Ts_i, Ts_target);
         end
         M = round(ratio);
-        fprintf('%s: decimación exacta M=%d (Ts %.9g -> %.9g)\n', names{i}, M, Ts_i, Ts_target);
-
-        Fs_i = 1/Ts_i;
-
-        % --- anti-alias: lowpass antes de decimar ---
-        % banda útil de tu planta ~2 Hz, elegimos 20 Hz sobrado
-        fc = 20;  % Hz
-        y_f = apply_lowpass(yraw, Fs_i, fc);
-        u_f = apply_lowpass(uraw, Fs_i, fc);
-
-        % decimar: tomar 1 cada M
-        yds = y_f(1:M:end);
-        uds = u_f(1:M:end);
+        fprintf('%s: decimación M=%d (Ts %.17g -> %.17g)\n', nm, M, Ts_i, Ts_target);
+        yraw = yraw(1:M:end);
+        uraw = uraw(1:M:end);
+    else
+        fprintf('%s: Ts ya coincide (%.17g)\n', nm, Ts_i);
     end
 
-    % quitar media de y para evitar offset en innovación
-    yds = yds - mean(yds);
+    % (opcional) detrend: sacá media para no pelear con offsets
+    yraw = yraw - mean(yraw);
+    uraw = uraw - mean(uraw);
 
-    U{i} = uds(:);
-    Y{i} = yds(:);
+    fprintf('%s: N=%d\n', nm, numel(yraw));
 
-    fprintf('%s: N=%d\n', names{i}, numel(yds));
+    % concatenar
+    y_all = [y_all; yraw(:)]; %#ok<AGROW>
+    u_all = [u_all; uraw(:)]; %#ok<AGROW>
 end
 
-fprintf('\n');
+y = y_all;
+u = u_all;
+
+fprintf('TOTAL: N=%d muestras\n', numel(y));
 
 %% ============================================================
-% 4) Estimar Q=qI con cada dataset (tuning por innovación)
+% 3) FIJAR R (ruido de medición) y TUNEAR q en Q=q*I
 %% ============================================================
-q_grid = logspace(-14, -2, 80);
-maxLag = 30;
+sigma_v = 2.043227851;     % cm  (poné 2..3 según tu medición)
+R = sigma_v^2;
 
-q_best = zeros(1,3);
-score_best = zeros(1,3);
+q_grid = logspace(-12, 2, 120);
 
-for i=1:3
-    u = U{i}; y = Y{i};
+best_q = NaN; best_err = Inf;
+stats_q = zeros(numel(q_grid),1);
+stats_var_eta = zeros(numel(q_grid),1);
+stats_var_nu  = zeros(numel(q_grid),1);
 
-    acfs  = zeros(size(q_grid));
-    varn  = zeros(size(q_grid));
-    score = zeros(size(q_grid));
+for i=1:numel(q_grid)
+    q = q_grid(i);
+    Q = q*eye(n);
 
-    for k=1:numel(q_grid)
-        q = q_grid(k);
-        Q = q*eye(n);
+    % Kalman (w entra a estados)
+    Gk = eye(n);
+    [L,P,~] = dlqe(A,Gk,C,Q,R);
 
-        nu = innovation_kalman(A,B,C,D,u,y,Q,R);
-
-        nu = nu - mean(nu);
-        varn(k) = var(nu, 1);
-
-        acf = xcorr(nu, maxLag, 'coeff');
-        mid = maxLag+1;
-        acfs(k) = sum(acf([1:mid-1 mid+1:end]).^2); % blancura
-
-        % score: primariamente blancura; penalización suave por var gigantes
-        score(k) = acfs(k) + 0.05*(log10(varn(k)+1e-30))^2;
-    end
-
-    [score_best(i), ix] = min(score);
-    q_best(i) = q_grid(ix);
-
-    fprintf('==== %s ====\n', names{i});
-    fprintf('q_best = %.3e\n', q_best(i));
-    fprintf('score  = %.6g\n', score_best(i));
-
-    figure('Name',sprintf('%s: tuning Q', names{i}), 'NumberTitle','off');
-    subplot(3,1,1);
-    semilogx(q_grid, acfs, 'LineWidth',1.1); grid on; grid minor;
-    ylabel('ACF sum'); title('Blancura innovación (menor=mejor)');
-
-    subplot(3,1,2);
-    semilogx(q_grid, varn, 'LineWidth',1.1); grid on; grid minor;
-    ylabel('Var(\nu)'); title('Varianza de innovación');
-
-    subplot(3,1,3);
-    semilogx(q_grid, score, 'LineWidth',1.1); grid on; grid minor;
-    xlabel('q'); ylabel('score'); title('Score combinado');
-end
-
-q_global = median(q_best);
-Q_global = q_global*eye(n);
-
-fprintf('\n==== RESULTADO GLOBAL ====\n');
-fprintf('q_best: [%.3e  %.3e  %.3e]\n', q_best(1), q_best(2), q_best(3));
-fprintf('q_global (mediana) = %.3e\n', q_global);
-
-%% ============================================================
-% 5) Ganancia Kalman final L (para estimar estados)
-%% ============================================================
-Gk = eye(n);  % ruido de proceso en estados
-[L, P, ~] = dlqe(A, Gk, C, Q_global, R);
-
-fprintf('\n==== Kalman final (planta sola) ====\n');
-fprintf('R = %.6g (sigma=%.4g cm)\n', R, sqrt(R));
-fprintf('Q_global = qI, q=%.3e\n', q_global);
-fprintf('L size %dx%d:\n', size(L,1), size(L,2));
-disp(L);
-
-save('RQ_estimados.mat', 'R','sigmaR','bias','q_best','q_global','Q_global','L','P','Ts_target');
-disp('Guardado: RQ_estimados.mat');
-
-%% ============================================================
-% === Función: innovación nu[k] = y[k] - ypred[k|k-1]
-%% ============================================================
-function nu = innovation_kalman(A,B,C,D,u,y,Q,R)
-    n = size(A,1);
-    N = numel(y);
-
-    G = eye(n);
-    [L,~,~] = dlqe(A, G, C, Q, R);
+    % Sinnov estacionario
+    Sinnov = C*P*C' + R;
+    if Sinnov < 1e-12, Sinnov = 1e-12; end
 
     xhat = zeros(n,1);
-    nu   = zeros(N,1);
+    nu   = zeros(numel(y),1);
 
-    for k=1:N
+    for k=1:numel(y)
         ypred = C*xhat + D*u(k);
         nu(k) = y(k) - ypred;
 
-        xhat = xhat + L*nu(k);      % update
-        xhat = A*xhat + B*u(k);     % predict
+        % delayed estimator estilo firmware
+        xhat = xhat + L*nu(k);
+        xhat = A*xhat + B*u(k);
+    end
+
+    eta = nu / sqrt(Sinnov);
+
+    var_eta = var(eta,1);
+    var_nu  = var(nu,1);
+
+    stats_q(i) = q;
+    stats_var_eta(i) = var_eta;
+    stats_var_nu(i)  = var_nu;
+
+    err = abs(log(var_eta));   % objetivo var_eta ~ 1
+    if err < best_err
+        best_err = err;
+        best_q = q;
+        best_L = L;
+        best_P = P;
+        best_S = Sinnov;
     end
 end
 
+fprintf('\n=== Resultado tuning Q con R fijo ===\n');
+fprintf('sigma_v = %.3f cm => R=%.3f cm^2\n', sigma_v, R);
+fprintf('q_best  = %.3e\n', best_q);
+fprintf('Sinnov  = %.3f  => sigma_pred_innov = %.3f cm\n', best_S, sqrt(best_S));
+fprintf('L_best  =\n'); disp(best_L);
+
 %% ============================================================
-% === Filtro lowpass con fallback si no existe lowpass()
+% 4) PLOTS
 %% ============================================================
-function xf = apply_lowpass(x, Fs, fc)
-    x = double(x(:));
+figure('Name','Tuning Q: var(eta)'); 
+semilogx(stats_q, stats_var_eta,'LineWidth',1.2); grid on; grid minor;
+xlabel('q'); ylabel('var(\eta)'); title('Objetivo: var(\eta) \approx 1');
 
-    % si existe lowpass() (Signal Processing Toolbox)
-    if exist('lowpass','file') == 2
-        xf = lowpass(x, fc, Fs);
-        return;
-    end
+figure('Name','Tuning Q: sigma(nu)'); 
+semilogx(stats_q, sqrt(stats_var_nu),'LineWidth',1.2); grid on; grid minor;
+xlabel('q'); ylabel('sigma(\nu) [cm]'); title('Innovación (predicción) vs q');
 
-    % fallback FIR simple (Hamming) si no existe lowpass
-    % Diseñamos un FIR con fc y aplicamos filtfilt para fase cero
-    if exist('fir1','file') == 2 && exist('filtfilt','file') == 2
-        Wn = fc/(Fs/2);
-        Wn = min(max(Wn, 1e-6), 0.99);
-        Nf = 101; % orden FIR
-        b = fir1(Nf, Wn, hamming(Nf+1));
-        xf = filtfilt(b, 1, x);
-        return;
-    end
-
-    % último fallback: sin filtro (te aviso)
-    warning('No tengo lowpass/fir1/filtfilt. Decimo sin anti-alias.');
-    xf = x;
-end
+%% ============================================================
+% 5) Guardar
+%% ============================================================
+Q_best = best_q*eye(n);
+L_best = best_L;
+save('RQ_tuning_fixedR.mat','sigma_v','R','best_q','Q_best','L_best','best_P','best_S','A','B','C','D','Ts_target');
+disp('Guardado: RQ_tuning_fixedR.mat');

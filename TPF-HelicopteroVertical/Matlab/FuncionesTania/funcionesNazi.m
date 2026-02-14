@@ -12,7 +12,7 @@ elseif isfield(S,'sysC')
 else
     error('No encuentro "plantaC" ni "sysC" dentro de planta (1).mat');
 end
-Ts   = 1/50;                 % <-- ajustá si querés
+Ts   = 1/100;                 % <-- ajustá si querés
 sysD = c2d(plantaC, Ts, 'zoh');
 [A,B,C,D] = ssdata(ss(sysD));
 n = size(A,1);
@@ -23,7 +23,7 @@ fprintf('Ts=%.9f | n=%d\n', Ts, n);
 % 2) POLOS DESEADOS (AJUSTE AUTOMÁTICO A n)
 %% =========================
 p_ctrl = [0.95 + 0.15i, 0.95 - 0.15i,0.95];
-p_obs  = [0.4  + 0.25i,  0.4  - 0.25i,0.6];
+p_obs  = [0.8 + 0.25i, 0.8 - 0.25i, 0.9];
 
 %% =========================
 % 3) GANANCIAS CON place + prec
