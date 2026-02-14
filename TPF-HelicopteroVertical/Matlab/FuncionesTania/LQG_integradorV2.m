@@ -184,8 +184,13 @@ D = 0;
 sysDaug = ss(Aaug,Baug,Caug,D,Ts);
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 sysObs = ss((A-Lk*C*A),B,C,D,Ts);
 figure;pzmap(sysDaug);grid on;zgrid;hold on;pzmap(sysObs);
+=======
+
+figure;pzmap(sysDaug);grid on;zgrid;hold on;pzmap()
+>>>>>>> Stashed changes
 =======
 
 figure;pzmap(sysDaug);grid on;zgrid;hold on;pzmap()
