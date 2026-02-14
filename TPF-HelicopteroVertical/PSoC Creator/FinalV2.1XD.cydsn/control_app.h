@@ -50,7 +50,7 @@
     #define CONTROL_CL_REF_MIN (12.0f)   /* cm */
 #endif
 #ifndef CONTROL_CL_REF_MAX
-    #define CONTROL_CL_REF_MAX (120.0f)  /* cm */
+    #define CONTROL_CL_REF_MAX (300.0f)  /* cm */
 #endif
 
 
