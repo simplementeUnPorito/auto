@@ -4,8 +4,13 @@ clc; close all; clear;
 % Parámetros
 %% =========================
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 titulo = 'SSi (u e y vs n)';
 DATA_MAT_PATH = 'D:\GitHub\auto\TPF-HelicopteroVertical\Matlab\Compensadores\SSi_practico.mat';
+=======
+titulo = 'LQR\_pred (u e y vs n)';
+DATA_MAT_PATH = 'D:\GitHub\auto\TPF-HelicopteroVertical\Matlab\Compensadores\LQR_pred_practico.mat';
+>>>>>>> Stashed changes
 =======
 titulo = 'LQR\_pred (u e y vs n)';
 DATA_MAT_PATH = 'D:\GitHub\auto\TPF-HelicopteroVertical\Matlab\Compensadores\LQR_pred_practico.mat';
