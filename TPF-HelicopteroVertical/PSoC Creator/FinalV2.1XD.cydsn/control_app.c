@@ -802,28 +802,20 @@ switch (UARTP_Impl)
     } break;
 
     case UARTP_IMPL_TF:
-    {
-        /* Anti-windup “freeze” para TF:
-           si el controlador (DF2T) satura y el error empuja hacia afuera,
-           revertimos el estado interno (tf_w) de este step. */
-        float e = r_rel - y_rel;
+{
+    /* Error en relativo (cm) */
+    const float e = (r_rel - y_rel);
 
-        float tf_w_bak[CONTROL_TF_MAX_ORDER];
-        memcpy(tf_w_bak, tf_w, sizeof(tf_w));
+    /* TF devuelve comando relativo Δu (us) */
+    float u_unsat = tf_step(e);
 
-        float u_unsat = tf_step(e);
-        uint8 sat_hi  = (u_unsat > umax_cmd);
-        uint8 sat_lo  = (u_unsat < umin_cmd);
-        float u_cmd   = satf(u_unsat, umin_cmd, umax_cmd);
+    /* Saturación en Δu (dinámica por u0) */
+    float u_cmd = satf(u_unsat, umin_cmd, umax_cmd);
 
-        /* freeze si satura y e empuja hacia la misma saturación */
-        if ( (sat_hi && (e > 0.0f)) || (sat_lo && (e < 0.0f)) )
-        {
-            memcpy(tf_w, tf_w_bak, sizeof(tf_w));
-        }
+    /* write_u espera Δu */
+    write_u(u_cmd);
+} break;
 
-        write_u(u_cmd);
-    } break;
 
 case UARTP_IMPL_SS_PRED_NOI:
 case UARTP_IMPL_SS_PRED_I:
