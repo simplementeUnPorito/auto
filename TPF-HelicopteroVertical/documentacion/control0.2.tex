@@ -28,36 +28,47 @@ Este formalismo permite:
 
 
 % ============================================================
-\subsection{Modelo en Espacio de Estados}
+\subsubsection{Modelo en Espacio de Estados}
 % ============================================================
 
 El modelo discreto obtenido a partir de la identificación es:
 
 \[
-A = \textbf{[Completar]}
+A = \begin{bmatrix}
+	0.9944 & -0.0035 & -0.0000 \\
+	0.0040 & 1.0000  & -0.0000 \\
+	0.0000 & 0.0000  & 1.0000
+\end{bmatrix}
 \]
 
 \[
-B = \textbf{[Completar]}
+B = 
+\begin{bmatrix}
+	0.0160 \\
+	0.0000 \\
+	0.0000
+\end{bmatrix}
 \]
 
 \[
-C = \textbf{[Completar]}
+C = 
+\begin{bmatrix}
+	-0.0076 & 0.0064 & 8.9975
+\end{bmatrix}
 \]
 
 \[
-D = \textbf{[Completar]}
+D = 
+\begin{bmatrix}
+	0
+\end{bmatrix}
 \]
 
 Tiempo de muestreo:
-
-\[
-T_s = \textbf{[Completar]}
-\]
-
+\[T_s = \frac{1}{1000}\]
 
 % ============================================================
-\subsection{Análisis de Controlabilidad y Observabilidad}
+\subsubsection{Análisis de Controlabilidad y Observabilidad}
 % ============================================================
 
 Matriz de controlabilidad:
@@ -67,7 +78,7 @@ Matriz de controlabilidad:
 \]
 
 \[
-\text{rank}(\mathcal{C}) = \textbf{[Completar]}
+\text{rank}(\mathcal{C}) = \textbf{[3]}
 \]
 
 Matriz de observabilidad:
@@ -79,42 +90,30 @@ Matriz de observabilidad:
 \]
 
 \[
-\text{rank}(\mathcal{O}) = \textbf{[Completar]}
+\text{rank}(\mathcal{O}) = \textbf{[3]}
 \]
 
 Conclusión estructural:
 
-\textbf{[Completar: sistema controlable/observable]}
+Dado que el rango de ambas matrices coincide con el orden del sistema,
+se concluye que el modelo es completamente controlable y completamente
+observable.
 
-
-% ============================================================
-\subsection{Realimentación de Estados}
-% ============================================================
-
-Se plantea la ley de control:
-
-\[
-u_k = -Kx_k
-\]
-
-Los polos del sistema en lazo cerrado quedan dados por:
-
-\[
-\lambda(A-BK)
-\]
-
-Objetivo:
+Desde el punto de vista físico, esto implica que:
 
 \begin{itemize}
-	\item Ubicación deseada de polos: \textbf{[Completar]}
+	\item Existe una combinación adecuada de la señal de entrada que
+	permite influenciar todos los estados internos del sistema.
+	\item La salida medida contiene información suficiente para reconstruir
+	completamente el vector de estados mediante un observador.
 \end{itemize}
 
-Ganancia obtenida:
+En consecuencia, el modelo identificado resulta estructuralmente apto
+para el diseño de control por realimentación de estados, ubicación de polos,
+LQR y estimación de estados mediante observador de Luenberger o filtro
+de Kalman.
 
-\[
-K = \textbf{[Completar]}
-\]
-
+% ============================================================
 
 \subsection{Ubicación Arbitraria de Polos}
 % ============================================================
