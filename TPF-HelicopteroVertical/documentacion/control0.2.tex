@@ -4,6 +4,42 @@
 A diferencia de los métodos clásicos basados en funciones de transferencia
 y análisis en frecuencia, los métodos modernos de control se fundamentan
 en la representación en espacio de estados del sistema dinámico.
+\subsubsection{Modelo en espacio de estados continuo}
+
+Las matrices del modelo continuo en representación
+estado–espacio son:
+
+\[
+F =
+\begin{bmatrix}
+	-5.6102 & -3.5055 & -0.0314 \\
+	4.0000  & 0       & 0       \\
+	0       & 0.0312  & 0
+\end{bmatrix}
+\]
+
+\[
+G =
+\begin{bmatrix}
+	16 \\
+	0 \\
+	0
+\end{bmatrix}
+\]
+
+\[
+H =
+\begin{bmatrix}
+	-0.0076 & 0.0064 & 8.9975
+\end{bmatrix}
+\]
+
+\[
+J =
+\begin{bmatrix}
+	0
+\end{bmatrix}
+\]
 
 En este enfoque, la dinámica se describe mediante:
 
@@ -31,41 +67,20 @@ Este formalismo permite:
 \subsubsection{Modelo en Espacio de Estados}
 % ============================================================
 
-El modelo discreto obtenido a partir de la identificación es:
-
+El modelo discreto obtenido:
 \[
-A = \begin{bmatrix}
-	0.9944 & -0.0035 & -0.0000 \\
-	0.0040 & 1.0000  & -0.0000 \\
-	0.0000 & 0.0000  & 1.0000
-\end{bmatrix}
+A = e^{F T_s}, 
+\qquad
+B = F^{-1}\!\left(e^{F T_s} - I\right) G,
+\qquad
+C = H,
+\]
+\[
+D = J
 \]
 
-\[
-B = 
-\begin{bmatrix}
-	0.0160 \\
-	0.0000 \\
-	0.0000
-\end{bmatrix}
-\]
 
-\[
-C = 
-\begin{bmatrix}
-	-0.0076 & 0.0064 & 8.9975
-\end{bmatrix}
-\]
-
-\[
-D = 
-\begin{bmatrix}
-	0
-\end{bmatrix}
-\]
-
-Tiempo de muestreo:
-\[T_s = \frac{1}{1000}\]
+Tiempo de muestreo depende de la práctica
 
 % ============================================================
 \subsubsection{Análisis de Controlabilidad y Observabilidad}
@@ -74,7 +89,7 @@ Tiempo de muestreo:
 Matriz de controlabilidad:
 
 \[
-\mathcal{C}=[B\ AB\ A^2B\ \dots A^{n-1}B]
+\mathcal{C}=[G\ FG\ F^2G\ \dots F^{n-1}G]
 \]
 
 \[
@@ -85,7 +100,7 @@ Matriz de observabilidad:
 
 \[
 \mathcal{O}=\begin{bmatrix}
-	C \\ CA \\ CA^2 \\ \vdots \\ CA^{n-1}
+	H \\ HF \\ HF^2 \\ \vdots \\ HF^{n-1}
 \end{bmatrix}
 \]
 
@@ -110,8 +125,15 @@ Desde el punto de vista físico, esto implica que:
 
 En consecuencia, el modelo identificado resulta estructuralmente apto
 para el diseño de control por realimentación de estados, ubicación de polos,
-LQR y estimación de estados mediante observador de Luenberger o filtro
-de Kalman.
+LQR y estimación de estados mediante observador de Luenberger o filtro de Kalman.
+
+No obstante, la validez práctica de dicha síntesis en tiempo discreto
+depende de que el tiempo de muestreo \(T_s\) sea suficientemente pequeño
+para capturar la dinámica relevante del sistema, evitando aliasing.
+En particular, se asume que las componentes significativas de la señal de
+salida y de las perturbaciones se encuentran por debajo de la frecuencia de
+Nyquist \(f_N = \tfrac{1}{2T_s}\), y que el acondicionamiento analógico
+(filtrado anti-alias) es consistente con esta hipótesis.
 
 % ============================================================
 
