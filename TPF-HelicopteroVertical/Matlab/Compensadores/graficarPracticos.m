@@ -3,8 +3,8 @@ clc; close all; clear;
 %% =========================
 % Parámetros
 %% =========================
-titulo = 'LQR\_pred (u e y vs n)';
-DATA_MAT_PATH = 'D:\GitHub\auto\TPF-HelicopteroVertical\Matlab\Compensadores\LQR_pred_practico.mat';
+titulo = 'BODE (u e y vs n)';
+DATA_MAT_PATH = 'BODE_practico.mat';
 
 %% =========================
 % Carga
