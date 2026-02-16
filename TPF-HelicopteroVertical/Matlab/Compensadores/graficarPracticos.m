@@ -3,8 +3,8 @@ clc; close all; clear;
 %% =========================
 % Parámetros
 %% =========================
-titulo = 'Ubicacion Arbitraria de Polos (u e y vs n)';
-DATA_MAT_PATH = ['SS_actual_practico.mat'];
+titulo = 'Ubicacion Arbitraria de Polos con integrador Predictivo (u e y vs n)';
+DATA_MAT_PATH = ['SSi_pred_practico.mat'];
 
 %% =========================
 % Carga
