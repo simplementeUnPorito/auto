@@ -3,8 +3,8 @@ clc; close all; clear;
 %% =========================
 % Parámetros
 %% =========================
-titulo = 'Lugar de Raíces (u e y vs n)';
-DATA_MAT_PATH = ['rlocus_practico_2.mat'];
+titulo = 'PID (u e y vs n)';
+DATA_MAT_PATH = ['PID_practico.mat'];
 
 %% =========================
 % Carga

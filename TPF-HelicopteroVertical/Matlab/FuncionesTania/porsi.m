@@ -1,40 +1,30 @@
-close all; clear; clc
+close all
+clear all
+clc
+load("D:\auto\TPF-HelicopteroVertical\Matlab\modeloSimplificado (1).mat");
 
-%% ===== 1) Cargar planta continua desde .mat =====
-S = load('D:\auto\TPF-HelicopteroVertical\Matlab\planta (1).mat');
 
-if isfield(S,'plantaC')
-    plantaC = S.plantaC;      % <- tu variable típica
-elseif isfield(S,'sysC')
-    plantaC = S.sysC;
-else
-    error('No encuentro "plantaC" ni "sysC" en el .mat');
-end
-
-%% ===== 2) A,B,C,D CONTINUO =====
-sysC = ss(plantaC);           % asegura forma espacio de estados
-[Ac,Bc,Cc,Dc] = ssdata(sysC);
-
-disp('=== CONTINUO ===');
-disp('Ac ='); disp(Ac);
-disp('Bc ='); disp(Bc);
-disp('Cc ='); disp(Cc);
-disp('Dc ='); disp(Dc);
-
-%% ===== 3) A,B,C,D DISCRETO (Ts = 1 ms) =====
 Ts = 1/1000;
-sysD = c2d(sysC, Ts, 'zoh');  % ZOH recomendado para planta con hold
+sysD = c2d(sysC,Ts,'zoh');
+%% PID
+% Kp = 2.5;Ti = 5;Td = 0.1; N = 3;
+% numCA = Kp*[Ti*Td, (Ti + Td/N), 1]; % Ojo con la forma exacta de tu numCA
+% denCA = [Ti*Td/N, Ti, 0];
+% controlador_Ams = tf(numCA, denCA);
+% C = c2d(controlador_Ams,Ts,'tustin');
 
-[Ad,Bd,Cd,Dd] = ssdata(sysD);
+%% Lugar de raices
 
-disp('=== DISCRETO (ZOH) ===');
-fprintf('Ts = %.9f s\n', Ts);
-disp('Ad ='); disp(Ad);
-disp('Bd ='); disp(Bd);
-disp('Cd ='); disp(Cd);
-disp('Dd ='); disp(Dd);
+C = tf(-0.017346322429932.*conv([1,-1.014028439216919],[1,-0.5]),conv([1,-0.952242280789835],[1,-0.989400000000000]),Ts);
+%% Graficos
+C
+zpk(C)
+figure;bode(C*sysD); grid on;grid minor;
+figure;rlocus(C*sysD); zgrid;
+figure;step(feedback(C*sysD,1));grid on; grid minor;
+figure;step(feedback(C,sysD));grid on;grid minor;
 
-%% ===== 4) (Opcional) Exportar a .mat para usar después =====
-save('ABCD_cont_y_disc.mat','Ac','Bc','Cc','Dc','Ad','Bd','Cd','Dd','Ts');
+
+
 
 

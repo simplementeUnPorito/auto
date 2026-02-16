@@ -1,43 +1,30 @@
 close all; clear; clc
 
-DATA_MAT_PATH = 'D:\auto\TPF-HelicopteroVertical\Matlab\Compensadores\rlocus_teorico.mat';
+DATA_MAT_PATH = 'D:\auto\TPF-HelicopteroVertical\Matlab\Compensadores\PID_teorico.mat';
 S = load(DATA_MAT_PATH);
 
-% Elegí qué planta usar (prioridad: sysD > plantaD > plantaC > planta)
-if isfield(S,'sysD')
-    P = S.sysD;
-elseif isfield(S,'plantaD')
-    P = S.plantaD;
-elseif isfield(S,'plantaC')
-    P = S.plantaC;
-elseif isfield(S,'planta')
-    P = S.planta;
+u = S.u(:);
+y = S.y(:);
+
+N = min(numel(u), numel(y));
+u = u(1:N); y = y(1:N);
+
+if isfield(S,'x')
+    x = S.x(:);
+    if numel(x) ~= N, x = (1:N).'; end
+    xlab = 'x';
+elseif isfield(S,'n')
+    x = S.n(:);
+    if numel(x) ~= N, x = (1:N).'; end
+    xlab = 'n [muestras]';
 else
-    error('No encuentro sysD/plantaD/plantaC/planta en el .mat');
+    x = (1:N).';
+    xlab = 'n [muestras]';
 end
 
-fprintf('Planta elegida: %s | Ts = %g\n', class(P), getfield(P,'Ts',{1}));
+if isfield(S,'xlab'), xlab = S.xlab; end
+if isfield(S,'titulo'), titulo = S.titulo; else, titulo = 'PID (log)'; end
 
-% Si es idpoly/idss lo convierto a tf/ss para graficar bien
-try
-    Ptf = tf(P);
-catch
-    Ptf = ss(P);
-end
-
-figure; pzmap(Ptf); grid on; title('Polos y ceros de la planta');
-
-figure; bode(Ptf); grid on; title('Bode de la planta');
-
-figure; step(Ptf); grid on; title('Step de la planta');
-
-% Si existe un controlador "Cd" (como se ve en tu workspace)
-if isfield(S,'Cd')
-    Cd = S.Cd;
-    L = series(Cd, Ptf);
-    figure; rlocus(L); grid on; title('Root Locus de L(z)=C(z)P(z)');
-    
-    % cerrado (si querés ver step CL)
-    Tcl = feedback(L, 1);
-    figure; step(Tcl); grid on; title('Step del lazo cerrado (feedback unity)');
-end
+figure('Name','PID: u/y');
+subplot(2,1,1); plot(x,y); grid on; grid minor; title([titulo ' - y']); ylabel('y');
+subplot(2,1,2); plot(x,u); grid on; grid minor; title([titulo ' - u']); ylabel('u'); xlabel(xlab);
