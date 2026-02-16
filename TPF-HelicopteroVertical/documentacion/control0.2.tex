@@ -4,6 +4,28 @@
 A diferencia de los métodos clásicos basados en funciones de transferencia
 y análisis en frecuencia, los métodos modernos de control se fundamentan
 en la representación en espacio de estados del sistema dinámico.
+
+En este enfoque, la dinámica se describe mediante:
+
+\[
+x_{k+1}=Ax_k+Bu_k
+\]
+\[
+y_k=Cx_k+Du_k
+\]
+
+donde $x_k \in \mathbb{R}^n$ es el vector de estados,
+$u_k$ la entrada de control y $y_k$ la salida medida.
+
+Este formalismo permite:
+
+\begin{itemize}
+	\item Diseñar realimentación directa de estados.
+	\item Ubicar polos del sistema de manera sistemática.
+	\item Formular problemas de control óptimo.
+	\item Incorporar estimadores de estado.
+\end{itemize}
+
 \subsubsection{Modelo en espacio de estados continuo}
 
 Las matrices del modelo continuo en representación
@@ -41,26 +63,6 @@ J =
 \end{bmatrix}
 \]
 
-En este enfoque, la dinámica se describe mediante:
-
-\[
-x_{k+1}=Ax_k+Bu_k
-\]
-\[
-y_k=Cx_k+Du_k
-\]
-
-donde $x_k \in \mathbb{R}^n$ es el vector de estados,
-$u_k$ la entrada de control y $y_k$ la salida medida.
-
-Este formalismo permite:
-
-\begin{itemize}
-	\item Diseñar realimentación directa de estados.
-	\item Ubicar polos del sistema de manera sistemática.
-	\item Formular problemas de control óptimo.
-	\item Incorporar estimadores de estado.
-\end{itemize}
 
 
 % ============================================================

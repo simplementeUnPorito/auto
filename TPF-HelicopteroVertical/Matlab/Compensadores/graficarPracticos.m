@@ -4,7 +4,7 @@ clc; close all; clear;
 % Parámetros
 %% =========================
 titulo = 'Lugar de Raíces (u e y vs n)';
-DATA_MAT_PATH = 'rlocus_practico_2.mat';
+DATA_MAT_PATH = 'rlocus_teorico.mat';
 
 %% =========================
 % Carga
