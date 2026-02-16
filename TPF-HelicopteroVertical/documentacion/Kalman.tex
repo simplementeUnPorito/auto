@@ -1,110 +1,249 @@
-
+% ============================================================
 \subsubsection{Modelo con Ruido}
+% ============================================================
 
-Para incorporar incertidumbre en el modelo,
-se considera la siguiente representación estocástica:
+Para incorporar incertidumbre y modelar explícitamente la presencia de
+perturbaciones no modeladas y ruido del sensor, se adopta la siguiente
+representación estocástica discreta:
 
 \[
-x_{k+1} = Ax_k + Bu_k + w_k
+x_{k+1} = A x_k + B u_k + w_k
 \]
 
 \[
-y_k = Cx_k + v_k
+y_k = C x_k + v_k
 \]
 
 donde:
 
 \begin{itemize}
-	\item $w_k \sim \mathcal{N}(0,Q)$ es el ruido de proceso.
-	\item $v_k \sim \mathcal{N}(0,R)$ es el ruido de medición.
+	\item $w_k \sim \mathcal{N}(0,Q)$ representa el ruido de proceso,
+	asociado a dinámica no modelada, perturbaciones aerodinámicas
+	y simplificaciones del modelo identificado.
+	\item $v_k \sim \mathcal{N}(0,R)$ representa el ruido de medición,
+	proveniente del sensor láser de distancia.
 \end{itemize}
 
-Las matrices de covarianza utilizadas fueron:
+\paragraph{Estimación de $R$ (ruido de medición)}
+
+La varianza del ruido de medición se obtuvo mediante ensayos empíricos,
+midiendo la dispersión de la señal del sensor con la planta en reposo.
+Siendo $\sigma_v$ la desviación estándar medida (en cm), se adopta:
 
 \[
-Q = \textbf{[Completar]}
+R = \sigma_v^2
 \]
+
+En los ensayos realizados se obtuvo:
 
 \[
-R = \textbf{[Completar]}
+\sigma_v = 2.043\ \text{cm}
+\qquad\Longrightarrow\qquad
+R = 4.174\ \text{cm}^2
 \]
 
+\paragraph{Parametrización y sintonización de $Q$ (ruido de proceso)}
+
+La matriz de covarianza del ruido de proceso se parametrizó como:
+
+\[
+Q = q\,I_n
+\]
+
+donde $q$ es un escalar positivo ajustable e $I_n$ es la matriz identidad
+de dimensión $n$. El valor de $q$ se determinó mediante consistencia
+estadística de la innovación normalizada (ver Apéndice~\ref{ap:kalman_tuning}).
+
+El valor óptimo obtenido fue:
+
+\[
+q = 50.8022\times 10^{-3}
+\qquad\Longrightarrow\qquad
+Q = q\,I_n
+\]
 
 % ============================================================
-\subsubsection{Ecuaciones del Filtro de Kalman}
+\subsubsection{Filtro de Kalman en régimen permanente}
 % ============================================================
 
-El filtro consta de dos etapas:
-
-\paragraph{Predicción}
-
-\[
-\hat{x}_{k|k-1} = A\hat{x}_{k-1} + Bu_{k-1}
-\]
+Se utilizó un estimador de Kalman discreto en su variante \textit{current estimator}
+(\texttt{kalman(...,'current')}). La ganancia en régimen permanente \(L\) se obtiene
+a partir de la solución estacionaria \(P\) de la ecuación de Riccati discreta:
 
 \[
-P_{k|k-1} = A P_{k-1} A^T + Q
+P = A P A^T - A P C^T \left(C P C^T + R\right)^{-1} C P A^T + Q
 \]
 
-\paragraph{Actualización}
+y la ganancia queda:
 
 \[
-L_k = P_{k|k-1} C^T (C P_{k|k-1} C^T + R)^{-1}
+L = A P C^T \left(C P C^T + R\right)^{-1}
 \]
+
+La ganancia obtenida en MATLAB para el modelo discretizado fue:
 
 \[
-\hat{x}_k = \hat{x}_{k|k-1} + L_k (y_k - C\hat{x}_{k|k-1})
+L =
+\begin{bmatrix}
+	97.4968\\
+	192.3014\\
+	94.7820
+\end{bmatrix}
 \]
+
+La estabilidad del observador se verifica con los polos del sistema estimador:
 
 \[
-P_k = (I - L_k C) P_{k|k-1}
+\lambda(A - L C A) = \mathbf{973.0274e-003 + 30.8455e-003i,\\ 973.0274e-003 - 30.8455e-003i,
+	\\969.4430e-003}
 \]
-
 
 % ============================================================
-\subsubsection{Ganancia en Régimen Permanente}
+\subsubsection{Control integral y realimentación de estados (LQI)}
 % ============================================================
 
-En régimen estacionario, la ganancia converge a:
+Con el objetivo de eliminar error en régimen permanente ante referencias tipo escalón,
+se incorporó un integrador de error. Definiendo el estado integral \(\xi_k\):
 
 \[
-L = A P C^T (C P C^T + R)^{-1}
+\xi_{k+1} = \xi_k + \left(r_k - y_k\right)
 \]
 
-donde $P$ satisface la ecuación de Riccati discreta:
+se construyó el sistema aumentado:
 
 \[
-P = A P A^T - A P C^T (C P C^T + R)^{-1} C P A^T + Q
+\begin{bmatrix}
+	x_{k+1}\\
+	\xi_{k+1}
+\end{bmatrix}
+=
+\begin{bmatrix}
+	A & B\\
+	-C & 1
+\end{bmatrix}
+\begin{bmatrix}
+	x_k\\
+	\xi_k
+\end{bmatrix}
++
+\begin{bmatrix}
+	B\\
+	0
+\end{bmatrix}
+u_k
++
+\begin{bmatrix}
+	0\\
+	1
+\end{bmatrix}
+r_k
 \]
 
-Ganancia obtenida:
+y se diseñó una ley de control tipo LQI:
 
 \[
-L = \textbf{[Completar]}
+u_k = -K_x\,\hat{x}_k + K_i\,\xi_k
 \]
 
+donde \(\hat{x}_k\) proviene del estimador de Kalman.
+
+Los valores obtenidos mediante \texttt{dlqr} (con pesos heurísticos) fueron:
+
+\[
+K_x = \begin{bmatrix}
+	16.5343   -15.8046    15.1271
+\end{bmatrix}
+\]
+
+\[
+K_i = \mathbf{3.2067}
+\]
+
+La dinámica del lazo cerrado puede analizarse mediante los polos del sistema
+aumentado (planta + integrador + control), y los polos de la planta discretizada
+se presentan como referencia:
+
+\[
+\lambda(A) = \mathbf{ 999.9972e-003 +  0.0000e+000i
+	972.0409e-003 + 24.1158e-003i
+	972.0409e-003 - 24.1158e-003i
+}
+\]
+
+\[
+\lambda(A_{\text{cl}}) = \mathbf{973.5939e-003 + 31.8308e-003i
+	973.5939e-003 - 31.8308e-003i
+	967.1966e-003 +  0.0000e+000i
+	-671.1275e-018 +  0.0000e+000i}
+\]
+
+\paragraph{Nota práctica sobre saturación}
+
+En la implementación práctica se aplica saturación al mando \(u_k\) para respetar
+los límites del actuador (PWM). La presencia de saturación puede degradar el
+cumplimiento exacto de la dinámica diseñada y producir integrador acumulado, por lo
+que en firmware se complementa con estrategias de anti-windup cuando corresponde.
 
 % ============================================================
-\subsubsection{Resultados de Estimación}
+\subsubsection{Resultados con ruido y validación}
 % ============================================================
 
-Se evaluó la calidad de estimación comparando:
+Para evaluar el desempeño se simuló el sistema incluyendo tanto ruido de medición
+(como dispersión del sensor) como ruido de proceso (dinámica no modelada). Se comparó:
 
 \begin{itemize}
-	\item Estados reales vs estados estimados.
-	\item Error cuadrático medio.
-	\item Respuesta frente a ruido.
+	\item Respuesta de salida con y sin ruido, y seguimiento de referencia.
+	\item Esfuerzo de control requerido en presencia de ruido.
+	\item Estabilidad del sistema mediante mapas de polos y ceros.
 \end{itemize}
 
-%\insertarfigura{img/Estados/estimacion_kalman.png}{Comparación entre estados reales y estimados mediante Filtro de Kalman.}{fig:kalman_estimacion}{1}
+Las siguientes figuras muestran los resultados obtenidos:
 
+\insertarfigura{img/LQGi/LQGi_step_ruido.png}
+{Respuesta temporal de la salida en presencia de ruido (medición y proceso), comparada con la referencia.}
+{fig:lqgi_step_ruido}{1}
+
+\insertarfigura{img/LQGi/LQGi_esfuerzo_ruido.png}
+{Esfuerzo de control (señal de mando) en presencia de ruido.}
+{fig:lqgi_esfuerzo_ruido}{1}
+
+\insertarfigura{img/LQGi/LQGi_practico.png}
+{Resultado práctico obtenido con la implementación sobre la planta real (ensayos experimentales).}
+{fig:lqgi_practico}{1}
+
+\insertarfigura{img/LQGi/LQGi_pzmap_NaranajaOBS_AzulPLANTA.png}
+{Mapa de polos y ceros. En naranja se muestran los polos del observador  y en azul los polos asociados a la planta/sistema.}
+{fig:lqgi_pzmap}{1}
 
 % ============================================================
 \subsubsection{Discusión}
 % ============================================================
 
-El filtro de Kalman presenta las siguientes ventajas:
+El uso combinado de realimentación de estados con integrador y estimación de estados
+mediante Kalman (estructura LQG/LQI) presenta las siguientes ventajas:
 
+\begin{itemize}
+	\item El integrador permite eliminar el error estacionario frente a referencias constantes,
+	compensando sesgos y pequeñas perturbaciones.
+	\item El filtro de Kalman mejora la realimentación al reconstruir estados no medidos a partir
+	de un modelo dinámico y mediciones ruidosas.
+	\item El ajuste de \(Q\) y \(R\) controla el compromiso entre confianza en el modelo y confianza
+	en la medición, lo cual resulta crítico ante ruido del sensor y variaciones no modeladas.
+\end{itemize}
 
-Limitaciones:
+Limitaciones y consideraciones:
 
+\begin{itemize}
+	\item La elección \(Q = qI\) es una aproximación heurística; el sistema real puede presentar
+	incertidumbres no homogéneas entre estados.
+	\item El diseño LQI/LQG supone un modelo lineal y no contempla explícitamente saturaciones del actuador,
+	por lo que el desempeño real puede diferir del esperado.
+	\item El criterio \(\mathrm{var}(\eta)\approx 1\) es práctico para ajustar \(q\), pero no reemplaza un
+	modelado físico detallado del ruido de proceso.
+\end{itemize}
+
+\paragraph{Referencia al apéndice de cómputo de ganancias}
+
+El código completo utilizado para calcular \(L\), \(K_x\), \(K_i\), los polos de la planta,
+los polos del observador y los polos del lazo cerrado se incluye en el
+Apéndice~\ref{ap:lqg_ganancias}.
