@@ -48,14 +48,19 @@ Los métodos clásicos utilizados en este trabajo incluyen:
 El diseño clásico parte de la función de transferencia identificada:
 
 \[
-G(z) = \textbf{[Completar]}
+G(z) = \frac{
+	b_0 + b_1 z^{-1} + b_2 z^{-2} + b_3 z^{-3}
+}{
+	1 + a_1 z^{-1} + a_2 z^{-2} + a_3 z^{-3}
+}
 \]
 
 Tiempo de muestreo:
 
 \[
-T_s = \textbf{[Completar]}
+T_s = \frac{1}{1000}
 \]
+
 
 Polos de la planta:
 
@@ -177,23 +182,7 @@ C(z)=\textbf{[Completar]}
 
 Se analiza el lazo abierto:
 
-\[
-L(z)=C(z)G(z)
-\]
 \input{BODE.tex}
-Parámetros clave:
-
-\begin{itemize}
-	\item Margen de fase: \textbf{[Completar]}
-	\item Margen de ganancia: \textbf{[Completar]}
-	\item Frecuencia de cruce: \textbf{[Completar]}
-\end{itemize}
-
-Controlador adoptado:
-
-\[
-C(z)=\textbf{[Completar]}
-\]
 
 \clearpage
 

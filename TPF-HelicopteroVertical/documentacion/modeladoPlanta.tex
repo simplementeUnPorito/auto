@@ -181,6 +181,30 @@ En esta forma:
 	alrededor del punto de operación.
 \end{itemize}
 
+\subsubsection{Obtención del modelo mediante identificación en MATLAB}
+
+La función de transferencia utilizada en este trabajo no se obtuvo
+exclusivamente a partir de un modelo físico teórico, sino mediante un
+proceso de \textbf{identificación experimental}.
+
+En particular, se empleó la herramienta \textit{System Identification Toolbox}
+de MATLAB, utilizando registros experimentales previamente adquiridos del
+sistema en lazo abierto (señal de mando PWM y altura medida por el sensor).
+Dichos datos fueron importados al entorno de identificación y organizados en
+un objeto \texttt{iddata}, definiendo la entrada como \(u(t)\) y la salida como
+\(y(t)=z(t)\), con el tiempo de muestreo correspondiente al sistema de
+adquisición.
+
+Sobre ese conjunto de datos se ajustó un modelo lineal SISO en tiempo
+continuo, seleccionando una estructura paramétrica compatible con la dinámica
+esperada del sistema, y estimando sus parámetros mediante los algoritmos de
+optimización incluidos en MATLAB.
+
+Finalmente, el modelo resultante fue validado comparando su respuesta con los
+datos medidos (ajuste temporal y análisis de residuales), y se adoptó como
+representación equivalente continua la función de transferencia \(G(s)\)
+presentada en la sección siguiente.
+
 \subsubsection{Validez del modelo}
 
 El modelo adoptado constituye una aproximación coherente con la física
@@ -191,3 +215,5 @@ Fuera de dicho intervalo, el sistema presenta comportamientos no lineales
 significativos (aerodinámica, fricción no lineal, saturaciones y posibles
 limitaciones térmicas del actuador) que no son capturados por el modelo
 lineal simplificado.
+
+
