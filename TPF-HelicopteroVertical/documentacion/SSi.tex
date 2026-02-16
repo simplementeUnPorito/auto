@@ -1,0 +1,236 @@
+% ============================================================
+\subsubsection{Ubicación arbitraria de polos — Método de Ogata 6.19 (solo integrador)}
+% ============================================================
+
+En esta sección se implementa el procedimiento propuesto en Ogata (Ec. 6.19)
+para incorporar acción integral al sistema en espacio de estados, utilizando
+únicamente un integrador externo y realimentación de estados estimados.
+
+La planta discreta utilizada (orden $n=3$) se obtuvo mediante discretización
+por ZOH con período de muestreo:
+
+\[
+T_s = 0.02\ \text{s}
+\qquad (50\ \text{Hz})
+\]
+
+% ============================================================
+\paragraph{Sistema aumentado con integrador}
+% ============================================================
+
+Para eliminar el error en régimen permanente frente a referencias constantes,
+se define el estado integral:
+
+\[
+v_{k+1} = v_k + (r_k - y_k)
+\]
+
+donde $y_k = Cx_k$.
+
+Siguiendo el desarrollo de Ogata, se construye el sistema aumentado:
+
+\[
+\hat{A} =
+\begin{bmatrix}
+	A & B \\
+	0 & 0
+\end{bmatrix},
+\qquad
+\hat{B} =
+\begin{bmatrix}
+	0 \\
+	1
+\end{bmatrix}
+\]
+
+y se ubican los polos deseados del sistema aumentado:
+
+\[
+p_{\text{ctrl}} =
+\{0.95 \pm 0.15j,\; 0.98\},
+\qquad
+p_i = 0.96
+\]
+
+De esta forma se obtienen las ganancias equivalentes:
+
+\[
+K_2 =
+\begin{bmatrix}
+	0.7820721 & -0.5678709 & 0.3779423
+\end{bmatrix}
+\]
+
+\[
+K_1 = 0.1469358
+\]
+
+donde:
+
+- $K_2$ actúa sobre el estado estimado $\hat{x}_k$.
+- $K_1$ actúa sobre el estado integral $v_k$.
+
+La ley de control implementada es:
+
+\[
+u_k = K_1 v_k - K_2 \hat{x}_k
+\]
+
+Los polos del sistema aumentado cerrado fueron correctamente ubicados
+(según \texttt{place}) en:
+
+\[
+p_{K_{21}} = 13
+\]
+
+(lo que confirma la correcta asignación interna en MATLAB).
+
+% ============================================================
+\paragraph{Diseño del observador}
+% ============================================================
+
+Se diseñaron dos variantes de observador con los mismos polos deseados:
+
+\[
+p_{\text{obs}} =
+\{0.8 \pm 0.25j,\; 0.9\}
+\]
+
+\subparagraph{Observador predictor}
+
+Dinámica del error:
+
+\[
+A - L_{\text{pred}} C
+\]
+
+Ganancia obtenida:
+
+\[
+L_{\text{pred}} =
+\begin{bmatrix}
+	167.3535 \\
+	253.6822 \\
+	86.0310
+\end{bmatrix}
+\]
+
+\[
+p_{L_{\text{pred}}} = 12
+\]
+
+\subparagraph{Observador actual}
+
+Dinámica del error:
+
+\[
+A - L_{\text{actual}} C A
+\]
+
+Ganancia obtenida:
+
+\[
+L_{\text{actual}} =
+\begin{bmatrix}
+	126.8411 \\
+	172.0621 \\
+	45.1301
+\end{bmatrix}
+\]
+
+\[
+p_{L_{\text{actual}}} = 13
+\]
+
+% ============================================================
+\paragraph{Estructura completa del sistema aumentado cerrado}
+% ============================================================
+
+Para analizar explícitamente la dinámica del sistema completo
+(planta + integrador + control), el script construye el modelo aumentado:
+
+\[
+A_{\text{aug}} =
+\begin{bmatrix}
+	A & B \\
+	K_2 - K_2A - K_1 C A & 1 - K_2 B - K_1 C B
+\end{bmatrix}
+\]
+
+\[
+B_{\text{aug}} =
+\begin{bmatrix}
+	0 \\
+	0 \\
+	0 \\
+	K_1
+\end{bmatrix}
+\]
+
+\[
+C_{\text{aug}} =
+\begin{bmatrix}
+	C & 0
+\end{bmatrix}
+\]
+
+Este sistema representa la dinámica cerrada resultante de aplicar
+la ley de control integral derivada mediante Ogata 6.19.
+
+Además, para comparar la dinámica del error de estimación,
+se construye el sistema:
+
+\[
+A_{\text{obs}} = A - L_{\text{actual}} C A
+\]
+
+y se superponen ambos mapas de polos mediante \texttt{pzmap}.
+
+% ============================================================
+\subsubsection{Resultados de simulación}
+% ============================================================
+
+Se evaluó el comportamiento del sistema para una referencia escalón
+de 25 unidades, comparando:
+
+\begin{itemize}
+	\item Observador predictor
+	\item Observador actual
+	\item Esfuerzo de control
+	\item Evolución del estado integral
+\end{itemize}
+
+Las figuras correspondientes se muestran a continuación:
+
+\insertarfigura{img/SSi/SSi_step.png}
+{Respuesta temporal $y(t)$ con integrador — comparación predictor vs actual.}
+{fig:ssi_step}{1}
+
+\insertarfigura{img/SSi/SSi_esfuerzo.png}
+{Esfuerzo de control $u(t)$ con integrador.}
+{fig:ssi_esfuerzo}{1}
+
+\insertarfigura{img/SSi/SSi_pzmap.png}
+{Mapa de polos: planta, sistema aumentado y dinámica del observador.}
+{fig:ssi_pzmap}{1}
+
+% ============================================================
+\subsubsection{Discusión}
+% ============================================================
+
+El método de Ogata 6.19 permite incorporar acción integral sin modificar
+la estructura original de la planta, utilizando un estado adicional y
+realimentación adecuada.
+
+Se observa que:
+
+\begin{itemize}
+	\item El integrador elimina el error en régimen permanente.
+	\item La dinámica del observador es más rápida que la del sistema controlado.
+	\item Ambos esquemas (predictor y actual) resultan estables,
+	con polos dentro del círculo unidad.
+	\item El sistema aumentado conserva estabilidad global.
+\end{itemize}
+
+El código completo utilizado para esta sección se incluye en el
+Apéndice~\ref{ap:ogata_integrador_obs}.

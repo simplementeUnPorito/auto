@@ -1,33 +1,183 @@
-Se define el funcional de costo:
+% ============================================================
+
+% ============================================================
+
+Se diseñó un regulador óptimo discreto de tipo LQR a partir del modelo
+en espacio de estados discretizado mediante retención de orden cero (ZOH)
+con tiempo de muestreo:
+
+\[
+\Ts = 0.01 \ \text{s}
+\]
+
+El objetivo del diseño es minimizar el funcional de costo cuadrático infinito:
 
 \[
 J=\sum_{k=0}^{\infty}(x_k^TQx_k+u_k^TRu_k)
 \]
 
-Matrices de ponderación:
+donde \(Q\succeq 0\) penaliza la energía de los estados y \(R\succ 0\) penaliza
+el esfuerzo de control.
+
+\paragraph{Matrices de ponderación}
+
+Se adoptó una sintonización práctica basada en escalas típicas del experimento:
+un cambio de referencia del orden de \(\Delta y \approx 20\) y una restricción del
+mando aproximadamente \(|u|\lesssim 300\) (en unidades del actuador).
+El diseño penaliza principalmente la salida mediante \(C^TC\), agregando un término
+pequeño para asegurar buena condición numérica:
 
 \[
-Q=\textbf{[Completar]}
+Q = w_y(C^TC) + 10^{-8}I_n,
+\qquad
+R = \frac{w_u}{u_{\max}}
+\]
+
+con \(w_y=20\), \(w_u=500\) y \(u_{\max}=300\). Para el modelo discretizado utilizado,
+las matrices resultantes fueron:
+
+\[
+Q=
+\begin{bmatrix}
+	6.8188\times 10^{-3} & -6.9883\times 10^{-3} &  7.0544\times 10^{-3}\\
+	-6.9883\times 10^{-3} &  7.1620\times 10^{-3} & -7.2298\times 10^{-3}\\
+	7.0544\times 10^{-3} & -7.2298\times 10^{-3} &  7.2982\times 10^{-3}
+\end{bmatrix}
 \]
 
 \[
-R=\textbf{[Completar]}
+R = 1.6667
 \]
 
-La solución se obtiene resolviendo la ecuación de Riccati discreta:
+\paragraph{Ecuación de Riccati discreta y ganancia óptima}
+
+La solución del problema se obtiene resolviendo la ecuación de Riccati discreta:
 
 \[
 P=A^TPA - A^TPB(R+B^TPB)^{-1}B^TPA + Q
 \]
 
-Ganancia óptima:
+La ganancia óptima resulta:
 
 \[
 K=(R+B^TPB)^{-1}B^TPA
 \]
 
-Polos obtenidos:
+Para el modelo discretizado se obtuvo:
 
 \[
-\lambda(A-BK)=\textbf{[Completar]}
+K=
+\begin{bmatrix}
+	0.5119095 & -0.4937470 & 0.4765571
+\end{bmatrix}
 \]
+
+\paragraph{Polos del sistema en lazo cerrado}
+
+La estabilidad se verifica mediante los polos del sistema:
+
+\[
+A_{\text{cl}} = A - BK
+\]
+
+Los polos obtenidos fueron:
+
+\[
+\lambda(A-BK)=
+\begin{aligned}
+	&0.9728458 + 0.0327300\,j\\
+	&0.9728458 - 0.0327300\,j\\
+	&0.9663930
+\end{aligned}
+\]
+
+Se observa que todos los polos se encuentran dentro del círculo unidad,
+garantizando estabilidad discreta.
+
+\paragraph{Referencia al apéndice de implementación}
+
+El código completo utilizado para:
+\begin{itemize}
+	\item cargar y discretizar la planta,
+	\item definir \(Q\) y \(R\) mediante parámetros \textit{knobs} (\(w_y\), \(w_u\)),
+	\item calcular \(K\) y verificar controlabilidad,
+	\item diseñar observadores (predictor y actual) por ubicación de polos,
+	\item calcular el prefiltro \(N_{\mathrm{bar}}\) para seguimiento,
+	\item y simular el lazo con/sin saturación, con/sin ruido, y en doble precisión y \texttt{float32},
+\end{itemize}
+se incluye en el Apéndice~\ref{ap:lqr_obs_sim}.
+
+% ============================================================
+\subsubsection{Simulación del LQR con observador, saturación y ruido}
+% ============================================================
+
+Con el fin de aproximar el comportamiento del sistema real y evitar conclusiones
+optimistas, se implementó un entorno de simulación que contempla:
+
+\begin{itemize}
+	\item \textbf{Observador de estados} en dos variantes:
+	\begin{itemize}
+		\item \textit{Predictor}: corrige usando \(y_k\).
+		\item \textit{Actual}: corrige usando \(y_{k+1}\).
+	\end{itemize}
+	\item \textbf{Prefiltro de referencia} \(N_{\mathrm{bar}}\) para mejorar el seguimiento
+	de referencia en lazo cerrado (estructura \(u_k = N_{\mathrm{bar}}r_k - K\hat{x}_k\)).
+	\item \textbf{Saturación} del actuador con límite \(\pm u_{\max}\) para representar
+	las restricciones del PWM/ESC.
+	\item \textbf{Ruido} configurable para emular incertidumbres del experimento:
+	\begin{itemize}
+		\item Ruido de medición: \(y_{\mathrm{meas}} = y_{\mathrm{true}} + v_y\), con \(v_y\sim\mathcal{N}(0,\sigma_y^2)\).
+		\item Ruido del actuador (jitter) y cuantización: \(u_{\mathrm{app}} = \mathrm{sat}\left(\mathrm{quant}(u_{\mathrm{cmd}}+v_u)\right)\).
+		\item Ruido de proceso: \(x_{k+1} = Ax_k + Bu_k + w_k\) (configurable como prueba de estrés).
+	\end{itemize}
+	\item \textbf{Comparación numérica} entre simulación en doble precisión y \texttt{float32}
+	para anticipar efectos de implementación embebida.
+\end{itemize}
+
+En particular, para evitar comparaciones sesgadas, las secuencias de ruido se
+pre-generaron y se reutilizaron de forma idéntica tanto en doble precisión como en
+\texttt{float32}.
+
+\paragraph{Observadores y ubicación de polos}
+
+Los observadores se diseñaron mediante ubicación arbitraria de polos en el plano-\(z\),
+definiendo polos deseados:
+
+\[
+p_{\mathrm{obs}}=\{0.8\pm 0.25j,\ 0.9\}
+\]
+
+y obteniendo:
+
+\[
+K_{e,\mathrm{pred}}=\mathrm{place}(A^T,C^T,p_{\mathrm{obs}})^T
+\qquad
+K_{e,\mathrm{act}}=\mathrm{place}(A^T,(CA)^T,p_{\mathrm{obs}})^T
+\]
+
+\paragraph{Prefiltro \(N_{\mathrm{bar}}\)}
+
+Para mejorar el seguimiento de referencia (SISO), se calculó un prefiltro
+\(N_{\mathrm{bar}}\) tal que la ganancia estática equivalente sea adecuada, utilizando
+la rutina auxiliar \texttt{refi}:
+
+\[
+u_k = N_{\mathrm{bar}}\,r_k - K\,\hat{x}_k
+\]
+
+\paragraph{Diagnósticos para evitar autoengaño}
+
+Se incluyeron verificaciones directas sobre el ruido inyectado:
+
+\[
+e_y(k)=y_{\mathrm{meas}}(k)-y_{\mathrm{true}}(k)
+\]
+
+y se reportaron métricas como RMS\((e_y)\) y conteo de saturaciones en \(u\), para
+confirmar que las perturbaciones y límites realmente están actuando sobre el lazo.
+
+\paragraph{Referencia al apéndice}
+
+El script completo de simulación (incluyendo funciones locales \texttt{sim\_obs\_loop},
+\texttt{plot\_zplane}, \texttt{refi} y el \textit{fallback} \texttt{dlqr\_iter\_nolic})
+se incluye en el Apéndice~\ref{ap:lqr_obs_sim}.
