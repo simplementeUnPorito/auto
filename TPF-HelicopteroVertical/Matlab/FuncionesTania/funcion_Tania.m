@@ -1,30 +1,20 @@
-close all; clear; clc
+% Supongamos que guardaste u1,u2 (esfuerzo) de cada simulación
+% y K1,K2 de cada diseño (place)
 
-DATA_MAT_PATH = 'D:\auto\TPF-HelicopteroVertical\Matlab\Compensadores\PID_teorico.mat';
-S = load(DATA_MAT_PATH);
+u1 = u_case1(:);
+u2 = u_case2(:);
 
-u = S.u(:);
-y = S.y(:);
+metrics = @(u) struct( ...
+    'umax', max(abs(u)), ...
+    'urms', sqrt(mean(u.^2)), ...
+    'uavg', mean(u), ...
+    'du_rms', sqrt(mean(diff(u).^2)) ); % suavidad del control
 
-N = min(numel(u), numel(y));
-u = u(1:N); y = y(1:N);
+M1 = metrics(u1);
+M2 = metrics(u2);
 
-if isfield(S,'x')
-    x = S.x(:);
-    if numel(x) ~= N, x = (1:N).'; end
-    xlab = 'x';
-elseif isfield(S,'n')
-    x = S.n(:);
-    if numel(x) ~= N, x = (1:N).'; end
-    xlab = 'n [muestras]';
-else
-    x = (1:N).';
-    xlab = 'n [muestras]';
-end
+fprintf('CASE 1: umax=%.4f | urms=%.4f | du_rms=%.4f\n', M1.umax, M1.urms, M1.du_rms);
+fprintf('CASE 2: umax=%.4f | urms=%.4f | du_rms=%.4f\n', M2.umax, M2.urms, M2.du_rms);
 
-if isfield(S,'xlab'), xlab = S.xlab; end
-if isfield(S,'titulo'), titulo = S.titulo; else, titulo = 'PID (log)'; end
-
-figure('Name','PID: u/y');
-subplot(2,1,1); plot(x,y); grid on; grid minor; title([titulo ' - y']); ylabel('y');
-subplot(2,1,2); plot(x,u); grid on; grid minor; title([titulo ' - u']); ylabel('u'); xlabel(xlab);
+fprintf('Reducción umax: %.1f %%\n', 100*(1 - M2.umax/M1.umax));
+fprintf('Reducción urms: %.1f %%\n', 100*(1 - M2.urms/M1.urms));
