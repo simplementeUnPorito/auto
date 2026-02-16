@@ -23,9 +23,36 @@ La \textbf{Figura~\ref{fig:Diagrama2}} muestra un diagrama de bloques que repres
 
 \subsection{Flujo de energía (parte electro--energética)}
 
-La batería LiPo de tres celdas (3S), con una tensión nominal de aproximadamente \(11{,}1\,\text{V}\), constituye la fuente principal de energía del sistema. Esta batería alimenta directamente al controlador electrónico de velocidad (ESC) de \(40\,\text{A}\), el cual se encarga de convertir la energía eléctrica continua proveniente de la batería en señales trifásicas adecuadas para el accionamiento del motor brushless.
+La batería utilizada es una LiPo de tres celdas (3S), con tensión nominal de \(11{,}1\,\text{V}\). 
+Cada celda presenta una tensión máxima de \(4{,}2\,\text{V}\), por lo que la batería completamente cargada alcanza:
 
-El ESC regula la velocidad del motor en función de la señal PWM recibida, lo que permite controlar el empuje generado por la hélice. Dicho empuje es el responsable del movimiento vertical de la planta, que constituye el sistema físico bajo control. En esta parte del sistema no se realiza ninguna acción de control, sino únicamente la conversión y entrega de potencia hacia el actuador.
+\[
+V_{\text{max}} = 12{,}6\,\text{V}
+\]
+
+Con el objetivo de preservar la integridad química de la batería y evitar degradación prematura, el rango operativo se restringe aproximadamente a:
+
+\[
+V \in [11{,}5,\; 12{,}5]\,\text{V}
+\]
+
+Evitar descargas por debajo de \(11{,}5\,\text{V}\) resulta fundamental, ya que tensiones inferiores pueden producir daño irreversible en las celdas LiPo.
+
+La batería alimenta directamente al controlador electrónico de velocidad (ESC) de \(40\,\text{A}\), el cual convierte la tensión continua en señales trifásicas moduladas para accionar el motor brushless. 
+
+El ESC incorpora disipadores térmicos integrados sobre los dispositivos de potencia (MOSFETs), cuya función es evacuar el calor generado durante la conmutación y conducción de corriente. Dado que el sistema opera en un régimen de potencia relativamente elevado para el tamaño del conjunto, la gestión térmica resulta crítica para evitar sobrecalentamientos que puedan producir fallas o reducción de eficiencia.
+
+La presencia de disipadores mejora la transferencia térmica hacia el ambiente, aumentando la confiabilidad del sistema durante los intervalos de operación de aproximadamente \(5\,\text{min}\) continuos.
+
+A medida que la batería se descarga, se observa una disminución progresiva de la tensión disponible, lo que impacta directamente en la capacidad de generación de empuje del motor. Este fenómeno es perceptible incluso en aplicaciones aeronáuticas (como drones), donde la pérdida de tensión se traduce en menor capacidad de sustentación.
+
+En la práctica experimental, el tiempo de operación continua es del orden de \(5\,\text{min}\) como máximo. Esto se debe a que la batería utilizada posee una capacidad limitada para el nivel de potencia demandado por el sistema. 
+
+El tiempo típico de recarga completa es aproximadamente \(1{,}5\,\text{h}\), lo que introduce una restricción significativa en la repetibilidad de los ensayos experimentales, constituyendo un factor limitante en el desarrollo de la práctica.
+
+En esta etapa del sistema no se realiza acción de control propiamente dicha, sino únicamente conversión y transferencia de potencia hacia el actuador.
+
+
 
 \subsection{Flujo de control (parte de mando)}
 
