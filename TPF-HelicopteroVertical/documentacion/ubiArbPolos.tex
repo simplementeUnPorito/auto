@@ -1,68 +1,165 @@
-
 \subsubsection{Fundamento}
 
-Se propone la ley de control:
+Se propone una ley de control por realimentación de estados de la forma:
 
 \[
 u_k = -Kx_k
 \]
 
-lo que conduce a:
+lo que conduce a la dinámica en lazo cerrado:
 
 \[
 x_{k+1} = (A - BK)x_k
 \]
 
-El objetivo es imponer:
+El objetivo del diseño consiste en ubicar arbitrariamente los polos del
+sistema en lazo cerrado, imponiendo:
 
 \[
 \lambda(A - BK)=\{p_1,p_2,\dots,p_n\}
 \]
 
+De esta manera, la dinámica del sistema queda completamente determinada
+por la selección de los autovalores deseados.
+
+\vspace{0.3cm}
 
 \subsubsection{Selección de Polos Deseados}
 
-Polos seleccionados:
+En primera instancia se realiza la simulación considerando un actuador
+ideal, es decir, sin restricciones de saturación.
+
+El tiempo de muestreo adoptado es:
 
 \[
-\{p_i\} = \textbf{[Completar]}
+T_s = 0.02 \text{ s}
 \]
 
-Criterios:
+Los polos seleccionados para el diseño fueron:
+
+\[
+\{p_i\} =
+\left\{
+0.95 + 0.15i,\;
+0.95 - 0.15i,\;
+0.95
+\right\}
+\]
+
+Los criterios de selección fueron:
 
 \begin{itemize}
-	\item Rapidez deseada.
-	\item Amortiguamiento.
-	\item Estabilidad discreta ($|p_i|<1$).
+	\item Garantizar estabilidad discreta ($|p_i|<1$).
+	\item Lograr una dinámica moderadamente rápida sin exigir esfuerzos
+	de control excesivos.
+	\item Introducir amortiguamiento suficiente para evitar oscilaciones
+	pronunciadas.
 \end{itemize}
 
+\insertarfigura{img/SS/SS_pzmap.png}
+{Mapa de polos del sistema en lazo cerrado con realimentación de estados.}
+{fig:ss_pzmap}{1}
+
+\insertarfigura{img/SS/SS_esfuerzo_noSat.png}
+{Esfuerzo de control en simulación sin saturación del actuador.}
+{fig:ss_esfuerzo_nosat}{1}
+
+%\insertarfigura{img/SS/SS_step_noSat.png}{Respuesta temporal en lazo cerrado sin saturación del actuador.}{fig:ss_step_nosat}{1}
+
+Se observa que los autovalores del sistema en lazo cerrado coinciden con
+los polos deseados, verificándose que:
+
+\[
+\lambda(A-BK) =
+\left\{
+0.95 + 0.15i,\;
+0.95 - 0.15i,\;
+0.95
+\right\}
+\]
+
+\vspace{0.3cm}
 
 \subsubsection{Cálculo de la Ganancia}
 
-La ganancia se obtuvo mediante:
+La ganancia de realimentación fue obtenida mediante el método de
+Ackermann y verificada utilizando la función \texttt{place()} de MATLAB.
 
-\begin{itemize}
-	\item Método de Ackermann.
-	\item Función \texttt{place()}.
-\end{itemize}
+El vector de ganancias resultante es:
 
 \[
-K = \textbf{[Completar]}
+K =
+\left[
+0.6169,\;
+-0.4194,\;
+0.2418
+\right]
 \]
 
-Polos resultantes:
+Para el caso con estimador de estados (estructura observador actual),
+la ganancia del observador obtenida fue:
 
 \[
-\lambda(A-BK)=\textbf{[Completar]}
+K_{eA} =
+\left[
+126.8411,\;
+172.0621,\;
+45.1301
+\right]
 \]
 
+\vspace{0.3cm}
 
-\subsubsection{Resultados}
+\subsubsection{Análisis sin Saturación}
+
+Bajo el supuesto lineal de actuador ideal, el sistema presenta una
+respuesta estable y coherente con los polos seleccionados.
+
+Es importante destacar que, en comparación con un conjunto de polos
+más agresivo evaluado previamente, el esfuerzo de control disminuye
+significativamente. Esto se debe a que la ubicación elegida no exige
+ganancias excesivas en la matriz $K$, evitando amplificaciones
+innecesarias del estado.
+
+\vspace{0.3cm}
+
+\subsubsection{Análisis con Saturación}
+
+Posteriormente se introduce la saturación del actuador para evaluar la
+implementabilidad física del controlador.
+
+\insertarfigura{img/SS/SS_todoJunto.png}
+{Comparación de salida y esfuerzo en simulación con saturación del actuador.}
+{fig:ss_sim_sat_combined}{1}
+
+\insertarfigura{img/SS/SS_esfuerzo_Sat.png}
+{Esfuerzo de control en simulación con saturación del actuador.}
+{fig:ss_esfuerzo_sat}{1}
+
+\insertarfigura{img/SS/SS_step_Sat.png}
+{Respuesta temporal en lazo cerrado con saturación del actuador.}
+{fig:ss_step_sat}{1}
+
+La inclusión de la saturación introduce una no linealidad que modifica
+ligeramente la dinámica transitoria, aunque el sistema mantiene la
+estabilidad general del lazo cerrado.
+
+\vspace{0.3cm}
+
+\subsubsection{Resultados Experimentales}
+
+\insertarfigura{img/SS/SS_practico.png}
+{Respuesta experimental del sistema en lazo cerrado: salida y esfuerzo de control.}
+{fig:ss_practico}{1}
+
+Los resultados experimentales muestran coherencia con la simulación
+considerando saturación del actuador.
 
 \begin{itemize}
-	\item Sobreimpulso: \textbf{[Completar]}
-	\item Tiempo de establecimiento: \textbf{[Completar]}
-	\item Pico de esfuerzo: \textbf{[Completar]}
+	\item Sobreimpulso: \textbf{[Completar con valor medido]}
+	\item Tiempo de establecimiento: \textbf{[Completar con valor medido]}
+	\item Pico de esfuerzo: \textbf{[Completar con valor medido]}
 \end{itemize}
 
-%\insertarfigura{img/Estados/respuesta_poleplacement.png}{Respuesta temporal con ubicación arbitraria de polos.}{fig:resp_poleplacement}{1}
+Se observa una buena correspondencia entre modelo y comportamiento
+experimental dentro del rango operativo seguro.
