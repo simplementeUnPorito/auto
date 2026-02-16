@@ -1,9 +1,20 @@
-\subsubsection{Fundamento}
+\subsection{Realimentación de Estados y Estimación}
 
-Se propone una ley de control por realimentación de estados de la forma:
+\subsubsection{Realimentación de Estados}
+
+Considerando el modelo discreto del sistema:
 
 \[
-u_k = -Kx_k
+x_{k+1} = A x_k + B u_k
+\]
+\[
+y_k = C x_k
+\]
+
+se propone una ley de control por realimentación de estados:
+
+\[
+u_k = -K x_k
 \]
 
 lo que conduce a la dinámica en lazo cerrado:
@@ -12,154 +23,77 @@ lo que conduce a la dinámica en lazo cerrado:
 x_{k+1} = (A - BK)x_k
 \]
 
-El objetivo del diseño consiste en ubicar arbitrariamente los polos del
-sistema en lazo cerrado, imponiendo:
+El diseño por ubicación arbitraria de polos consiste en determinar la
+matriz de ganancia \(K\) tal que:
 
 \[
-\lambda(A - BK)=\{p_1,p_2,\dots,p_n\}
+\lambda(A - BK) = \{p_1, p_2, \dots, p_n\}
 \]
 
-De esta manera, la dinámica del sistema queda completamente determinada
-por la selección de los autovalores deseados.
+siendo \(|p_i| < 1\) condición necesaria para estabilidad discreta.
+
+La determinación de \(K\) puede realizarse mediante el método de
+Ackermann o utilizando la función \texttt{place()} de MATLAB, siempre
+que el sistema sea completamente controlable.
 
 \vspace{0.3cm}
 
-\subsubsection{Selección de Polos Deseados}
+\subsubsection{Estimador de Estados}
 
-En primera instancia se realiza la simulación considerando un actuador
-ideal, es decir, sin restricciones de saturación.
+En situaciones donde no todos los estados son medibles, se introduce
+un estimador de Luenberger para reconstruir el vector de estados a
+partir de la entrada y la salida medida.
 
-El tiempo de muestreo adoptado es:
+El estimador discreto se define como:
 
 \[
-T_s = 0.02 \text{ s}
+\hat{x}_{k+1} = A\hat{x}_k + B u_k + L (y_k - \hat{y}_k)
 \]
 
-Los polos seleccionados para el diseño fueron:
+donde:
 
 \[
-\{p_i\} =
-\left\{
-0.95 + 0.15i,\;
-0.95 - 0.15i,\;
-0.95
-\right\}
+\hat{y}_k = C \hat{x}_k
 \]
 
-Los criterios de selección fueron:
-
-\begin{itemize}
-	\item Garantizar estabilidad discreta ($|p_i|<1$).
-	\item Lograr una dinámica moderadamente rápida sin exigir esfuerzos
-	de control excesivos.
-	\item Introducir amortiguamiento suficiente para evitar oscilaciones
-	pronunciadas.
-\end{itemize}
-
-\insertarfigura{img/SS/SS_pzmap.png}
-{Mapa de polos del sistema en lazo cerrado con realimentación de estados.}
-{fig:ss_pzmap}{1}
-
-\insertarfigura{img/SS/SS_esfuerzo_noSat.png}
-{Esfuerzo de control en simulación sin saturación del actuador.}
-{fig:ss_esfuerzo_nosat}{1}
-
-%\insertarfigura{img/SS/SS_step_noSat.png}{Respuesta temporal en lazo cerrado sin saturación del actuador.}{fig:ss_step_nosat}{1}
-
-Se observa que los autovalores del sistema en lazo cerrado coinciden con
-los polos deseados, verificándose que:
+La dinámica del error de estimación:
 
 \[
-\lambda(A-BK) =
-\left\{
-0.95 + 0.15i,\;
-0.95 - 0.15i,\;
-0.95
-\right\}
+e_k = x_k - \hat{x}_k
+\]
+
+queda gobernada por:
+
+\[
+e_{k+1} = (A - LC)e_k
+\]
+
+Por lo tanto, la convergencia del estimador depende de la ubicación
+de los autovalores de la matriz \(A - LC\), que pueden ser fijados
+arbitrariamente siempre que el sistema sea observable:
+
+\[
+\lambda(A - LC) = \{p_{obs,1}, \dots, p_{obs,n}\}
 \]
 
 \vspace{0.3cm}
 
-\subsubsection{Cálculo de la Ganancia}
+\subsubsection{Principio de Separación}
 
-La ganancia de realimentación fue obtenida mediante el método de
-Ackermann y verificada utilizando la función \texttt{place()} de MATLAB.
-
-El vector de ganancias resultante es:
+Cuando se combinan realimentación de estados y estimación, la ley de
+control adopta la forma:
 
 \[
-K =
-\left[
-0.6169,\;
--0.4194,\;
-0.2418
-\right]
+u_k = -K\hat{x}_k
 \]
 
-Para el caso con estimador de estados (estructura observador actual),
-la ganancia del observador obtenida fue:
+y la dinámica total del sistema presenta autovalores dados por la
+unión de los polos del controlador y los polos del estimador:
 
 \[
-K_{eA} =
-\left[
-126.8411,\;
-172.0621,\;
-45.1301
-\right]
+\lambda_{\text{total}} =
+\lambda(A - BK) \cup \lambda(A - LC)
 \]
 
-\vspace{0.3cm}
-
-\subsubsection{Análisis sin Saturación}
-
-Bajo el supuesto lineal de actuador ideal, el sistema presenta una
-respuesta estable y coherente con los polos seleccionados.
-
-Es importante destacar que, en comparación con un conjunto de polos
-más agresivo evaluado previamente, el esfuerzo de control disminuye
-significativamente. Esto se debe a que la ubicación elegida no exige
-ganancias excesivas en la matriz $K$, evitando amplificaciones
-innecesarias del estado.
-
-\vspace{0.3cm}
-
-\subsubsection{Análisis con Saturación}
-
-Posteriormente se introduce la saturación del actuador para evaluar la
-implementabilidad física del controlador.
-
-\insertarfigura{img/SS/SS_todoJunto.png}
-{Comparación de salida y esfuerzo en simulación con saturación del actuador.}
-{fig:ss_sim_sat_combined}{1}
-
-\insertarfigura{img/SS/SS_esfuerzo_Sat.png}
-{Esfuerzo de control en simulación con saturación del actuador.}
-{fig:ss_esfuerzo_sat}{1}
-
-\insertarfigura{img/SS/SS_step_Sat.png}
-{Respuesta temporal en lazo cerrado con saturación del actuador.}
-{fig:ss_step_sat}{1}
-
-La inclusión de la saturación introduce una no linealidad que modifica
-ligeramente la dinámica transitoria, aunque el sistema mantiene la
-estabilidad general del lazo cerrado.
-
-\vspace{0.3cm}
-
-\subsubsection{Resultados Experimentales}
-
-\insertarfigura{img/SS/SS_practico.png}
-{Respuesta experimental del sistema en lazo cerrado: salida y esfuerzo de control.}
-{fig:ss_practico}{1}
-
-Los resultados experimentales muestran coherencia con la simulación
-considerando saturación del actuador.
-
-\begin{itemize}
-	\item Sobreimpulso: \textbf{[Completar con valor medido]}
-	\item Tiempo de establecimiento: \textbf{[Completar con valor medido]}
-	\item Pico de esfuerzo: \textbf{[Completar con valor medido]}
-\end{itemize}
-
-Se observa una buena correspondencia entre modelo y comportamiento
-experimental dentro del rango operativo seguro.
+Este resultado, conocido como principio de separación, permite diseñar
+independientemente el controlador y el estimador.

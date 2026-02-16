@@ -6,13 +6,17 @@ y análisis en frecuencia, los métodos modernos de control se fundamentan
 en la representación en espacio de estados del sistema dinámico.
 
 En este enfoque, la dinámica se describe mediante:
+\begin{equation}
+	x_{k+1}=Ax_k+Bu_k
+	\label{eq:din_estado}
+\end{equation}
 
-\[
-x_{k+1}=Ax_k+Bu_k
-\]
-\[
-y_k=Cx_k+Du_k
-\]
+\begin{equation}
+	y_k=Cx_k+Du_k
+	\label{eq:din_salida}
+\end{equation}
+
+
 
 donde $x_k \in \mathbb{R}^n$ es el vector de estados,
 $u_k$ la entrada de control y $y_k$ la salida medida.
@@ -143,14 +147,13 @@ Nyquist \(f_N = \tfrac{1}{2T_s}\), y que el acondicionamiento analógico
 % ============================================================
 \input{ubiArbPolos.tex}
 
-\clearpage
 
-\subsection{Estimación de Estados}
+%\subsection{Estimación de Estados}
 % ============================================================
 
-\input{Estimadores.tex}
+%\input{Estimadores.tex}
 
-\clearpage
+\newpage
 
 
 \subsection{Control Integrador}
