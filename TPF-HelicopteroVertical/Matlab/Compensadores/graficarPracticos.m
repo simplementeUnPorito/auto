@@ -3,7 +3,7 @@ clc; close all; clear;
 %% =========================
 % Parámetros
 %% =========================
-titulo = 'PID (u e y vs n)';
+titulo = 'Ubicacion Arbitraria de Polos (u e y vs n)';
 DATA_MAT_PATH = ['SS_actual_practico.mat'];
 
 %% =========================
