@@ -1,4 +1,4 @@
-Dado que la planta identificada (ecuación \ref{eq:Gz_identificada}) presenta polos ubicados fuera del círculo unitario, el sistema en lazo abierto resulta inestable en el dominio discreto. En consecuencia, cualquier diseño de control debe garantizar que los polos del lazo cerrado queden estrictamente dentro del círculo unitario para asegurar estabilidad interna.
+Dado que la planta identificada presenta polos ubicados fuera del círculo unitario, el sistema en lazo abierto resulta inestable en el dominio discreto. En consecuencia, cualquier diseño de control debe garantizar que los polos del lazo cerrado queden estrictamente dentro del círculo unitario para asegurar estabilidad interna.
 
 \insertarfigura{img/CircUnitarioPlanta.png}
 {Ubicación de los polos de la planta sin compensar en el plano $z$. Se observa que al menos uno de ellos se encuentra fuera del círculo unitario, lo que implica inestabilidad discreta.}
@@ -60,13 +60,33 @@ El resultado fue un compensador lag--lead cuyos parámetros fueron obtenidos med
 \insertarfigura{img/Rlocus/rsta.png}
 {Respuesta temporal del sistema en lazo cerrado con el compensador diseñado.}
 {fig:RespuestaTemporalCompensada}{1}
-
 \subsubsection{Práctica}
 
-\insertarfigura{img/Rlocus/RlocusPractica.png}
-{Esfuerzo y altura de la implementación práctica de lugar de raices}
-{fig:Rlocus_practica}{1}
+En la implementación experimental se obtuvo un tiempo de subida de:
 
+\[
+t_r^{\text{exp}} = 1.068 \text{ s}
+\]
 
+Mientras que en la simulación del modelo lineal el tiempo de subida
+observado fue aproximadamente:
 
+\[
+t_r^{\text{sim}} \approx 5 \text{ s}
+\]
+
+En ambos casos no se registró sobreimpulso, lo que indica un
+comportamiento sobreamortiguado del sistema.
+
+Sin embargo, se observa una diferencia significativa en la rapidez
+de la respuesta, siendo el sistema real considerablemente más rápido
+que el modelo simulado.
+
+%Este resultado sugiere que el modelo lineal subestima la gananciaefectiva o no captura completamente la dinámica real del actuador.
+
+Dado que el sistema presentaba estabilidad intrínseca, se ajustó la
+ganancia del controlador con el objetivo de limitar el esfuerzo
+de control y evitar saturaciones excesivas.
+
+\insertarfigura{img/Rlocus/RlocusPractica.png} {Esfuerzo y altura de la implementación práctica de lugar de raices.} {fig:Rlocus_practica}{1}
 

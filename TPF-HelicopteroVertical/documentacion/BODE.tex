@@ -63,7 +63,7 @@ La incorporación de polos adicionales introduciría retardos en la respuesta y 
 
 
 \clearpage
-\subsection{Implementación}
+\subsection{Práctica}
 
 \insertarfigura{img/Bode/bode_practica.png}{Figura de la respuesta del bode, altura y esfuerzo en n muestras}{fig:B_practica}{0.8}
 
@@ -76,7 +76,22 @@ Compensador usado:
 Tiempo de muestreo:
 
 \[
-T_s = 0.0001\]
+T_s = 0.0001
+\]
+El sobreimpulso simulado con el compensador es de aproximadamente
+$20\%$. En la implementación experimental, el primer levantamiento
+presenta un sobreimpulso máximo de $55.55\%$. Sin embargo, en un
+levantamiento posterior el sobreimpulso disminuye a aproximadamente
+$37\%$, y tiende a reducirse adicionalmente a medida que aumenta la
+altura de operación.
+
+Esta variabilidad entre levantamientos sugiere una dependencia del
+comportamiento transitorio con el punto de operación y las condiciones
+iniciales (por ejemplo, arranque desde reposo, dinámica del actuador y
+no linealidades del empuje). En particular, durante el primer
+levantamiento se observa un esfuerzo de control mayor al inicio, que
+luego decrece conforme el sistema se aproxima al equilibrio dinámico,
+reduciendo la acción requerida para sostener la altura.
 
 
 

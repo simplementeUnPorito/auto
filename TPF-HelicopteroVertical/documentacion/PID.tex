@@ -60,16 +60,46 @@ El controlador PID basado en el método de Åström permitió obtener un comport
 \insertarfigura{img/PID/EsfuerzoPID.png}{El esfuerzo del con el controlador PID.}{fig:EsfPID}{1}
 
 \subsubsection{Práctica}
+
+Los parámetros implementados del controlador PID fueron:
+
 \[
-K_p = \textbf{[2.5]}, \quad
-T_i = \textbf{[5]}, \quad
-T_d = \textbf{[0.1]}, \quad
-N = \textbf{[3]}
+K_p = 2.5, \quad
+T_i = 5, \quad
+T_d = 0.1, \quad
+N = 3
 \]
 
-\onecolumn
-\insertarfigura{img/PID/PID_Practico.png}{Implementación práctica del PID.}{fig:PID_practica}{0.8}
+En la simulación del modelo lineal (figura \ref{fig:rstaPID}) se obtuvo:
 
-%\insertarfigura{img/PID/EsfuerzoPIDPractica.png}{El esfuerzo del con el controlador PID.}{fig:EsfPID_practica}{0.8}
-\twocolumn
+\[
+\%OS_{\text{sim}} \approx 46\%, \quad
+t_r^{\text{sim}} = 0.397 \text{ s}
+\]
+
+En la implementación experimental (figura \ref{fig:PID_practica})
+se observaron los siguientes valores de sobreimpulso según la altura
+de referencia:
+
+\begin{itemize}
+	\item Para $57\,\text{cm}$: $\%OS = 28.07\%$
+	\item Para $78\,\text{cm}$: $\%OS = 11.54\%$
+	\item Para $90\,\text{cm}$: $\%OS \approx 0\%$
+\end{itemize}
+
+El tiempo de subida experimental fue:
+
+\[
+t_r^{\text{exp}} = 0.393 \text{ s}
+\]
+
+Se observa que el tiempo de subida coincide prácticamente con el
+predicho por el modelo, mientras que el sobreimpulso disminuye
+progresivamente a medida que aumenta la altura de operación.
+
+\insertarfigura{img/PID/PID_Practico.png}
+{Implementación práctica del controlador PID.}
+{fig:PID_practica}{1}
+
+
 
