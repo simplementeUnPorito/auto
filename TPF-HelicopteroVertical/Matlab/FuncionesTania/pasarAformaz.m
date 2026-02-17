@@ -1,7 +1,7 @@
 close all; clear; clc;
 
-S = load("D:\auto\TPF-HelicopteroVertical\Matlab\modeloSimplificado.mat");
-whos('-file',"D:\auto\TPF-HelicopteroVertical\Matlab\modeloSimplificado.mat")
+S = load("D:\auto\TPF-HelicopteroVertical\Matlab\planta (1).mat");
+whos('-file',"D:\auto\TPF-HelicopteroVertical\Matlab\planta (1).mat")
 
 % Elegí la planta correcta según lo que exista
 if isfield(S,'plantaC')
@@ -15,7 +15,7 @@ else
 end
 
 
-Ts = 1/4;
+Ts = 1/2;
 [num, den] = tfdata(c2d(plantaC,Ts,'zoh'),'v');
 
 n = length(num)-1;   % grado numerador
@@ -41,10 +41,10 @@ b1 = (a0+a1)/(a0+a1+a2);
 b0 = a0/(a0+a1+a2);
 
 
-C = K*(z-p1)*(z-p2)/(z^2+b1*z+b0);C%Hz^-1*(1/(z^3-1));
+C1 = K*(z-p1)*(z-p2)/(z^2+b1*z+b0);%Hz^-1*(1/(z^3-1));
 
-figure(1);step(feedback(Hz*C,1));hold on;
-[ud,n] = step(feedback(C,Hz));
+figure(1);step(feedback(Hz*C1,1));hold on;
+[ud,n] = step(feedback(C1,Hz));
 uc = repelem(ud, 40);
 t = (0:Ts/40:(n(end))*Ts);
 dt = Ts/40;
@@ -53,3 +53,17 @@ t  = (0:length(uc)-1)' * dt;     % mismo largo que uc
 plot(t, yc);
 figure(2);
 stairs(n,ud);
+
+C2 = Hz^-1*(1/(z^3-1));
+
+figure(3);step(feedback(Hz*C2,1));hold on;
+[ud,n] = step(feedback(C2,Hz));
+uc = repelem(ud, 40);
+t = (0:Ts/40:(n(end))*Ts);
+dt = Ts/40;
+t  = (0:length(uc)-1)' * dt;     % mismo largo que uc
+[yc,t] = lsim(plantaC, uc, t);
+plot(t, yc);
+figure(4);
+stairs(n,ud);
+
