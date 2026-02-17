@@ -13,12 +13,15 @@ El método de Truxal--Ragazzini consiste en especificar explícitamente
 una dinámica deseada en lazo cerrado $G_{cl}(z)$ y obtener el controlador
 a partir de la relación:
 
-\begin{equation}
-	\label{eq:TR_general}
-	G_{cl}(z)=\frac{C(z)G_{ZAS}(z)}{1+C(z)G_{ZAS}(z)}
-	\quad \Longrightarrow \quad
-	C(z)=\frac{1}{G_{ZAS}(z)}\frac{G_{cl}(z)}{1-G_{cl}(z)}.
-\end{equation}
+{\small
+	\begin{equation}
+		\label{eq:TR_general}
+		G_{cl}(z)=\frac{C(z)G_{ZAS}(z)}{1+C(z)G_{ZAS}(z)}
+		\quad \Longrightarrow \quad
+		C(z)=\frac{1}{G_{ZAS}(z)}\frac{G_{cl}(z)}{1-G_{cl}(z)}.
+	\end{equation}
+}
+
 
 Este procedimiento implica una inversión explícita del modelo de la planta,
 por lo que el diseño depende fuertemente de la exactitud del modelo identificado.
