@@ -52,27 +52,289 @@ El tiempo típico de recarga completa es aproximadamente \(1{,}5\,\text{h}\), lo
 
 En esta etapa del sistema no se realiza acción de control propiamente dicha, sino únicamente conversión y transferencia de potencia hacia el actuador.
 
+% ============================================================
+\section{Arquitectura completa de implementación y flujo de operación}
+\label{sec:arquitectura_total}
+% ============================================================
 
+En esta sección se describe la arquitectura completa del sistema de control implementado, integrando:
 
-\subsection{Flujo de control (parte de mando)}
-
-El PSoC actúa como el controlador embebido del sistema. A partir de los algoritmos de control implementados (PID, control en espacio de estados, LQG, entre otros), el PSoC genera una señal PWM de tipo servo que es enviada al ESC.
-
-Esta señal PWM representa la variable de control \(u(t)\) del sistema y determina el nivel de empuje aplicado al motor. Para asegurar una correcta referencia eléctrica y el funcionamiento adecuado del sistema, el PSoC y el ESC comparten una conexión de tierra común (GND).
-
-El sistema MATLAB se comunica con el PSoC mediante una interfaz de datos seriales, lo que permite:
 \begin{itemize}
-	\item enviar referencias de altura,
-	\item modificar parámetros de control,
-	\item recibir y visualizar datos del sistema en tiempo real.
+	\item Interfaz MATLAB (\texttt{psoc\_control\_gui\_hl\_v3()})
+	\item Protocolo de comunicación UARTP
+	\item Firmware embebido en PSoC (\texttt{control\_app.c})
+	\item Autocalibración automática del punto de hover
+	\item Ejecución del controlador (TF y espacio de estados)
+	\item Transmisión de telemetría en tiempo real
 \end{itemize}
 
-En este esquema, MATLAB cumple una función de supervisión, ajuste y análisis experimental, mientras que el PSoC ejecuta el control en tiempo real.
+El sistema fue concebido como una arquitectura integrada y modular: MATLAB actúa como entorno de diseño, configuración y supervisión, mientras que el PSoC ejecuta el control en tiempo real con temporización determinística.
 
-\subsection{Medición y realimentación (cierre del lazo)}
+% ============================================================
+\subsection{Interfaz MATLAB}
+% ============================================================
+\insertarfigura{img/GUI.png}
+{Interfaz gráfica desarrollada en MATLAB: \texttt{psoc\_control\_gui\_hl\_v3()}.}
+{fig:gui_matlab}{1}
 
-La planta física, al desplazarse verticalmente, genera una altura real que es medida mediante el sensor de distancia láser TFMini Plus. Este sensor entrega la medición de altura al PSoC a través de su interfaz de recepción (RX).
+El programa utilizado para la interacción con la planta es:
 
-La señal medida es utilizada por el PSoC para calcular el error entre la referencia y la salida real del sistema, cerrando de esta manera el lazo de control de altura. Adicionalmente, los datos medidos pueden ser enviados a MATLAB para su visualización, almacenamiento y análisis experimental.
+\begin{center}
+	\texttt{psoc\_control\_gui\_hl\_v3()}
+\end{center}
+
+La interfaz permite:
+
+\begin{itemize}
+	\item Cargar modelos discretos (TF o espacio de estados)
+	\item Enviar coeficientes al PSoC
+	\item Definir frecuencia de muestreo
+	\item Ajustar referencia
+	\item Iniciar y detener sesiones de control
+	\item Visualizar en tiempo real $u(t)$ e $y(t)$
+\end{itemize}
+
+La GUI constituye el nexo entre el diseño teórico en MATLAB y la implementación embebida en la planta real.
+
+El código correspondiente se presenta en el Anexo~\ref{ap:gui_matlab}.
+
+% ============================================================
+\subsection{Protocolo UARTP}
+% ============================================================
+
+Se desarrolló un protocolo serial propietario denominado UARTP con el objetivo de simplificar la implementación del firmware y garantizar robustez en la comunicación.
+
+\paragraph{Carga de coeficientes}
+
+Para simplificar el parsing en el microcontrolador, la transmisión de coeficientes se realiza siempre mediante un paquete fijo de:
+
+\[
+25 \text{ floats}
+\]
+
+independientemente del tipo de controlador.
+
+\subsubsection*{Formato del paquete}
+
+\textbf{Controlador en función de transferencia (TF):}
+
+\begin{itemize}
+	\item $b_0 \dots b_{10}$
+	\item $a_0 \dots a_{10}$
+	\item Orden efectivo (0–10)
+	\item Divisor de streaming $N$
+	\item Frecuencia de muestreo $F_s$
+\end{itemize}
+
+\textbf{Controlador en espacio de estados (siempre 3 estados):}
+
+\begin{itemize}
+	\item $A$ (3x3)
+	\item $B$ (3x1)
+	\item $C$ (1x3)
+	\item $D$
+	\item $L$ (ganancia del observador)
+	\item $K$ (realimentación de estados)
+	\item $K_x$ (integrador o referencia directa)
+	\item $N$
+	\item $F_s$
+\end{itemize}
+
+\paragraph{Comandos rápidos}
+
+Para reducir latencia:
+
+\begin{itemize}
+	\item START → 1 byte
+	\item STOP → 5 bytes
+\end{itemize}
+
+\paragraph{Streaming}
+
+La telemetría enviada es:
+
+\[
+[u_k,\; y_k]
+\]
+
+El parámetro $N$ actúa como divisor de muestreo:
+
+\[
+F_{\text{stream}} = \frac{F_s}{N}
+\]
+
+Si el buffer UART se llena, las muestras se descartan para evitar interferir con la ejecución del control.
+
+% ============================================================
+\subsection{Autocalibración automática del punto de hover}
+% ============================================================
+
+Antes de iniciar el control en lazo cerrado se ejecuta una rutina automática para estimar el punto de equilibrio (hover).
+
+\subsubsection*{Motivación}
+
+El punto de equilibrio del sistema depende de:
+
+\begin{itemize}
+	\item Nivel de batería
+	\item Temperatura
+	\item Condiciones mecánicas
+\end{itemize}
+
+Por lo tanto, se estima en cada sesión de control.
+
+\subsubsection*{Procedimiento}
+
+\begin{enumerate}
+	\item Se fija la frecuencia de muestreo en 1000 Hz.
+	\item Se realiza un barrido creciente de PWM entre:
+	
+	\[
+	u \in
+	\begin{aligned}
+		[\texttt{CONTROL\_CALIB\_START\_US},\\
+		\texttt{CONTROL\_CALIB\_MAX\_US}]
+	\end{aligned}
+	\]
+	
+	
+	\item Se detecta movimiento si:
+	
+	\[
+	|\Delta y| \geq \texttt{CONTROL\_CALIB\_DY\_CM}
+	\]
+	
+	durante un número mínimo de muestras consecutivas.
+	
+	\item Se fija el offset:
+	
+	\[
+	u_0 = g\_u0\_offset\_us
+	\]
+	
+	\item Se estabiliza el sistema.
+	\item Se retorna PWM a mínimo.
+\end{enumerate}
+
+Posteriormente el control se realiza en coordenadas relativas:
+
+\[
+\Delta u = u - u_0
+\]
+
+Esto desacopla la dinámica alrededor del punto de operación.
+
+% ============================================================
+\subsection{Modelo del sensor TFMini}
+% ============================================================
+
+El sensor TFMini Plus fue configurado mediante su interfaz serial según el procedimiento indicado en el datasheet, incluyendo la selección de frecuencia de muestreo.
+
+Se realizó una calibración empírica de segundo orden:
+
+\[
+y = A + B d + C d^2
+\]
+
+Los coeficientes fueron obtenidos mediante \texttt{polyfit} en MATLAB.
+
+La medición final se limita al rango operativo:
+
+\[
+y \in [10\,\text{cm},\;130\,\text{cm}]
+\]
+
+% ============================================================
+\subsection{Control en espacio de estados con integrador}
+% ============================================================
+
+Se implementa la estructura de Ogata (Ec. 6.19):
+
+\[
+v(k+1) = v(k) + e(k)
+\]
+
+\[
+u(k) = K_1 v(k+1) - K_2 \hat{x}(k)
+\]
+
+donde:
+
+\begin{itemize}
+	\item $K_2$ corresponde a la realimentación de estados
+	\item $K_1$ es la ganancia del integrador
+\end{itemize}
+
+Todo el control opera en coordenadas relativas.
+
+% ============================================================
+\subsection{Anti-windup implementado}
+% ============================================================
+
+Se implementó un esquema de \textit{conditional integration}:
+
+\begin{itemize}
+	\item Si no hay saturación → integrar normalmente.
+	\item Si hay saturación:
+	\begin{itemize}
+		\item Integrar sólo si el error empuja hacia la desaturación.
+		\item En caso contrario, congelar el integrador.
+	\end{itemize}
+\end{itemize}
+
+Esto evita acumulación indebida del estado integral.
+
+% ============================================================
+\subsection{Observadores implementados}
+% ============================================================
+
+Se implementaron dos variantes con tres estados:
+
+\paragraph{Predictor}
+
+\[
+\hat{x}_{k+1} = A\hat{x}_k + Bu_k + L(y_k - \hat{y}_k)
+\]
+
+\paragraph{Actual}
+
+Corrección previa:
+
+\[
+\hat{x}_k = \hat{x}_k^- + L(y_k - \hat{y}_k^-)
+\]
+
+Predicción posterior:
+
+\[
+\hat{x}_{k+1}^- = A\hat{x}_k + Bu_k
+\]
+
+% ============================================================
+\subsection{Flujo completo de operación}
+% ============================================================
+
+\begin{enumerate}
+	\item Diseño del controlador en MATLAB.
+	\item Envío de coeficientes vía UARTP.
+	\item Configuración de frecuencia del TFMini.
+	\item Ejecución de autocalibración de hover.
+	\item Inicio de sesión de control.
+	\item Ejecución del controlador en cada período de muestreo.
+	\item Streaming en tiempo real.
+	\item STOP suave y cierre de sesión.
+\end{enumerate}
+
+% ============================================================
+\subsection{Referencias a anexos}
+% ============================================================
+
+\begin{itemize}
+	\item GUI MATLAB: Anexo~\ref{ap:gui_matlab}
+	\item Firmware PSoC: Anexo~\ref{ap:main}
+	\item Protocolo UARTP: Anexo~\ref{ap:uartp_sw}
+\end{itemize}
+
+
 
 
