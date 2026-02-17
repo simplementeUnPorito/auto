@@ -176,6 +176,86 @@ e_y(k)=y_{\mathrm{meas}}(k)-y_{\mathrm{true}}(k)
 y se reportaron métricas como RMS\((e_y)\) y conteo de saturaciones en \(u\), para
 confirmar que las perturbaciones y límites realmente están actuando sobre el lazo.
 
+\paragraph{Resultados de simulación}
+
+La figura~\ref{fig:lqr_step_sim} muestra la respuesta temporal simulada del lazo
+cerrado con LQR, observador y saturación/ruido configurables. La figura~\ref{fig:lqr_u_sim}
+presenta el esfuerzo de control asociado, evidenciando los instantes de saturación
+y la actividad del regulador ante perturbaciones.
+
+\insertarfigura{img/LQR/LQR_step.png}
+{Respuesta temporal simulada del sistema con regulador LQR y observador (con saturación y ruido según configuración).}
+{fig:lqr_step_sim}{1}
+
+\insertarfigura{img/LQR/LQR_esfuerzo.png}
+{Esfuerzo de control simulado $u(k)$ para el regulador LQR (incluyendo saturación y ruido según configuración).}
+{fig:lqr_u_sim}{1}
+
+% ============================================================
+\subsubsection{Implementación experimental del LQR}
+% ============================================================
+
+En la implementación real se evaluaron ambas variantes del observador (predictor y actual)
+manteniendo el mismo regulador LQR. Las figuras~\ref{fig:lqr_pred_prac} y~\ref{fig:lqr_act_prac}
+muestran la respuesta experimental, evidenciando diferencias en el esfuerzo de control y el
+comportamiento transitorio debido a no linealidades, saturación y variaciones del punto de operación.
+
+\insertarfigura{img/LQR/LQR_pred_practico.png}
+{Respuesta experimental en lazo cerrado con regulador LQR y observador \textit{predictor}.}
+{fig:lqr_pred_prac}{1}
+
+\insertarfigura{img/LQR/LQR_act_practico.png}
+{Respuesta experimental en lazo cerrado con regulador LQR y observador \textit{actual}.}
+{fig:lqr_act_prac}{1}
+
+\subsubsection{Discusión}
+
+\paragraph{Observador predictor}
+
+En la simulación (figura~\ref{fig:lqr_step_sim}) la respuesta presenta
+un tiempo de subida aproximado de $t_r^{\text{sim}} \approx 0.75\,\text{s}$
+sin sobreimpulso apreciable. Este comportamiento es consistente con los
+polos dominantes del sistema en lazo cerrado, ubicados próximos al
+círculo unitario y con amortiguamiento elevado.
+
+En la implementación experimental se observó una diferencia significativa
+durante la primera subida (10\,cm a 30\,cm), donde el tiempo de subida
+fue aproximadamente $15.17\,\text{s}$. Esta discrepancia se atribuye a
+condiciones iniciales alejadas del punto de operación lineal, presencia
+de fricción estática, retardo del conjunto ESC--motor y penalización del
+esfuerzo impuesta por el funcional LQR, que favorece una respuesta de
+menor energía antes que máxima rapidez.
+
+En una segunda subida (30\,cm a 45\,cm), ya en un entorno más próximo al
+equilibrio dinámico, el tiempo de subida fue de $0.55\,\text{s}$
+(figura~\ref{fig:lqr_pred_prac}), mostrando una concordancia mucho mayor
+con la predicción del modelo lineal. En ambas transiciones el
+sobreimpulso fue prácticamente nulo.
+
+Respecto al esfuerzo de control, se observa una evolución progresiva
+hasta alcanzar el equilibrio, seguida de picos moderados asociados a la
+corrección fina de la altura bajo saturación y no linealidades del
+actuador.
+
+\paragraph{Observador actual}
+
+En simulación, el comportamiento temporal coincide con el del predictor
+en términos de tiempo de subida y ausencia de sobreimpulso
+(figura~\ref{fig:lqr_u_sim}), en concordancia con el principio de
+separación.
+
+Experimentalmente, para una transición de 75\,cm a 95\,cm, se obtuvo un
+tiempo de subida aproximado de $0.69\,\text{s}$ con error estacionario
+inferior a 1\,cm (figura~\ref{fig:lqr_act_prac}). Se observan picos de
+esfuerzo más continuos que en el predictor, lo cual puede atribuirse a
+una corrección más inmediata basada en la medición disponible y a la
+interacción con ruido y saturación del actuador.
+
+En alturas elevadas, el esfuerzo tiende a estabilizarse alrededor del
+valor de equilibrio requerido para compensar el peso, reduciendo la
+actividad transitoria.
+
+
 \paragraph{Referencia al apéndice}
 
 El script completo de simulación (incluyendo funciones locales \texttt{sim\_obs\_loop},
