@@ -237,19 +237,37 @@ ganancias reportada previamente.
 \subsubsection{Discusión}
 % ============================================================
 
-El método de Ogata 6.19 permite incorporar acción integral sin modificar
-la estructura original de la planta, utilizando un estado adicional y
-realimentación adecuada.
+El método de Ogata 6.19 permite incorporar acción integral sin modificar la
+planta física, aumentando el modelo de control con un estado integral adicional
+y realimentación adecuada.
 
 Se observa que:
 
 \begin{itemize}
-	\item El integrador elimina el error en régimen permanente.
-	\item La dinámica del observador es más rápida que la del sistema controlado.
-	\item Ambos esquemas (predictor y actual) resultan estables,
-	con polos dentro del círculo unidad.
-	\item El sistema aumentado conserva estabilidad global.
+	\item La acción integral permite eliminar el error en régimen permanente ante
+	perturbaciones constantes, siempre que el lazo sea estable y no exista
+	saturación sostenida (o se implemente anti-windup).
+	\item Se eligieron polos del observador más rápidos que los polos del lazo
+	cerrado para asegurar convergencia rápida del estado estimado.
+	\item En el modelo lineal discreto, tanto el esquema con observador predictor
+	como el esquema con observador actual presentan polos dentro del círculo unidad.
+	\item El sistema aumentado (planta + integrador) conserva estabilidad en el
+	diseño lineal, aunque en la práctica pueden aparecer diferencias por
+	no linealidades y saturación del actuador.
 \end{itemize}
 
 El código completo utilizado para esta sección se incluye en el
 Apéndice~\ref{ap:ogata_integrador_obs}.
+
+En la figura~\ref{fig:ssi_step} se aprecia la simulación. En ella no se observa
+sobreimpulso, pero sí un tiempo de subida aproximado de $t_r^{\text{sim}}\approx 2.6\ \text{s}$
+tanto para el observador predictor como para el actual. Experimentalmente,
+se obtuvo $t_r^{\text{exp}}=2.36\ \text{s}$ para el observador actual y
+$t_r^{\text{exp}}=2.02\ \text{s}$ para el predictor (figuras~\ref{fig:ssi_practico_act}
+y~\ref{fig:ssi_practico_pred}). La diferencia sugiere que el modelo lineal
+subestima la rapidez del sistema real en el punto de operación considerado
+y/o que existen dinámicas no modeladas del conjunto ESC--motor--hélice.
+
+Respecto al esfuerzo de control, en el observador actual (figura~\ref{fig:ssi_practico_act}) se observa un incremento más progresivo del esfuerzo y picos para sostener la altura, mientras que en el predictor (figura~\ref{fig:ssi_practico_pred}) aparecen picos más continuos desde el inicio.
+Este comportamiento es consistente con una acción de control más activa del predictor basada en la predicción del estado, y con correcciones del observador actual asociadas a la incorporación explícita de la medición, además de los efectos de saturación y no linealidades del actuador.
+
