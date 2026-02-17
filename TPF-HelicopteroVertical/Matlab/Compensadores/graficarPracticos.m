@@ -3,8 +3,8 @@ clc; close all; clear;
 %% =========================
 % Parámetros
 %% =========================
-titulo = 'Ubicacion Arbitraria de Polos con integrador Predictivo (u e y vs n)';
-DATA_MAT_PATH = ['SSi_pred_practico.mat'];
+titulo = 'Lugar de Raíces (u e y vs n)';
+DATA_MAT_PATH = ['rlocus_practico_2.mat'];
 
 %% =========================
 % Carga
