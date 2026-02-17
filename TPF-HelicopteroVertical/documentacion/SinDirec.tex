@@ -1,116 +1,134 @@
-\subsubsection{Síntesis directa (Truxal--Ragazzini)}
+\subsubsection{Síntesis directa (Truxal--Ragazzini) y evaluación intramuestra}
 
-Se parte del modelo discreto identificado de la planta:
+Se parte del modelo continuo ya utilizado en los anteriores diseños.
+Sus polos dominantes en tiempo continuo son:
 
-\begin{equation}
-	\label{eq:GZAS}
-	G_{ZAS}(z)=
-	\frac{-0.0001205\,z^{-1}+0.0002415\,z^{-2}-0.0001209\,z^{-3}}
-	{1-2.994\,z^{-1}+2.989\,z^{-2}-0.9944\,z^{-3}} .
-\end{equation}
+\[
+p_{1,2} = -2.805 \pm j\,2.4804,
+\qquad
+p_3 = -0.0003.
+\]
 
-El método de Truxal--Ragazzini consiste en especificar explícitamente
-una dinámica deseada en lazo cerrado $G_{cl}(z)$ y obtener el controlador
-a partir de la relación:
+Para el par complejo, la frecuencia natural resulta:
 
-{\small
-	\begin{equation}
-		\label{eq:TR_general}
-		G_{cl}(z)=\frac{C(z)G_{ZAS}(z)}{1+C(z)G_{ZAS}(z)}
-		\quad \Longrightarrow \quad
-		C(z)=\frac{1}{G_{ZAS}(z)}\frac{G_{cl}(z)}{1-G_{cl}(z)}.
-	\end{equation}
+\[
+\omega_n
+=
+\sqrt{(-2.805)^2 + (2.4804)^2}
+\approx 3.745 \,\text{rad/s}.
+\]
+
+En términos de frecuencia:
+
+\[
+f_n
+=
+\frac{\omega_n}{2\pi}
+\approx 0.596 \,\text{Hz}.
+\]
+
+Siguiendo el criterio de Nyquist, la frecuencia mínima de muestreo
+debería ser superior a \(2f_n \approx 1.19\,\text{Hz}\).
+Sin embargo, experimentalmente se observó que para frecuencias
+de muestreo mayores a \(2\,\text{Hz}\)
+el esfuerzo de control crece de manera extremadamente elevada,
+producto de la inversión explícita del modelo y la mayor agresividad
+dinámica introducida por el diseño.
+
+Por esta razón se adoptó:
+
+\[
+F_s = 2\,\text{Hz}
+\qquad
+(T_s = 0.5\,\text{s}),
+\]
+
+valor que representa un compromiso entre velocidad de respuesta
+y esfuerzo físicamente realizable.
+
+El procedimiento completo de discretización, resolución
+del sistema polinómico y simulación intramuestra
+se encuentra detallado en el Apéndice~\ref{ap:codigo_TR}.
+
+
+\paragraph{Fundamento teórico (Ogata 6.7.1)}
+
+Sea la función de lazo:
+
+\[
+L(z) = C(z)G_{ZAS}(z) = \frac{N_L(z)}{D_L(z)}.
+\]
+
+Para eliminar oscilaciones intramuestra (ripple-free response)
+y lograr error nulo luego de \(l\) pasos,
+deben cumplirse simultáneamente:
+
+\begin{enumerate}
+	\item \(N_L(z) + D_L(z) = z^l,\quad l \ge n\).
+	\item \(D_L(z)\) debe tener una raíz en \(z=1\) (sistema tipo 1).
+	\item No deben existir cancelaciones inestables entre
+	\(C(z)\) y \(G_{ZAS}(z)\).
+\end{enumerate}
+
+Resolviendo el sistema polinómico correspondiente se obtiene
+el controlador sin oscilaciones intramuestra.
+
+\subsubsection{Controlador sin oscilaciones intramuestra}
+
+\[
+C_1(z)=
+\frac{1.73z^2 - 0.2763z + 0.1047}
+{z^2 + 0.6683z + 0.04352}.
+\]
+
+\insertarfigura{img/Sintesis/Step_salidaSinOscilaciones.png}
+{Respuesta al escalón sin oscilaciones intramuestra.}
+{fig:sinSalida}{1}
+
+\insertarfigura{img/Sintesis/Step_esfuerzoSinOscilaciones.png}
+{Esfuerzo de control asociado a \(C_1(z)\).}
+{fig:sinEsfuerzo}{1}
+
+\subsubsection{Controlador con oscilaciones intramuestra}
+
+Para evitar que la expresión exceda el ancho de columna,
+se presenta en forma partida:
+
+{\tiny
+	\[
+	C_2(z)=
+	\frac{z^3 - 1.16z^2 + 0.2202z - 0.0605}
+	{0.1917z^5 + 0.3612z^4 + 0.02515z^3
+		- 0.1917z^2 - 0.3612z - 0.02515}
+	\]
 }
 
 
-Este procedimiento implica una inversión explícita del modelo de la planta,
-por lo que el diseño depende fuertemente de la exactitud del modelo identificado.
+\insertarfigura{img/Sintesis/Step_salidaConOscilaciones.png}
+{Respuesta al escalón con oscilaciones intramuestra.}
+{fig:conSalida}{1}
 
-\paragraph{Método 1: respuesta \textit{deadbeat}}
+\insertarfigura{img/Sintesis/Step_esfuerzoConOscilaciones.png}
+{Esfuerzo de control asociado a \(C_2(z)\).}
+{fig:conEsfuerzo}{1}
 
-Como primera aproximación se adoptó una dinámica deseada del tipo
-\textit{deadbeat}, definida por:
+\subsubsection{Discusión y decisión experimental}
 
-\begin{equation}
-	G_{cl}(z)=z^{-1}.
-\end{equation}
+Ambos controladores presentan una dinámica extremadamente agresiva.
+La inversión explícita del modelo genera amplificaciones significativas
+del esfuerzo de control y alta sensibilidad ante incertidumbres,
+no linealidades y saturaciones del actuador.
 
-Esta elección implica que la salida alcance el valor deseado
-en un único período de muestreo, anulando el error en el menor tiempo posible.
+Si bien el controlador ripple-free elimina oscilaciones intramuestra,
+los niveles de esfuerzo observados en simulación resultan
+potencialmente destructivos para la planta real.
 
-Reemplazando en \eqref{eq:TR_general} se obtiene:
+Por esta razón, ninguno de los dos controladores fue implementado
+experimentalmente, priorizando la integridad física del sistema
+y la seguridad del actuador.
 
-\begin{equation}
-	\label{eq:C1}
-	C_1(z)=\frac{1}{G_{ZAS}(z)}\frac{z^{-1}}{1-z^{-1}}
-	=
-	\frac{1}{G_{ZAS}(z)}\frac{1}{z-1}.
-\end{equation}
-
-Se observa que el controlador resultante contiene explícitamente
-la inversa de la planta y un polo adicional en $z=1$,
-lo que anticipa posibles problemas de magnitud del esfuerzo de control.
-
-\subsubsection{Método 2: Deadbeat \textit{ripple-free}}
-
-Como alternativa se evaluó la variante \textit{ripple-free},
-cuyo controlador obtenido es:
-
-\begin{equation}
-	\label{eq:C2_z}
-	C_2(z)=
-	\frac{10.43038\,z^{2}-2.7635\,z+3.3344}
-	{-0.33662\,z^{2}-0.66338\,z+1}.
-\end{equation}
-
-Multiplicando numerador y denominador por $(-1)$
-y normalizando el coeficiente líder del denominador, se obtiene:
-
-\begin{equation}
-	\label{eq:C2_z_norm}
-	C_2(z)=
-	\frac{-30.9856\,z^{2}+8.2096\,z-9.9055}
-	{z^{2}+1.9707\,z-2.9707}.
-\end{equation}
-
-Para implementación digital resulta conveniente expresarlo en términos de $z^{-1}$:
-
-\begin{equation}
-	\label{eq:C2_zinv}
-	C_2(z)=
-	\frac{-30.9856+8.2096\,z^{-1}-9.9055\,z^{-2}}
-	{1+1.9707\,z^{-1}-2.9707\,z^{-2}}.
-\end{equation}
-
-\subsubsection{Resultados y Limitaciones Prácticas}
-
-Las simulaciones mostraron que ambos controladores demandan esfuerzos
-de control extremadamente elevados, alcanzando valores del orden de:
-
-\[
-|u_{\max}| \sim 10^{29},
-\]
-
-lo cual excede ampliamente las capacidades del actuador físico.
-
-En la implementación real, la señal de control corresponde a una
-señal PWM tipo servo a $50\,\text{Hz}$ acotada en el rango:
-
-\begin{equation}
-	u \in [1000,2000]\ \mu s .
-\end{equation}
-
-La magnitud desproporcionada del esfuerzo se explica por:
-
-\begin{itemize}
-	\item La inversión explícita del modelo $G_{ZAS}(z)$.
-	\item La presencia de polos cercanos a $z=1$ en la planta.
-	\item Alta sensibilidad a pequeñas incertidumbres del modelo.
-	\item Cancelaciones exactas requeridas por el diseño.
-\end{itemize}
-
-En particular, la inversión de dinámicas cercanas al borde del círculo unitario produce amplificaciones significativas en la señal de control, haciendo que el diseño sea extremadamente sensible a variaciones como cambios en la tensión de batería, fricción, efectos aerodinámicos y dinámica no modelada del conjunto ESC--motor--hélice.
-
-Por estas razones, si bien la síntesis directa resulta valiosa desde el punto de vista conceptual y didáctico, no se considera viable para implementación experimental en la planta real.
-
-En consecuencia, para la etapa práctica se priorizan estrategias de menor orden y mayor robustez, que contemplen explícitamente las limitaciones del actuador y la saturación de la señal de control.
+Estos diseños deben considerarse controladores teóricos
+altamente sensibles (“controladores de papel”),
+útiles desde el punto de vista académico,
+pero no apropiados para implementación directa
+en la planta real.
