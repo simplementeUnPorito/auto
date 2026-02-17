@@ -4,7 +4,7 @@ clc; close all; clear;
 % Parámetros
 %% =========================
 titulo = 'Lugar de Raíces (u e y vs n)';
-DATA_MAT_PATH = ['BODE_practico.mat'];
+DATA_MAT_PATH = ['SSi_pred_practico.mat'];
 
 %% =========================
 % Carga
