@@ -262,3 +262,35 @@ Las siguientes figuras muestran los resultados obtenidos:
 El código completo utilizado para calcular \(L\), \(K_x\), \(K_i\), los polos de la planta,
 los polos del observador y los polos del lazo cerrado se incluye en el
 Apéndice~\ref{ap:lqg_ganancias}.
+
+\subsubsection{Discusión}
+
+En la primera subida experimental (figura~\ref{fig:lqgi_practico})
+se obtuvo un tiempo de subida de $11.55\,\text{s}$ con un sobreimpulso
+de $12.5\%$. Esta respuesta significativamente más lenta respecto a
+las siguientes transiciones puede atribuirse a condiciones iniciales
+alejadas del punto de operación lineal, presencia de fricción estática,
+retardo del conjunto ESC--motor y dinámica de acumulación del integrador.
+Al partir desde reposo, el controlador debe generar el empuje necesario
+para compensar el peso y superar no linealidades iniciales, lo que
+produce una transición más gradual.
+
+En las subidas posteriores, ya en régimen dinámico y con el integrador
+compensando el peso del sistema, el tiempo de subida se reduce a
+aproximadamente $0.65\,\text{s}$ con sobreimpulso prácticamente nulo.
+Este comportamiento es coherente con el diseño LQGI y con la
+linealización alrededor del punto de equilibrio.
+
+En la simulación con ruido (figura~\ref{fig:lqgi_step_ruido}) se obtuvo
+un tiempo de subida aproximado de $0.5\,\text{s}$ y un sobreimpulso de
+$8\%$, mostrando buena concordancia con la respuesta experimental en
+condiciones próximas al equilibrio.
+
+Respecto al esfuerzo de control, la simulación con ruido
+(figura~\ref{fig:lqgi_esfuerzo_ruido}) presenta mayor cantidad de picos,
+producto de la inyección explícita de ruido gaussiano y de la
+sensibilidad del integrador a perturbaciones. En la implementación
+real (figura~\ref{fig:lqgi_practico}), los picos resultan más
+consistentes y de menor amplitud relativa, probablemente debido a la
+dinámica física del sistema y al filtrado natural del sensor.
+
