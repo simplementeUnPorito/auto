@@ -1,11 +1,13 @@
 
 \subsection{Introducción}
 
-A diferencia de los métodos clásicos basados en funciones de transferencia
-y análisis en frecuencia, los métodos modernos de control se fundamentan
-en la representación en espacio de estados del sistema dinámico.
+A diferencia de los métodos clásicos, que se apoyan en funciones
+de transferencia y análisis en el dominio de la frecuencia,
+los métodos modernos de control se fundamentan en la
+\textbf{representación en espacio de estados} del sistema dinámico.
 
-En este enfoque, la dinámica se describe mediante:
+En este enfoque, la dinámica del sistema discreto se describe como:
+
 \begin{equation}
 	x_{k+1}=Ax_k+Bu_k
 	\label{eq:din_estado}
@@ -16,24 +18,34 @@ En este enfoque, la dinámica se describe mediante:
 	\label{eq:din_salida}
 \end{equation}
 
-
-
-donde $x_k \in \mathbb{R}^n$ es el vector de estados,
-$u_k$ la entrada de control y $y_k$ la salida medida.
-
-Este formalismo permite:
+donde:
 
 \begin{itemize}
-	\item Diseñar realimentación directa de estados.
-	\item Ubicar polos del sistema de manera sistemática.
-	\item Formular problemas de control óptimo.
-	\item Incorporar estimadores de estado.
+	\item $x_k \in \mathbb{R}^n$ es el vector de estados,
+	\item $u_k$ es la entrada de control,
+	\item $y_k$ es la salida medida.
 \end{itemize}
 
-\subsubsection{Modelo en espacio de estados continuo}
+Este formalismo presenta ventajas estructurales relevantes
+respecto al enfoque clásico:
 
-Las matrices del modelo continuo en representación
-estado–espacio son:
+\begin{itemize}
+	\item Permite diseñar realimentación directa de estados.
+	\item Facilita la ubicación sistemática de polos.
+	\item Habilita la formulación de problemas de control óptimo.
+	\item Permite incorporar estimadores de estado cuando no todos
+	los estados son medibles.
+\end{itemize}
+
+En el sistema desarrollado, únicamente se dispone de medición directa
+de la altura, por lo que la reconstrucción de los estados internos
+mediante observadores resulta un elemento central del diseño.
+
+% ============================================================
+\subsubsection{Modelo continuo en espacio de estados}
+% ============================================================
+
+Las matrices del modelo continuo identificado son:
 
 \[
 F =
@@ -67,29 +79,34 @@ J =
 \end{bmatrix}
 \]
 
-
+Este modelo representa la dinámica linealizada del sistema
+alrededor del punto de operación (hover),
+en coordenadas relativas.
 
 % ============================================================
-\subsubsection{Modelo en Espacio de Estados}
+\subsubsection{Modelo discreto}
 % ============================================================
 
-El modelo discreto obtenido:
+Para implementación digital en el PSoC,
+el modelo continuo se discretiza con período de muestreo \(T_s\):
+
 \[
 A = e^{F T_s}, 
 \qquad
 B = F^{-1}\!\left(e^{F T_s} - I\right) G,
-\qquad
+\qquad\\
 C = H,
-\]
-\[
-D = J
+\qquad
+D = J.
 \]
 
-
-Tiempo de muestreo depende de la práctica
+El valor de \(T_s\) depende del método de diseño y de la práctica
+experimental, ya que diferentes estrategias de control
+requieren distintos compromisos entre velocidad de respuesta
+y sensibilidad numérica.
 
 % ============================================================
-\subsubsection{Análisis de Controlabilidad y Observabilidad}
+\subsubsection{Análisis de controlabilidad y observabilidad}
 % ============================================================
 
 Matriz de controlabilidad:
@@ -99,85 +116,82 @@ Matriz de controlabilidad:
 \]
 
 \[
-\text{rank}(\mathcal{C}) = \textbf{[3]}
+\text{rank}(\mathcal{C}) = 3
 \]
 
 Matriz de observabilidad:
 
 \[
-\mathcal{O}=\begin{bmatrix}
-	H \\ HF \\ HF^2 \\ \vdots \\ HF^{n-1}
+\mathcal{O}=
+\begin{bmatrix}
+	H \\
+	HF \\
+	HF^2 \\
+	\vdots \\
+	HF^{n-1}
 \end{bmatrix}
 \]
 
 \[
-\text{rank}(\mathcal{O}) = \textbf{[3]}
+\text{rank}(\mathcal{O}) = 3
 \]
 
-Conclusión estructural:
+Dado que ambos rangos coinciden con el orden del sistema,
+el modelo es \textbf{completamente controlable y observable}.
 
-Dado que el rango de ambas matrices coincide con el orden del sistema,
-se concluye que el modelo es completamente controlable y completamente
-observable.
-
-Desde el punto de vista físico, esto implica que:
+Esto implica que:
 
 \begin{itemize}
-	\item Existe una combinación adecuada de la señal de entrada que
-	permite influenciar todos los estados internos del sistema.
-	\item La salida medida contiene información suficiente para reconstruir
-	completamente el vector de estados mediante un observador.
+	\item Existe una señal de control capaz de influenciar todos los estados.
+	\item La medición disponible contiene información suficiente
+	para reconstruir el vector de estados mediante un observador.
 \end{itemize}
 
-En consecuencia, el modelo identificado resulta estructuralmente apto
-para el diseño de control por realimentación de estados, ubicación de polos,
-LQR y estimación de estados mediante observador de Luenberger o filtro de Kalman.
+Por lo tanto, el modelo es estructuralmente apto
+para diseño mediante realimentación de estados,
+ubicación arbitraria de polos,
+control óptimo LQR
+y estimación mediante observador de Luenberger
+o filtro de Kalman.
 
-No obstante, la validez práctica de dicha síntesis en tiempo discreto
-depende de que el tiempo de muestreo \(T_s\) sea suficientemente pequeño
-para capturar la dinámica relevante del sistema, evitando aliasing.
-En particular, se asume que las componentes significativas de la señal de
-salida y de las perturbaciones se encuentran por debajo de la frecuencia de
-Nyquist \(f_N = \tfrac{1}{2T_s}\), y que el acondicionamiento analógico
-(filtrado anti-alias) es consistente con esta hipótesis.
+No obstante,
+la validez práctica en tiempo discreto
+depende de la adecuada elección del período de muestreo \(T_s\),
+de modo que la dinámica relevante del sistema
+quede correctamente representada
+y no se introduzcan efectos de aliasing
+ni problemas numéricos asociados
+a discretizaciones excesivamente finas.
 
 % ============================================================
-
 \subsection{Ubicación Arbitraria de Polos}
 % ============================================================
+
 \input{ubiArbPolos.tex}
-
-
-%\subsection{Estimación de Estados}
+\balance
+\clearpage
+% ============================================================
+\subsection{Ubicación Arbitraria de Polos con Integrador de error}
 % ============================================================
 
-%\input{Estimadores.tex}
-
-\newpage
-
-
-\subsection{Control Integrador}
-
 \input{SSi.tex}
-
+\balance
 \clearpage
 % ============================================================
 \subsection{Control Óptimo (LQR)}
 % ============================================================
 
 \input{ControlOptimo.tex}
-
-\newpage
+\balance
+\clearpage
+% ============================================================
+\subsection{Control Óptimo con Filtro de Kalman e Integrador de Error (LQGi)}
 % ============================================================
 
-% ============================================================
-
-% ============================================================
-
-%\input{ControlOptimoIntegrador.tex}
-%\clearpage
-
-% ============================================================
-\subsection{Filtro de Kalman}
-% ============================================================
 \input{Kalman.tex}
+\balance
+\clearpage
+
+\subsection{Comparación entre Métodos Modernos}
+
+\input{conclusion0.2.tex}

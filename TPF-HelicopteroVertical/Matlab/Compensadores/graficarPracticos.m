@@ -3,8 +3,8 @@ clc; close all; clear;
 %% =========================
 % Parámetros
 %% =========================
-titulo = 'Lugar de Raíces (u e y vs n)';
-DATA_MAT_PATH = ['LQGi_practico.mat'];
+titulo = 'SS predictor (u e y vs n)';
+DATA_MAT_PATH = ['SS_actual_practico.mat'];
 
 %% =========================
 % Carga

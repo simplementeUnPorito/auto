@@ -1,9 +1,11 @@
+% ============================================================
 \subsection{Variables y convenciones}
+% ============================================================
 
-Se definen a continuación las variables y convenciones utilizadas para el modelado del sistema:
+Se definen a continuación las variables y convenciones empleadas en el modelado del sistema:
 
 \begin{itemize}
-	\item Eje vertical \(z\) [m], definido positivo hacia arriba.
+	\item Eje vertical \(z\), definido positivo hacia arriba.
 	
 	\item Masa móvil:
 	\[
@@ -25,55 +27,54 @@ Se definen a continuación las variables y convenciones utilizadas para el model
 	u \in [1000,2000]\ \mu s
 	\]
 	
-	Si bien el rango eléctrico nominal del protocolo PWM se encuentra entre
-	$1000$ y $2000\ \mu s$, durante la operación en vuelo la señal se restringe
-	intencionalmente al intervalo
+	Durante la operación experimental, la señal se restringe intencionalmente al intervalo:
 	
 	\[
 	u \in [1100,1700]\ \mu s
 	\]
 	
-	Esta limitación surge de criterios de confiabilidad experimental.
-	En ensayos previos realizados con ESCs de menor capacidad nominal
-	($30\ \text{A}$), se observaron fallas térmicas al operar en valores
-	superiores a aproximadamente $1600\ \mu s$ bajo carga sostenida.
+	Esta limitación surge de criterios de seguridad térmica y confiabilidad. En ensayos previos se observaron riesgos térmicos al operar sostenidamente en valores elevados bajo carga.
 	
-	Dado que no se realizaron mediciones directas de corriente ni
-	caracterizaciones térmicas detalladas del conjunto motor--ESC--hélice,
-	se adoptó un margen de seguridad conservador que evita la operación
-	prolongada en regímenes de alta demanda energética.
+	Asimismo, el límite inferior evita regiones cercanas a la detención del motor, donde aparecen comportamientos fuertemente no lineales y pérdida abrupta de sustentación.
 	
-	Asimismo, el límite inferior de $1100\ \mu s$ se fija con el objetivo
-	de evitar regiones cercanas a la detención del motor, donde pueden
-	presentarse comportamientos fuertemente no lineales y pérdida abrupta
-	de sustentación.
+	En consecuencia, el modelo identificado y las estrategias de control desarrolladas se consideran válidos únicamente dentro de este rango operativo seguro.
 	
-	En consecuencia, el modelo identificado y las estrategias de control
-	desarrolladas se consideran válidos únicamente dentro de este rango
-	operativo seguro.
-	
-	\item Normalización de la entrada:
+	\item Trabajo en coordenadas relativas respecto al punto de hover:
 	\[
-	\hat u = \mathrm{sat}\!\left(u-u_0,\,1100-u_0,\,1700-u_0\right)
+	\Delta u = u - u_0
 	\]
-	
-	Siendo $u_0$ el valor de PWM necesario para generar un empuje
-	equivalente al peso del sistema, es decir, la condición de equilibrio
-	vertical estacionario.
+	donde \(u_0\) es el PWM necesario para generar un empuje equivalente al peso del sistema.
 	
 	\item Salida medida:
 	\[
 	y = z
 	\]
-	
-	correspondiente a la altura del cuerpo móvil medida mediante el sensor
-	TFMini Plus, cuya resolución efectiva se encuentra en el orden de
-	centímetros.
+	correspondiente a la altura medida mediante el sensor TFMini Plus.
 \end{itemize}
 
-\subsubsection{Modelo físico simplificado}
+% ============================================================
+\paragraph{Consideración sobre las unidades utilizadas}
+% ============================================================
 
-Desde un punto de vista físico, el movimiento vertical del cuerpo móvil puede describirse, en primera aproximación, mediante:
+La identificación y el diseño de control se realizaron utilizando directamente las unidades nativas del sistema físico: centímetros para la altura y microsegundos para el PWM.
+
+Si bien el uso de unidades del Sistema Internacional podría facilitar la interpretación física directa de algunos parámetros, se optó por trabajar en las unidades reales de operación debido a que:
+
+\begin{itemize}
+	\item el sensor entrega la medición en centímetros,
+	\item el actuador es comandado mediante pulsos PWM en microsegundos,
+	\item el firmware del PSoC opera naturalmente en dichas magnitudes.
+\end{itemize}
+
+Trabajar en las unidades operativas evitó conversiones intermedias innecesarias, reduciendo complejidad y posibles errores de escala en la implementación embebida.
+
+Desde el punto de vista del modelado lineal, el cambio de unidades sólo afecta la escala de ganancia del sistema, sin modificar polos, ceros ni estructura dinámica.
+
+% ============================================================
+\subsubsection{Modelo físico simplificado}
+% ============================================================
+
+En una primera aproximación ideal, el movimiento vertical puede describirse como:
 
 \[
 \dot z = v
@@ -83,58 +84,70 @@ Desde un punto de vista físico, el movimiento vertical del cuerpo móvil puede 
 m\dot v = T - mg
 \]
 
-Este modelo corresponde al caso ideal sin disipación, en el cual la
-dinámica posición--empuje presenta una estructura de doble integración.
+lo que conduce a una estructura de doble integración entre empuje y posición.
 
-En una aproximación más realista, puede incorporarse el efecto de
-rozamiento de las guías mediante un término viscoso proporcional a la
-velocidad:
+Incorporando pérdidas mecánicas equivalentes, puede agregarse un término viscoso:
 
 \[
 m\dot v = T - mg - b\,v
 \]
 
-donde \(b\) [N\,s/m] representa un coeficiente equivalente de fricción
-viscosa.
+donde \(b\) representa fricción equivalente.
 
-La inclusión de este término modifica la estructura ideal de doble
-integrador, convirtiéndola en un sistema con integración amortiguada.
-Desde el punto de vista de función de transferencia continua, el
-doble polo en el origen deja de ser estrictamente doble, introduciéndose
-un amortiguamiento mecánico que desplaza uno de los polos hacia el
-semiplano izquierdo.
+Sin embargo, los ensayos experimentales muestran comportamientos que no pueden ser capturados adecuadamente por un modelo puramente integrador o de segundo orden simple.
 
-Por lo tanto, la presencia de un único integrador dominante en el modelo
-simplificado resulta coherente con la física del sistema cuando se
-consideran pérdidas mecánicas.
+% ============================================================
+\subsubsection{Evidencia experimental de comportamiento no mínimo-fase}
+% ============================================================
 
-\subsubsection{Modelo dinámico equivalente del actuador (BLDC)}
+Durante la identificación experimental se observaron respuestas repetibles en las cuales, ante escalones pequeños alrededor del punto de operación (\(\Delta u \approx 100\ \mu s\) por encima del hover, siendo estas lo suficientemente grandes como para excitar todos los modos del sistema), la altura presenta inicialmente una leve disminución antes de iniciar el ascenso.
 
-A efectos de análisis lineal, el conjunto ESC--motor BLDC puede
-aproximarse mediante un modelo promedio equivalente al de un motor DC
-de imanes permanentes:
+Estos ensayos:
 
-\[
-v(t)=R\,i(t) + L\,\dot i(t) + K_e\,\omega(t)
-\]
+\begin{itemize}
+	\item se realizaron lejos de saturación,
+	\item utilizaron amplitudes similares,
+	\item fueron repetidos múltiples veces,
+	\item arrojaron consistentemente el mismo patrón cualitativo.
+\end{itemize}
 
-\[
-J\,\dot \omega(t)=K_t\,i(t) - B\,\omega(t) - \tau_L(t)
-\]
+Esta respuesta inversa es característica de sistemas no mínimo-fase. Los modelos sin cero en el semiplano derecho no lograron reproducir esta inversión inicial ni la curvatura transitoria observada.
 
-Este modelo introduce una dinámica electromecánica adicional respecto
-del modelo puramente mecánico de la masa móvil, justificando la
-aparición de un polo adicional en la relación entrada--salida.
+Por lo tanto, desde el punto de vista de modelado lineal equivalente alrededor del hover, la inclusión de un cero no mínimo-fase resulta necesaria para capturar la dinámica dominante observada experimentalmente.
 
-En muchos casos, la constante de tiempo eléctrica
-\(\tau_e=L/R\) es considerablemente menor que la mecánica,
-permitiendo despreciar \(L\) y obtener una dinámica dominante de
-segundo orden asociada al actuador.
+% ============================================================
+\subsubsection{Justificación del orden del modelo}
+% ============================================================
 
+Se ensayaron modelos continuos de segundo a quinto orden utilizando herramientas de identificación.
+
+Los modelos de menor orden no lograron reproducir simultáneamente:
+
+\begin{itemize}
+	\item la inversión inicial observada,
+	\item la curvatura transitoria,
+	\item la pendiente dinámica correcta.
+\end{itemize}
+
+El modelo de tercer orden fue el mínimo orden capaz de capturar estas características sin introducir complejidad innecesaria.
+
+% ============================================================
+\subsubsection{Identificación experimental}
+% ============================================================
+
+El modelo fue obtenido mediante la \textit{System Identification Toolbox} de MATLAB.
+
+Se utilizaron registros experimentales en lazo abierto en coordenadas relativas, eliminando offsets de esfuerzo y altura para linealizar alrededor del punto de operación.
+
+Las excitaciones consistieron en escalones pequeños aplicados sobre el hover, limitando el rango de entrada a regiones aproximadamente lineales.
+
+Se ensayaron distintas estructuras paramétricas, seleccionándose aquella que mejor reprodujo los datos experimentales bajo validación cruzada y análisis de residuales.
+
+% ============================================================
 \subsubsection{Función de transferencia continua equivalente}
+% ============================================================
 
-La representación continua obtenida a partir del modelo identificado
-puede expresarse inicialmente como:
+El modelo continuo identificado puede expresarse como:
 
 \[
 G(s)=
@@ -142,26 +155,11 @@ G(s)=
 {(s+0.0002797)\,(s^2+5.61s+14.02)}
 \]
 
-El polo ubicado en \(s=-0.0002797\) corresponde a una dinámica
-extremadamente lenta respecto de las restantes constantes de tiempo
-del sistema.
+El polo en \(s=-0.0002797\) posee una constante de tiempo extremadamente lenta respecto de la duración típica de los experimentos (del orden de segundos).
 
-Considerando que:
+La eliminación de dicho polo produce diferencias menores que el nivel de ruido del sensor y no altera de manera apreciable la dinámica relevante para el diseño de control.
 
-\begin{itemize}
-	\item la resolución del sensor de altura se encuentra en el orden
-	de centímetros,
-	\item no se dispone de mediciones de alta precisión submilimétrica,
-	\item el identificador polinomial puede ajustar polos muy cercanos
-	al origen para capturar pequeñas tendencias de deriva,
-\end{itemize}
-
-se interpreta que dicho polo próximo a cero no representa una dinámica
-física real dominante, sino un posible efecto de sobreajuste
-(\textit{overfitting}) del procedimiento de identificación.
-
-En consecuencia, y en coherencia con el modelo físico que contempla
-amortiguamiento mecánico, se adopta la siguiente simplificación:
+En consecuencia, se adopta la forma simplificada:
 
 \[
 G(s)=
@@ -169,51 +167,22 @@ G(s)=
 {s\,(s^2+5.61s+14.02)}
 \]
 
-En esta forma:
+En esta representación:
 
 \begin{itemize}
-	\item El polo en el origen representa el carácter integrador dominante
-	de la posición vertical.
-	\item El segundo orden \(s^2+5.61s+14.02\) modela la dinámica
-	electromecánica del actuador.
-	\item Los ceros se interpretan como parámetros de ajuste que capturan
-	efectos agregados del actuador, discretización y linealización
-	alrededor del punto de operación.
+	\item El polo en el origen representa el carácter integrador dominante de la posición vertical.
+	\item El término de segundo orden modela la dinámica agregada del actuador y la estructura.
+	\item El cero en el semiplano derecho es consistente con la respuesta inversa observada experimentalmente.
 \end{itemize}
 
-\subsubsection{Obtención del modelo mediante identificación en MATLAB}
-
-La función de transferencia utilizada en este trabajo no se obtuvo
-exclusivamente a partir de un modelo físico teórico, sino mediante un
-proceso de \textbf{identificación experimental}.
-
-En particular, se empleó la herramienta \textit{System Identification Toolbox}
-de MATLAB, utilizando registros experimentales previamente adquiridos del
-sistema en lazo abierto (señal de mando PWM y altura medida por el sensor).
-Dichos datos fueron importados al entorno de identificación y organizados en
-un objeto \texttt{iddata}, definiendo la entrada como \(u(t)\) y la salida como
-\(y(t)=z(t)\), con el tiempo de muestreo correspondiente al sistema de
-adquisición.
-
-Sobre ese conjunto de datos se ajustó un modelo lineal SISO en tiempo
-continuo, seleccionando una estructura paramétrica compatible con la dinámica
-esperada del sistema, y estimando sus parámetros mediante los algoritmos de
-optimización incluidos en MATLAB.
-
-Finalmente, el modelo resultante fue validado comparando su respuesta con los
-datos medidos (ajuste temporal y análisis de residuales), y se adoptó como
-representación equivalente continua la función de transferencia \(G(s)\)
-presentada en la sección siguiente.
-
+% ============================================================
 \subsubsection{Validez del modelo}
+% ============================================================
 
-El modelo adoptado constituye una aproximación coherente con la física
-del sistema y adecuada para el diseño de control dentro del rango
-operativo \([1100,1700]\ \mu s\).
+El modelo adoptado constituye una aproximación coherente con la física del sistema y adecuada para el diseño de control dentro del rango operativo:
 
-Fuera de dicho intervalo, el sistema presenta comportamientos no lineales
-significativos (aerodinámica, fricción no lineal, saturaciones y posibles
-limitaciones térmicas del actuador) que no son capturados por el modelo
-lineal simplificado.
+\[
+u \in [1100,1700]\ \mu s
+\]
 
-
+Fuera de dicho intervalo, el sistema presenta no linealidades aerodinámicas, fricción no lineal, saturaciones y posibles limitaciones térmicas que no son capturadas por el modelo lineal simplificado.

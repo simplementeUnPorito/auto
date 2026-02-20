@@ -1,11 +1,10 @@
-
+% ============================================================
 \subsection{Introducción}
+% ============================================================
 
-Los métodos clásicos de control se fundamentan en el análisis de sistemas
-lineales mediante funciones de transferencia y herramientas del dominio
-de la frecuencia y del plano complejo.
+Los métodos clásicos de control se fundamentan en el análisis de sistemas lineales mediante funciones de transferencia y herramientas del dominio de la frecuencia y del plano complejo.
 
-En este enfoque, la dinámica del sistema se describe como:
+En este enfoque, la dinámica del sistema se representa como:
 
 \[
 G(s)=\frac{Y(s)}{U(s)}
@@ -13,25 +12,22 @@ G(s)=\frac{Y(s)}{U(s)}
 G(z)=\frac{Y(z)}{U(z)}
 \]
 
-El diseño del controlador se realiza modificando la función de transferencia
-del lazo abierto:
+El objetivo del diseño consiste en definir un controlador \(C\) tal que el lazo cerrado:
 
 \[
-L(s)=C(s)G(s)
-\quad \text{o} \quad
-L(z)=C(z)G(z)
+G_{cl}=\frac{C G}{1+CG}
 \]
 
-con el objetivo de garantizar:
+cumpla simultáneamente:
 
 \begin{itemize}
-	\item Estabilidad en lazo cerrado.
-	\item Desempeño transitorio adecuado.
+	\item Estabilidad.
+	\item Respuesta transitoria adecuada.
 	\item Error estacionario reducido.
-	\item Robustez frente a incertidumbre.
+	\item Robustez frente a incertidumbres.
 \end{itemize}
 
-Los métodos clásicos utilizados en este trabajo incluyen:
+En este trabajo se implementaron y evaluaron las siguientes técnicas clásicas:
 
 \begin{itemize}
 	\item Controlador PID.
@@ -40,12 +36,11 @@ Los métodos clásicos utilizados en este trabajo incluyen:
 	\item Síntesis Directa (Truxal--Ragazzini).
 \end{itemize}
 
-
 % ============================================================
 \subsection{Modelo de la Planta}
 % ============================================================
 
-El diseño clásico parte de la función de transferencia identificada:
+El diseño clásico parte de la función de transferencia discreta identificada:
 
 \[
 G(z) = \frac{
@@ -55,111 +50,60 @@ G(z) = \frac{
 }
 \]
 
-Tiempo de muestreo, depende de la experiencia.
-
-
+El tiempo de muestreo utilizado depende de la experiencia considerada, ya que los distintos controladores fueron desarrollados en paralelo por los miembros del grupo con diferentes enfoques de diseño.
 
 % ============================================================
-\subsection{Fundamentos Matemáticos del Control Clásico}
+\subsection{Criterio general de estabilidad}
 % ============================================================
 
-\subsubsection{Estabilidad en Lazo Cerrado}
-
-El sistema en lazo cerrado se expresa como:
+Para sistemas discretos, la estabilidad en lazo cerrado requiere que todos los polos satisfagan:
 
 \[
-G_{cl}(z)=\frac{C(z)G(z)}{1+C(z)G(z)}
+|z_i| < 1
 \]
 
-La estabilidad discreta requiere que:
-
-\[
-|z_i| < 1 \quad \forall i
-\]
-
-donde $z_i$ son los polos de $G_{cl}(z)$.
-
-\subsubsection{Lugar de Raíces}
-
-Los polos del lazo cerrado satisfacen:
-
-\[
-1 + C(z)G(z) = 0
-\]
-
-El Lugar de Raíces describe la trayectoria de estos polos al variar
-la ganancia del controlador.
-
-\subsubsection{Márgenes de Estabilidad}
-
-A partir del diagrama de Bode del lazo abierto $L(z)$ se definen:
-
-\begin{itemize}
-	\item Margen de ganancia.
-	\item Margen de fase.
-	\item Frecuencia de cruce de ganancia.
-\end{itemize}
-
-Estos parámetros cuantifican la estabilidad relativa y robustez del sistema.
-
+Este criterio será verificado en cada uno de los métodos desarrollados.
 
 % ============================================================
 \subsection{Controlador PID}
 % ============================================================
 
-%Forma general del PID:
-
-%\[
-%C(s)=K_p\left(1+\frac{1}{T_is}+\frac{T_ds}{1+\frac{T_d}{N}s}\right)
-%\]
-
-%Parámetros utilizados:
-
-
-%Objetivo del PID:
-
-%\begin{itemize}
-%	\item Reducir error estacionario.
-%	\item Mejorar rapidez.
-%	\item Ajustar amortiguamiento.
-%\end{itemize}
 \input{PID.tex}
 
+\balance
 \clearpage
+
 % ============================================================
 \subsection{Diseño por Lugar de Raíces}
 % ============================================================
 
-Se analiza la ecuación característica:
-
-\[
-1 + C(z)G(z) = 0
-\]
 
 \input{RLOCUS.tex}
 
-
-
-
 \clearpage
+\balance
 % ============================================================
 \subsection{Diseño por Respuesta en Frecuencia}
 % ============================================================
 
-Se analiza el lazo abierto:
 
 \input{BODE.tex}
 
+\balance
 \clearpage
+% ============================================================
+\subsection{Síntesis Directa \cite{Fadali2020}}
+% ============================================================
 
-% ============================================================
-\subsection{Síntesis Directa}
-% ============================================================
+
 \input{SinDirec.tex}
 
 % ============================================================
 \subsection{Comparación entre Métodos Clásicos}
 % ============================================================
 
+
 \input{ComparacionMClasic.tex}
+
+\balance
 \clearpage

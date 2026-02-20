@@ -1,11 +1,31 @@
 \section{Planteamiento del problema}
 
-Los sistemas de regulación de altura basados en propulsión vertical constituyen un problema particularmente exigente desde el punto de vista del control automático, debido a la combinación de inestabilidad inherente, dinámica no lineal y restricciones físicas severas del actuador. La planta experimental considerada en este trabajo presenta comportamiento inestable en lazo abierto, dinámica de tercer orden con integrador y ceros que condicionan la respuesta transitoria, incluyendo la presencia de un cero en el semiplano derecho que impone limitaciones fundamentales en el desempeño alcanzable.
+Los sistemas de regulación de altura basados en propulsión vertical
+constituyen un caso particularmente exigente dentro del control automático,
+debido a la interacción entre dinámica inestable, restricciones físicas
+del actuador y presencia de no idealidades significativas.
 
-Desde el punto de vista físico, el sistema consiste en un cuerpo móvil guiado en el eje vertical cuyo equilibrio depende del balance entre la fuerza gravitatoria y el empuje generado por un motor brushless accionado mediante un ESC. Sin embargo, el comportamiento real se ve influenciado por múltiples no idealidades: saturaciones estrictas del esfuerzo de control por razones de seguridad térmica (1100–1700 µs), variaciones del punto de operación asociadas a la descarga de la batería, fricción no uniforme en los rieles de guiado, dinámica propia del conjunto motor–ESC y ruido de medición proveniente del sensor láser de distancia.
+La planta considerada consiste en un cuerpo móvil guiado en el eje vertical,
+cuya posición depende del equilibrio entre la fuerza gravitatoria y el empuje
+generado por un motor brushless accionado mediante un controlador electrónico
+de velocidad (ESC). En lazo abierto, el sistema presenta comportamiento
+inestable, dinámica de orden superior con integrador y características
+no mínimas que condicionan la respuesta transitoria.
 
-Se realizaron desarrollos físico–matemáticos iniciales con el objetivo de modelar el sistema a partir de principios dinámicos fundamentales. No obstante, la complejidad aerodinámica del empuje, junto con la dinámica interna del motor y del ESC, dificultaron la obtención de un modelo analítico suficientemente representativo, lo que motivó la adopción de técnicas de identificación experimental alrededor del punto de operación de hover.
+Adicionalmente, el sistema físico opera bajo restricciones reales,
+entre ellas saturaciones estrictas del esfuerzo de control,
+variaciones del punto de operación asociadas a la descarga de la batería,
+fricción no uniforme en los rieles de guiado,
+dinámica propia del conjunto motor–ESC
+y ruido de medición proveniente del sensor de distancia.
 
-El desafío central radica entonces en obtener un modelo lineal que capture adecuadamente la dinámica dominante del sistema y permita diseñar controladores implementables en tiempo real sobre hardware embebido. El firmware desarrollado integra múltiples estrategias de control dentro del mismo sistema, permitiendo la modificación dinámica de coeficientes, la adquisición de datos en lazo abierto y cerrado, y la transmisión en tiempo real de las señales de esfuerzo y altura mediante comunicación UART para su análisis posterior.
+Estas características introducen limitaciones estructurales
+en el desempeño alcanzable y dificultan la obtención de un modelo
+lineal simple que represente adecuadamente la dinámica dominante
+alrededor del punto de operación.
 
-En este contexto, el problema abordado no se limita a la estabilización del sistema, sino que implica analizar la relación entre calidad del modelado, complejidad de la estrategia de control y desempeño experimental obtenido sobre una planta física con restricciones reales.
+En consecuencia, el problema central consiste en modelar y controlar
+un sistema vertical inherentemente inestable, sujeto a restricciones
+físicas y perturbaciones reales, garantizando estabilidad,
+seguimiento de referencia y desempeño transitorio aceptable
+en condiciones experimentales.

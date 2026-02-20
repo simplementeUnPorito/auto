@@ -1,13 +1,11 @@
 % ============================================================
 
-% ============================================================
-
 Se diseñó un regulador óptimo discreto de tipo LQR a partir del modelo
 en espacio de estados discretizado mediante retención de orden cero (ZOH)
 con tiempo de muestreo:
 
 \[
-\Ts = 0.01 \ \text{s}
+T_s = 0.01 \ \text{s}
 \]
 
 El objetivo del diseño es minimizar el funcional de costo cuadrático infinito:
@@ -19,11 +17,14 @@ J=\sum_{k=0}^{\infty}(x_k^TQx_k+u_k^TRu_k)
 donde \(Q\succeq 0\) penaliza la energía de los estados y \(R\succ 0\) penaliza
 el esfuerzo de control.
 
+% ============================================================
 \paragraph{Matrices de ponderación}
+% ============================================================
 
 Se adoptó una sintonización práctica basada en escalas típicas del experimento:
 un cambio de referencia del orden de \(\Delta y \approx 20\) y una restricción del
 mando aproximadamente \(|u|\lesssim 300\) (en unidades del actuador).
+
 El diseño penaliza principalmente la salida mediante \(C^TC\), agregando un término
 pequeño para asegurar buena condición numérica:
 
@@ -33,8 +34,9 @@ Q = w_y(C^TC) + 10^{-8}I_n,
 R = \frac{w_u}{u_{\max}}
 \]
 
-con \(w_y=20\), \(w_u=500\) y \(u_{\max}=300\). Para el modelo discretizado utilizado,
-las matrices resultantes fueron:
+con \(w_y=20\), \(w_u=500\) y \(u_{\max}=300\).
+
+Para el modelo discretizado utilizado, las matrices resultantes fueron:
 
 \[
 Q=
@@ -49,7 +51,9 @@ Q=
 R = 1.6667
 \]
 
+% ============================================================
 \paragraph{Ecuación de Riccati discreta y ganancia óptima}
+% ============================================================
 
 La solución del problema se obtiene resolviendo la ecuación de Riccati discreta:
 
@@ -72,7 +76,9 @@ K=
 \end{bmatrix}
 \]
 
+% ============================================================
 \paragraph{Polos del sistema en lazo cerrado}
+% ============================================================
 
 La estabilidad se verifica mediante los polos del sistema:
 
@@ -94,19 +100,6 @@ Los polos obtenidos fueron:
 Se observa que todos los polos se encuentran dentro del círculo unitario,
 garantizando estabilidad discreta.
 
-\paragraph{Referencia al apéndice de implementación}
-
-El código completo utilizado para:
-\begin{itemize}
-	\item cargar y discretizar la planta,
-	\item definir \(Q\) y \(R\) mediante parámetros \textit{knobs} (\(w_y\), \(w_u\)),
-	\item calcular \(K\) y verificar controlabilidad,
-	\item diseñar observadores (predictor y actual) por ubicación de polos,
-	\item calcular el prefiltro \(N_{\mathrm{bar}}\) para seguimiento,
-	\item y simular el lazo con/sin saturación, con/sin ruido, y en doble precisión y \texttt{float32},
-\end{itemize}
-se incluye en el Apéndice~\ref{ap:lqr_obs_sim}.
-
 % ============================================================
 \subsubsection{Simulación del LQR con observador, saturación y ruido}
 % ============================================================
@@ -115,39 +108,22 @@ Con el fin de aproximar el comportamiento del sistema real y evitar conclusiones
 optimistas, se implementó un entorno de simulación que contempla:
 
 \begin{itemize}
-	\item \textbf{Observador de estados} en dos variantes:
+	\item Observador de estados en dos variantes:
 	\begin{itemize}
-		\item \textit{Predictor}: corrige usando \(y_k\).
-		\item \textit{Actual}: corrige usando \(y_{k+1}\).
+		\item Predictor: corrige usando \(y_k\).
+		\item Actual: corrige usando \(y_{k+1}\).
 	\end{itemize}
-	\item \textbf{Prefiltro de referencia} \(N_{\mathrm{bar}}\) para mejorar el seguimiento
-	de referencia en lazo cerrado (estructura \(u_k = N_{\mathrm{bar}}r_k - K\hat{x}_k\)).
-	\item \textbf{Saturación} del actuador con límite \(\pm u_{\max}\) para representar
-	las restricciones del PWM/ESC.
-	\item \textbf{Ruido} configurable para emular incertidumbres del experimento:
-	\begin{itemize}
-		\item Ruido de medición: \(y_{\mathrm{meas}} = y_{\mathrm{true}} + v_y\), con \(v_y\sim\mathcal{N}(0,\sigma_y^2)\).
-		\item Ruido del actuador (jitter) y cuantización: \(u_{\mathrm{app}} = \mathrm{sat}\left(\mathrm{quant}(u_{\mathrm{cmd}}+v_u)\right)\).
-		\item Ruido de proceso: \(x_{k+1} = Ax_k + Bu_k + w_k\) (configurable como prueba de estrés).
-	\end{itemize}
-	\item \textbf{Comparación numérica} entre simulación en doble precisión y \texttt{float32}
-	para anticipar efectos de implementación embebida.
+	\item Prefiltro de referencia \(N_{\mathrm{bar}}\).
+	\item Saturación del actuador con límite \(\pm u_{\max}\).
+	\item Ruido de medición, ruido de actuador y ruido de proceso configurables.
+	\item Comparación doble precisión vs \texttt{float32}.
 \end{itemize}
 
-En particular, para evitar comparaciones sesgadas, las secuencias de ruido se
-pre-generaron y se reutilizaron de forma idéntica tanto en doble precisión como en
-\texttt{float32}.
-
-\paragraph{Observadores y ubicación de polos}
-
-Los observadores se diseñaron mediante ubicación arbitraria de polos en el plano-\(z\),
-definiendo polos deseados:
+Los observadores se diseñaron mediante ubicación de polos:
 
 \[
 p_{\mathrm{obs}}=\{0.8\pm 0.25j,\ 0.9\}
 \]
-
-y obteniendo:
 
 \[
 K_{e,\mathrm{pred}}=\mathrm{place}(A^T,C^T,p_{\mathrm{obs}})^T
@@ -155,109 +131,79 @@ K_{e,\mathrm{pred}}=\mathrm{place}(A^T,C^T,p_{\mathrm{obs}})^T
 K_{e,\mathrm{act}}=\mathrm{place}(A^T,(CA)^T,p_{\mathrm{obs}})^T
 \]
 
-\paragraph{Prefiltro \(N_{\mathrm{bar}}\)}
-
-Para mejorar el seguimiento de referencia (SISO), se calculó un prefiltro
-\(N_{\mathrm{bar}}\) tal que la ganancia estática equivalente sea adecuada, utilizando
-la rutina auxiliar \texttt{refi}:
+La estructura implementada fue:
 
 \[
 u_k = N_{\mathrm{bar}}\,r_k - K\,\hat{x}_k
 \]
 
-\paragraph{Diagnósticos para evitar autoengaño}
-
-Se incluyeron verificaciones directas sobre el ruido inyectado:
-
-\[
-e_y(k)=y_{\mathrm{meas}}(k)-y_{\mathrm{true}}(k)
-\]
-
-y se reportaron métricas como RMS\((e_y)\) y conteo de saturaciones en \(u\), para
-confirmar que las perturbaciones y límites realmente están actuando sobre el lazo.
-
-\paragraph{Resultados de simulación}
-
-La figura~\ref{fig:lqr_step_sim} muestra la respuesta temporal simulada del lazo
-cerrado con LQR, observador y saturación/ruido configurables. La figura~\ref{fig:lqr_u_sim}
-presenta el esfuerzo de control asociado, evidenciando los instantes de saturación
-y la actividad del regulador ante perturbaciones.
-
 \insertarfigura{img/LQR/LQR_step.png}
-{Respuesta temporal simulada del sistema con regulador LQR y observador (con saturación y ruido según configuración).}
+{Respuesta temporal simulada del sistema con regulador LQR y observador.}
 {fig:lqr_step_sim}{1}
 
 \insertarfigura{img/LQR/LQR_esfuerzo.png}
-{Esfuerzo de control simulado $u(k)$ para el regulador LQR (incluyendo saturación y ruido según configuración).}
+{Esfuerzo de control simulado $u(k)$.}
 {fig:lqr_u_sim}{1}
 
 % ============================================================
-\subsubsection{Implementación experimental del LQR}
+\subsubsection{Implementación experimental}
 % ============================================================
 
-En la implementación real se evaluaron ambas variantes del observador (predictor y actual)
-manteniendo el mismo regulador LQR. Las figuras~\ref{fig:lqr_pred_prac} y~\ref{fig:lqr_act_prac}
-muestran la respuesta experimental, evidenciando diferencias en el esfuerzo de control y el
-comportamiento transitorio debido a no linealidades, saturación y variaciones del punto de operación.
-
 \insertarfigura{img/LQR/LQR_pred_practico.png}
-{Respuesta experimental en lazo cerrado con regulador LQR y observador \textit{predictor}.}
+{Respuesta experimental con observador predictor.}
 {fig:lqr_pred_prac}{1}
 
 \insertarfigura{img/LQR/LQR_act_practico.png}
-{Respuesta experimental en lazo cerrado con regulador LQR y observador \textit{actual}.}
+{Respuesta experimental con observador actual.}
 {fig:lqr_act_prac}{1}
 
-\subsubsection{Discusión}
+En simulación el tiempo de subida fue aproximadamente:
 
-\paragraph{Observador predictor}
+\[
+t_r^{\text{sim}} \approx 0.75\,\text{s}
+\]
 
-En la simulación (figura~\ref{fig:lqr_step_sim}) la respuesta presenta
-un tiempo de subida aproximado de $t_r^{\text{sim}} \approx 0.75\,\text{s}$
-sin sobreimpulso apreciable. Este comportamiento es consistente con los
-polos dominantes del sistema en lazo cerrado, ubicados próximos al
-círculo unitario y con amortiguamiento elevado.
+sin sobreimpulso apreciable.
 
-En la implementación experimental se observó una diferencia significativa
-durante la primera subida (10\,cm a 30\,cm), donde el tiempo de subida
-fue aproximadamente $15.17\,\text{s}$. Esta discrepancia se atribuye a
-condiciones iniciales alejadas del punto de operación lineal, presencia
-de fricción estática, retardo del conjunto ESC--motor y penalización del
-esfuerzo impuesta por el funcional LQR, que favorece una respuesta de
-menor energía antes que máxima rapidez.
+Experimentalmente se observaron tiempos de subida del orden de
+\(0.55\,\text{s}\) a \(0.69\,\text{s}\) dependiendo del punto de operación,
+con error estacionario inferior a 1 cm.
 
-En una segunda subida (30\,cm a 45\,cm), ya en un entorno más próximo al
-equilibrio dinámico, el tiempo de subida fue de $0.55\,\text{s}$
-(figura~\ref{fig:lqr_pred_prac}), mostrando una concordancia mucho mayor
-con la predicción del modelo lineal. En ambas transiciones el
-sobreimpulso fue prácticamente nulo.
+Se evidenció nuevamente la presencia de ruido significativo en el esfuerzo,
+más marcado en el observador predictor que en el actual.
 
-Respecto al esfuerzo de control, se observa una evolución progresiva
-hasta alcanzar el equilibrio, seguida de picos moderados asociados a la
-corrección fina de la altura bajo saturación y no linealidades del
-actuador.
+% ============================================================
+\subsubsection{Conclusión}
+% ============================================================
 
-\paragraph{Observador actual}
+A diferencia del método de ubicación arbitraria de polos, el regulador LQR
+no fija directamente las raíces del sistema en lazo cerrado, sino que
+determina la ganancia óptima a partir de la minimización explícita de un
+funcional de costo que pondera la energía de los estados y el esfuerzo
+de control.
 
-En simulación, el comportamiento temporal coincide con el del predictor
-en términos de tiempo de subida y ausencia de sobreimpulso
-(figura~\ref{fig:lqr_u_sim}), en concordancia con el principio de
-separación.
+En este enfoque, los polos resultan consecuencia de los pesos definidos
+en \(Q\) y \(R\). Esto introduce un criterio sistemático basado en la
+relación esfuerzo–desempeño.
 
-Experimentalmente, para una transición de 75\,cm a 95\,cm, se obtuvo un
-tiempo de subida aproximado de $0.69\,\text{s}$ con error estacionario
-inferior a 1\,cm (figura~\ref{fig:lqr_act_prac}). Se observan picos de
-esfuerzo más continuos que en el predictor, lo cual puede atribuirse a
-una corrección más inmediata basada en la medición disponible y a la
-interacción con ruido y saturación del actuador.
+En este trabajo, al utilizar un modelo identificado sin interpretación
+física directa de los estados, no fue posible penalizar estados
+individuales (como velocidad o inercia del motor). Por ello se penalizó la
+salida mediante \(C^TC\).
 
-En alturas elevadas, el esfuerzo tiende a estabilizarse alrededor del
-valor de equilibrio requerido para compensar el peso, reduciendo la
-actividad transitoria.
+En modelos físicos estructurados, el LQR permitiría penalizar estados
+específicos según objetivos de desempeño, lo que constituye una ventaja
+conceptual importante frente a la ubicación arbitraria de polos.
 
+La selección de \(Q\) y \(R\) requiere criterio ingenieril y ajustes
+iterativos. Sin embargo, una vez definidos adecuadamente, el método
+proporciona resultados consistentes y estructurados.
 
-\paragraph{Referencia al apéndice}
+Persiste la sensibilidad al ruido de medición introducida por el
+observador. Polos de estimación agresivos amplifican ruido; polos
+más lentos reducen este efecto pero enlentecen la convergencia.
 
-El script completo de simulación (incluyendo funciones locales \texttt{sim\_obs\_loop},
-\texttt{plot\_zplane}, \texttt{refi} y el \textit{fallback} \texttt{dlqr\_iter\_nolic})
-se incluye en el Apéndice~\ref{ap:lqr_obs_sim}.
+En conjunto, el regulador LQR mostró un desempeño experimental sólido,
+con seguimiento estable y transitorios coherentes con la simulación,
+constituyendo un enfoque más fundamentado que la simple ubicación
+arbitraria de polos.

@@ -9,6 +9,7 @@
 \usepackage{listings}
 \usepackage{xcolor}
 \usepackage{hyperref}
+\usepackage{balance}
 
 
 \lstdefinestyle{cfirmware}{
@@ -139,7 +140,7 @@
 }
 
 % ======= Hyperref =======
-\usepackage[unicode,hidelinks]{hyperref}
+
 
 % ======= Metadatos LAB 9 =======
 \title{Trabajo Práctico: Helicóptero vertical de un solo eje.}
@@ -158,13 +159,13 @@
 	\begin{abstract}
 		En este trabajo práctico se estudia el control de altura de una planta experimental basada en un sistema de propulsión vertical mediante un motor brushless controlado electrónicamente. La planta consiste en un cuerpo móvil guiado mecánicamente en el eje vertical, cuya posición es medida mediante un sensor de distancia láser y regulada a través de una señal PWM aplicada a un controlador electrónico de velocidad (ESC). 
 		
-		A partir del modelado físico y matemático del sistema, se desarrollan e implementan distintas estrategias de control vistas a lo largo de la materia Automatizaciones. Se analizan controladores clásicos, tales como el PID y métodos de diseño basados en el lugar de las raíces, diagramas de Bode, síntesis directa y ubicación arbitraria de polos. Asimismo, se aborda el control en el espacio de estados, incorporando control integral para sistemas de seguimiento y el uso de estimadores de estado tanto de predicción como de actualización.
+		%A partir del modelado físico y matemático del sistema, se desarrollan e implementan distintas estrategias de control vistas a lo largo de la materia Automatizaciones. Se analizan controladores clásicos, tales como el PID y métodos de diseño basados en el lugar de las raíces, diagramas de Bode, síntesis directa y ubicación arbitraria de polos. Asimismo, se aborda el control en el espacio de estados, incorporando control integral para sistemas de seguimiento y el uso de estimadores de estado tanto de predicción como de actualización.
 		
-		Finalmente, se diseñan y evalúan controladores óptimos que incluyen integrador y estimadores basados en el filtro de Kalman, culminando en la implementación de un regulador LQG. Los distintos enfoques de control son comparados en términos de desempeño dinámico, estabilidad y robustez frente a perturbaciones y variaciones paramétricas, utilizando resultados obtenidos mediante ensayos experimentales sobre la planta real.
+		%Finalmente, se diseñan y evalúan controladores óptimos que incluyen integrador y estimadores basados en el filtro de Kalman, culminando en la implementación de un regulador LQG. Los distintos enfoques de control son comparados en términos de desempeño dinámico, estabilidad y robustez frente a perturbaciones y variaciones paramétricas, utilizando resultados obtenidos mediante ensayos experimentales sobre la planta real.
 	\end{abstract}
 	
 	\begin{IEEEkeywords}
-		control de altura, sistemas dinámicos, identificación de sistemas, control PID, control en espacio de estados, LQG, PSoC, TFMini, ESC, PWM
+		control de altura, sistemas dinámicos, identificación de sistemas, control PID, Lugar de raices, Diagrama de Bode, control en espacio de estados, LQG, PSoC, TFMini, ESC, PWM
 	\end{IEEEkeywords}
 	
 	
@@ -194,10 +195,13 @@
 	% ============================================================
 	
 	\input{control0.2.tex}
-	\section{Conclusiones}
-	% \input{conclusiones.tex}
-	%\input{appendices.tex}
-	%\bibliographystyle{IEEEtran}
-	%\bibliography{refs}
+	\balance
+	\clearpage
 	
+	\section{Conclusiones}
+	 \input{conclusiones.tex}
+	
+	\bibliographystyle{IEEEtran}
+	\bibliography{refs}
+%	\input{appendices.tex}
 \end{document}
